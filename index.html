@@ -159,7 +159,16 @@
     }
     .completed-icon svg { color: var(--success); }
     .completed-state h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
-    .completed-state p { font-size: 15px; color: var(--text-secondary); line-height: 1.6; }
+    .completed-state p { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+    .edit-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 24px;
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: all 0.18s ease; font-family: inherit;
+    }
+    .edit-btn:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--text-tertiary); }
 
     /* ─── History View ─── */
     .history-header { margin-bottom: 24px; }
@@ -440,6 +449,10 @@
       </div>
       <h2>今天的感恩已完成</h2>
       <p>你已记录了今天的三件感恩之事。<br>明天见 🌱</p>
+      <button class="edit-btn" id="editBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        修改今天的记录
+      </button>
     </div>
 
   </div>
@@ -854,6 +867,12 @@ function updateSubmitBtn() {
   document.getElementById('submitBtn').disabled = !allFilled;
 }
 
+// ─── Edit Today's Entry ────────────────────────────────────────────────────
+document.getElementById('editBtn').addEventListener('click', () => {
+  todayDone = false;
+  renderToday();
+});
+
 // ─── Submit ────────────────────────────────────────────────────────────────
 document.getElementById('submitBtn').addEventListener('click', async () => {
   if (!entries.every(e => e.trim())) return;
@@ -980,38 +999,55 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
   });
 });
 
-// ─── Reminder (11pm–midnight) ──────────────────────────────────────────────
+// ─── Reminder (1 hour before midnight, local timezone) ─────────────────────
 function scheduleReminder() {
+  let lastBannerMinute = -1; // prevent repeated banners within same minute
+
   function checkAndNotify() {
-    if (allEntries[todayKey()]) return;
+    const key = todayKey();
+    if (allEntries[key] && allEntries[key].length === 3 && allEntries[key].some(e => e.trim())) return; // already done
+
     const now = new Date();
     const h = now.getHours(), m = now.getMinutes();
-    if (h === 23 && m >= 0 && m <= 59) {
-      showBanner('🌙 今天还没有写感恩日记，在午夜前记录今天吧');
+    const currentMinute = h * 60 + m;
+
+    // 23:00 ~ 23:59 = 1 hour before midnight in user's local timezone
+    if (h === 23 && currentMinute !== lastBannerMinute) {
+      lastBannerMinute = currentMinute;
+      const remaining = 60 - m;
+      showBanner(`🌙 距午夜还有 ${remaining} 分钟，今天还没有写感恩日记`);
     }
   }
-  checkAndNotify();
-  setInterval(checkAndNotify, 30 * 60 * 1000);
 
+  // Check immediately, then every 60 seconds for more precise reminder
+  checkAndNotify();
+  setInterval(checkAndNotify, 60 * 1000);
+
+  // Also use Notification API for system-level push
   if ('Notification' in window) {
     const scheduleWebNotif = () => {
       const now = new Date();
       const target = new Date();
-      target.setHours(23, 0, 0, 0);
-      if (now > target) target.setDate(target.getDate() + 1);
+      target.setHours(23, 0, 0, 0); // 11:00 PM local timezone
+      if (now >= target) target.setDate(target.getDate() + 1);
       const msUntil = target - now;
-      setTimeout(() => {
-        if (!allEntries[todayKey()]) {
+      setTimeout(async () => {
+        // Re-check if today's entry is still empty
+        const key = todayKey();
+        if (!allEntries[key] || !allEntries[key].some(e => e.trim())) {
           if (Notification.permission === 'granted') {
-            new Notification('感恩日记', {
-              body: '今天还没有记录感恩，在午夜前写下三件事吧 🌿',
-              icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text y="52" font-size="52">🌿</text></svg>'
+            new Notification('感恩日记 🌿', {
+              body: '午夜前一小时提醒：今天还没有记录感恩，写下三件事吧',
+              icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text y="52" font-size="52">🌿</text></svg>',
+              tag: 'gratitude-reminder'
             });
           }
         }
         scheduleWebNotif();
       }, msUntil);
     };
+
+    // Request permission on first click
     document.addEventListener('click', function requestPerm() {
       if (Notification.permission === 'default') {
         Notification.requestPermission().then(() => scheduleWebNotif());

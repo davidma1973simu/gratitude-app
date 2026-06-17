@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gratitude-v1';
+const CACHE_NAME = 'gratitude-v2';
 const ASSETS = [
   '/',
   '/index.html',
