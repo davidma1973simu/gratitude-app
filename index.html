@@ -366,8 +366,8 @@
 </head>
 <body>
 
-<!-- ═══ Login View ═══ -->
-<div id="loginView" class="login-view" style="display:none;">
+<!-- ═══ Login View (default visible — hidden only after confirmed auth) ═══ -->
+<div id="loginView" class="login-view">
   <div class="login-logo">🌿</div>
   <div class="login-title">感恩日记</div>
   <div class="login-subtitle">每天记录三件感恩的事<br>跨设备同步，随时随地回顾</div>
@@ -382,7 +382,7 @@
   </div>
 </div>
 
-<!-- ═══ App Shell ═══ -->
+<!-- ═══ App Shell (hidden until confirmed auth) ═══ -->
 <div id="appShell" style="display:none;">
 
 <!-- Navigation -->
@@ -637,26 +637,39 @@ function showApp() {
   document.getElementById('appShell').style.display = 'block';
 }
 
+let authInitialized = false;
+
 async function initAuth() {
-  // Check for magic link callback
-  const { data, error } = await supabase.auth.getSession();
-  if (data.session) {
-    currentUser = data.session.user;
-    showApp();
-    await startApp();
-    return;
+  try {
+    // Check for magic link callback
+    const { data, error } = await supabase.auth.getSession();
+    if (data && data.session) {
+      currentUser = data.session.user;
+      showApp();
+      await startApp();
+      authInitialized = true;
+      return;
+    }
+  } catch (e) {
+    console.error('Auth check failed:', e);
   }
+  // No session or error — always show login
   showLogin();
+  authInitialized = true;
 }
 
 // Listen for auth changes (magic link callback)
 supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
+  // Ignore INITIAL_SESSION — handled by initAuth()
+  if (event === 'INITIAL_SESSION') return;
+
+  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
     currentUser = session.user;
     showApp();
     await startApp();
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
+    allEntries = {};
     showLogin();
   }
 });
@@ -1072,9 +1085,14 @@ initAuth();
 
 // ─── Service Worker Registration ────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(() => {
-    console.log('SW registered');
-  }).catch(() => {});
+  const swPath = new URL('sw.js', window.location.href).pathname;
+  navigator.serviceWorker.register(swPath).then(reg => {
+    // Force update on every load to prevent stale cache
+    reg.update();
+    console.log('SW registered at', swPath);
+  }).catch(err => {
+    console.log('SW registration skipped:', err.message);
+  });
 }
 </script>
 </body>

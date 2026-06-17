@@ -1,10 +1,11 @@
-const CACHE_NAME = 'gratitude-v2';
+const CACHE_NAME = 'gratitude-v3';
+// Use relative paths that work on GitHub Pages subdirectory
+const BASE = self.location.pathname.replace('/sw.js', '');
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  BASE + '/index.html',
+  BASE + '/manifest.json',
+  BASE + '/icon-192.png',
+  BASE + '/icon-512.png'
 ];
 
 // Install: cache core assets
@@ -25,14 +26,21 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: cache-first for assets, network-first for navigation
+// Fetch: network-first for HTML (always get latest), cache-first for static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.mode === 'navigate') {
+  if (request.mode === 'navigate' || request.url.endsWith('.html')) {
+    // Network-first for HTML — always try to get the latest version
     event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
+      fetch(request).then(response => {
+        // Cache the fresh copy
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+        return response;
+      }).catch(() => caches.match(BASE + '/index.html'))
     );
   } else {
+    // Cache-first for static assets (icons, manifest)
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request))
     );
