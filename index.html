@@ -518,6 +518,21 @@
 <div class="notif-banner" id="notifBanner"></div>
 
 <script>
+// ─── Path fix: if user lands on root (from wrong magic link redirect), go to /gratitude-app ──
+(function() {
+  var basePath = '/gratitude-app';
+  // If we're on the root but should be on /gratitude-app, redirect preserving everything
+  if (location.pathname !== basePath && location.pathname !== basePath + '/' &&
+      !location.pathname.startsWith(basePath)) {
+    // Check if there's a hash with access_token (magic link callback)
+    var hash = location.hash;
+    var search = location.search;
+    if (hash || search) {
+      location.replace(basePath + '/' + search + hash);
+    }
+  }
+})();
+
 // ─── Supabase Config (direct REST API, zero CDN dependency) ────────────────
 const SB_URL = 'https://reaoliuszbameeibzjvl.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlYW9saXVzemJhbWVlaWJ6anZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzNjYsImV4cCI6MjA5NzI3NDM2Nn0.36r_ubgSCFAiQGoCsj_OmqWshPPX1KVHAlcF-8l0F_8';
@@ -573,13 +588,15 @@ const SB = {
 
   // ── Auth methods ──
   async sendMagicLink(email) {
+    // Always use absolute path for redirect — works even if user is on root
+    var redirectTo = window.location.origin + '/gratitude-app/';
     return this._api('/auth/v1/otp', {
       method: 'POST',
       body: JSON.stringify({
         email,
         create_user: true,
         options: {
-          emailRedirectTo: window.location.origin + window.location.pathname
+          emailRedirectTo: redirectTo
         }
       }),
     });
@@ -1242,6 +1259,25 @@ function showBanner(msg) {
 }
 
 // ─── Boot ──────────────────────────────────────────────────────────────────
+// Show friendly message if coming from expired/error magic link
+(function() {
+  var params = new URLSearchParams(location.search);
+  var errCode = params.get('error_code');
+  var errMsg = params.get('error_description');
+  if (errCode) {
+    // Clean up the URL
+    history.replaceState(null, '', location.pathname);
+    // Show message after initAuth runs and login page is shown
+    setTimeout(function() {
+      if (errCode === 'otp_expired') {
+        showBanner('登录链接已过期，请重新发送');
+      } else {
+        showBanner(errMsg || '登录出现问题，请重试');
+      }
+    }, 500);
+  }
+})();
+
 initAuth();
 
 // ─── Service Worker Registration ────────────────────────────────────────────
