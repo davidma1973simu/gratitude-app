@@ -12,7 +12,6 @@
   <meta name="apple-mobile-web-app-title" content="感恩日记" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="console.error('Supabase SDK failed to load')"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -502,23 +501,186 @@
 <div class="notif-banner" id="notifBanner"></div>
 
 <script>
-// ─── Supabase Config ──────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://reaoliuszbameeibzjvl.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlYW9saXVzemJhbWVlaWJ6anZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzNjYsImV4cCI6MjA5NzI3NDM2Nn0.36r_ubgSCFAiQGoCsj_OmqWshPPX1KVHAlcF-8l0F_8';
+// ─── Supabase Config (direct REST API, zero CDN dependency) ────────────────
+const SB_URL = 'https://reaoliuszbameeibzjvl.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlYW9saXVzemJhbWVlaWJ6anZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzNjYsImV4cCI6MjA5NzI3NDM2Nn0.36r_ubgSCFAiQGoCsj_OmqWshPPX1KVHAlcF-8l0F_8';
 
-// Defensive: ensure Supabase SDK loaded
-let supabase;
-try {
-  if (!window.supabase || !window.supabase.createClient) {
-    throw new Error('Supabase SDK not loaded');
-  }
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch (e) {
-  console.error('Supabase init failed:', e);
-  // Show error on login page
-  document.getElementById('loginBtn').textContent = '加载失败，请刷新重试';
-  document.getElementById('loginBtn').disabled = true;
-}
+// Minimal Supabase REST + Auth client (no SDK needed)
+const SB = {
+  // Auth tokens stored in localStorage
+  _tokens: null,
+  _listeners: [],
+
+  _loadTokens() {
+    try {
+      const raw = localStorage.getItem('sb_auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Check expiry
+        if (parsed.expires_at && Date.now() / 1000 < parsed.expires_at) {
+          this._tokens = parsed;
+          return parsed;
+        }
+        this._tokens = null;
+        localStorage.removeItem('sb_auth');
+      }
+    } catch { this._tokens = null; }
+    return null;
+  },
+
+  _saveTokens(session) {
+    if (!session) { localStorage.removeItem('sb_auth'); this._tokens = null; return; }
+    const t = {
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at || (Date.now() / 1000 + 3600),
+      user: session.user
+    };
+    localStorage.setItem('sb_auth', JSON.stringify(t));
+    this._tokens = t;
+  },
+
+  async _api(path, opts = {}) {
+    const headers = {
+      'apikey': SB_KEY,
+      'Content-Type': 'application/json',
+    };
+    if (this._tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${this._tokens.access_token}`;
+    }
+    const res = await fetch(`${SB_URL}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'API error');
+    return data;
+  },
+
+  // ── Auth methods ──
+  async sendMagicLink(email) {
+    return this._api('/auth/v1/otp', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        create_user: true,
+        gotrue_meta_security: {},
+      }),
+    });
+  },
+
+  async getSession() {
+    const tokens = this._loadTokens();
+    if (!tokens) return null;
+    // Try to refresh if close to expiry
+    if (tokens.expires_at && Date.now() / 1000 > tokens.expires_at - 300) {
+      try {
+        const refreshed = await this._refreshToken(tokens.refresh_token);
+        return this._tokens;
+      } catch {
+        localStorage.removeItem('sb_auth');
+        this._tokens = null;
+        return null;
+      }
+    }
+    return tokens;
+  },
+
+  async getUser() {
+    const session = await this.getSession();
+    if (!session) return null;
+    try {
+      const data = await this._api('/auth/v1/user');
+      this._tokens.user = data;
+      this._saveTokens(this._tokens);
+      return data;
+    } catch {
+      return session.user;
+    }
+  },
+
+  async _refreshToken(refreshToken) {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || 'Refresh failed');
+    this._saveTokens(data);
+    this._notify('TOKEN_REFRESHED', data);
+    return data;
+  },
+
+  // Handle magic link callback (access_token in URL hash/params)
+  handleCallback() {
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const expiresIn = params.get('expires_in');
+
+    if (accessToken) {
+      // Parse JWT to get user info
+      let user = null;
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+        user = {
+          id: payload.sub,
+          email: payload.email,
+          aud: payload.aud,
+        };
+      } catch {}
+
+      const session = {
+        access_token: accessToken,
+        refresh_token: refreshToken || '',
+        expires_at: expiresIn ? Date.now() / 1000 + parseInt(expiresIn) : Date.now() / 1000 + 3600,
+        user,
+      };
+      this._saveTokens(session);
+      // Clean URL
+      window.history.replaceState(null, '', window.location.pathname);
+      this._notify('SIGNED_IN', session);
+      return session;
+    }
+    return null;
+  },
+
+  async signOut() {
+    try {
+      await this._api('/auth/v1/logout', { method: 'POST' });
+    } catch {}
+    localStorage.removeItem('sb_auth');
+    this._tokens = null;
+    this._notify('SIGNED_OUT', null);
+  },
+
+  onAuthStateChange(callback) {
+    this._listeners.push(callback);
+  },
+
+  _notify(event, session) {
+    this._listeners.forEach(fn => { try { fn(event, session); } catch {} });
+  },
+
+  // ── Data methods ──
+  async getEntries(userId) {
+    const data = await this._api(`/rest/v1/entries?user_id=eq.${userId}&order=date.desc&select=*`);
+    return data;
+  },
+
+  async upsertEntry(userId, date, c1, c2, c3) {
+    await this._api('/rest/v1/entries', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({
+        user_id: userId,
+        date: date,
+        content1: c1 || '',
+        content2: c2 || '',
+        content3: c3 || '',
+      }),
+    });
+  },
+};
 
 // ─── Storage ───────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'gratitude_entries_v1';
@@ -538,50 +700,33 @@ function todayKey() {
 }
 
 // ─── Cloud Data ────────────────────────────────────────────────────────────
-let allEntries = {};  // merged: local + cloud
+let allEntries = {};
 
 async function loadCloud() {
-  if (!supabase) return {};
-  const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : null;
-  if (!user) return {};
+  if (!SB._tokens) return {};
   try {
     setSyncStatus('syncing');
-    const { data, error } = await supabase
-      .from('entries')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false });
-    if (error) { console.error('Load cloud error:', error); return {}; }
+    const user = SB._tokens.user;
+    const rows = await SB.getEntries(user.id);
     const map = {};
-    (data || []).forEach(row => {
-      map[row.date] = [row.content1, row.content2, row.content3];
+    (rows || []).forEach(row => {
+      map[row.date] = [row.content1 || '', row.content2 || '', row.content3 || ''];
     });
     setSyncStatus('online');
     return map;
   } catch (e) {
-    console.error('Cloud error:', e);
+    console.error('Cloud load error:', e);
     setSyncStatus('offline');
     return {};
   }
 }
 
 async function saveCloud(dateKey, contents) {
-  if (!supabase) return;
-  const user = (await supabase.auth.getUser()).data.user;
-  if (!user) return;
+  if (!SB._tokens) return;
   try {
     setSyncStatus('syncing');
-    // Upsert: insert or update
-    const { error } = await supabase
-      .from('entries')
-      .upsert({
-        user_id: user.id,
-        date: dateKey,
-        content1: contents[0] || '',
-        content2: contents[1] || '',
-        content3: contents[2] || '',
-      }, { onConflict: 'user_id,date' });
-    if (error) console.error('Save cloud error:', error);
+    const user = SB._tokens.user;
+    await SB.upsertEntry(user.id, dateKey, contents[0] || '', contents[1] || '', contents[2] || '');
     setSyncStatus('online');
   } catch (e) {
     console.error('Cloud save error:', e);
@@ -590,38 +735,27 @@ async function saveCloud(dateKey, contents) {
 }
 
 async function migrateLocalToCloud() {
-  if (!supabase) return;
   const localData = loadLocal();
   const keys = Object.keys(localData);
-  if (!keys.length) return;
-  const user = (await supabase.auth.getUser()).data.user;
-  if (!user) return;
+  if (!keys.length || !SB._tokens) return;
 
-  // Load existing cloud data to avoid overwriting
   const cloudData = await loadCloud();
   let migrated = 0;
   for (const key of keys) {
-    if (cloudData[key]) continue; // cloud already has this date
+    if (cloudData[key]) continue;
     const contents = localData[key];
     if (contents && contents.length === 3 && contents.some(c => c.trim())) {
       await saveCloud(key, contents);
       migrated++;
     }
   }
-  if (migrated > 0) {
-    showBanner(`✅ 已将 ${migrated} 天的本地记录同步到云端`);
-  }
-  // Merge after migration
+  if (migrated > 0) showBanner(`✅ 已将 ${migrated} 天的本地记录同步到云端`);
   allEntries = { ...localData, ...cloudData };
 }
 
-// ─── Merge local + cloud ──────────────────────────────────────────────────
 function mergeData(localData, cloudData) {
   const merged = { ...localData };
-  for (const key of Object.keys(cloudData)) {
-    // Cloud data takes precedence if both exist
-    merged[key] = cloudData[key];
-  }
+  for (const key of Object.keys(cloudData)) merged[key] = cloudData[key];
   return merged;
 }
 
@@ -641,7 +775,7 @@ let entries = ['', '', ''];
 let todayDone = false;
 let currentUser = null;
 
-// ─── Auth ──────────────────────────────────────────────────────────────────
+// ─── Auth UI ───────────────────────────────────────────────────────────────
 function showLogin() {
   document.getElementById('loginView').style.display = 'flex';
   document.getElementById('appShell').style.display = 'none';
@@ -652,77 +786,59 @@ function showApp() {
   document.getElementById('appShell').style.display = 'block';
 }
 
-let authInitialized = false;
-
 async function initAuth() {
-  if (!supabase) {
-    showLogin();
-    authInitialized = true;
+  // 1. Check if returning from magic link (token in URL)
+  const callbackSession = SB.handleCallback();
+  if (callbackSession) {
+    currentUser = callbackSession.user;
+    showApp();
+    await startApp();
     return;
   }
-  try {
-    // Check for magic link callback
-    const { data, error } = await supabase.auth.getSession();
-    if (data && data.session) {
-      currentUser = data.session.user;
-      showApp();
-      await startApp();
-      authInitialized = true;
-      return;
-    }
-  } catch (e) {
-    console.error('Auth check failed:', e);
+
+  // 2. Check stored session
+  const session = await SB.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    showApp();
+    await startApp();
+    return;
   }
-  // No session or error — always show login
+
+  // 3. No session → show login
   showLogin();
-  authInitialized = true;
 }
 
-// Listen for auth changes (magic link callback)
-if (supabase) {
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    // Ignore INITIAL_SESSION — handled by initAuth()
-    if (event === 'INITIAL_SESSION') return;
+// Listen for auth events
+SB.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    currentUser = session.user;
+    showApp();
+    await startApp();
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    allEntries = {};
+    showLogin();
+  }
+});
 
-    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-      currentUser = session.user;
-      showApp();
-      await startApp();
-    } else if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      allEntries = {};
-      showLogin();
-    }
-  });
-}
-
-// Login
+// Login button
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   if (!email) { showBanner('请输入邮箱地址'); return; }
-  if (!supabase) { showBanner('服务加载失败，请刷新页面重试'); return; }
 
   const btn = document.getElementById('loginBtn');
   btn.disabled = true;
   btn.textContent = '发送中…';
 
   try {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname }
-    });
-    if (error) {
-      showBanner('发送失败：' + error.message);
-      btn.disabled = false;
-      btn.textContent = '发送登录链接';
-      return;
-    }
+    await SB.sendMagicLink(email);
     document.getElementById('loginSent').style.display = 'block';
     btn.textContent = '重新发送';
     btn.disabled = false;
   } catch (e) {
-    console.error('Login error:', e);
-    showBanner('发送失败，请重试');
+    console.error('Magic link error:', e);
+    showBanner('发送失败：' + e.message);
     btn.disabled = false;
     btn.textContent = '发送登录链接';
   }
@@ -735,7 +851,7 @@ document.getElementById('loginEmail').addEventListener('keydown', (e) => {
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-  if (supabase) await supabase.auth.signOut();
+  await SB.signOut();
   document.getElementById('userMenu').classList.remove('show');
   allEntries = {};
   currentUser = null;
@@ -745,8 +861,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 // User avatar / menu
 document.getElementById('userAvatar').addEventListener('click', (e) => {
   e.stopPropagation();
-  const menu = document.getElementById('userMenu');
-  menu.classList.toggle('show');
+  document.getElementById('userMenu').classList.toggle('show');
 });
 document.addEventListener('click', () => {
   document.getElementById('userMenu').classList.remove('show');
@@ -765,24 +880,16 @@ function updateUserUI() {
 async function startApp() {
   updateUserUI();
 
-  // Load from cloud
   const cloudData = await loadCloud();
-
-  // Merge with local
   const localData = loadLocal();
   allEntries = mergeData(localData, cloudData);
 
-  // Migrate local data to cloud (one-time)
   await migrateLocalToCloud();
 
-  // Re-merge after migration
   const updatedCloud = await loadCloud();
   allEntries = mergeData(localData, updatedCloud);
-
-  // Save merged data locally as cache
   saveLocal(allEntries);
 
-  // Init UI
   const key = todayKey();
   if (allEntries[key] && allEntries[key].length === 3) {
     entries = allEntries[key];
@@ -924,14 +1031,10 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   const key = todayKey();
   const trimmed = entries.map(e => e.trim());
 
-  // Save locally
   allEntries[key] = trimmed;
   saveLocal(allEntries);
 
-  // Save to cloud
-  if (currentUser) {
-    await saveCloud(key, trimmed);
-  }
+  if (currentUser) await saveCloud(key, trimmed);
 
   todayDone = true;
   renderToday();
@@ -1046,17 +1149,16 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
 
 // ─── Reminder (1 hour before midnight, local timezone) ─────────────────────
 function scheduleReminder() {
-  let lastBannerMinute = -1; // prevent repeated banners within same minute
+  let lastBannerMinute = -1;
 
   function checkAndNotify() {
     const key = todayKey();
-    if (allEntries[key] && allEntries[key].length === 3 && allEntries[key].some(e => e.trim())) return; // already done
+    if (allEntries[key] && allEntries[key].length === 3 && allEntries[key].some(e => e.trim())) return;
 
     const now = new Date();
     const h = now.getHours(), m = now.getMinutes();
     const currentMinute = h * 60 + m;
 
-    // 23:00 ~ 23:59 = 1 hour before midnight in user's local timezone
     if (h === 23 && currentMinute !== lastBannerMinute) {
       lastBannerMinute = currentMinute;
       const remaining = 60 - m;
@@ -1064,26 +1166,22 @@ function scheduleReminder() {
     }
   }
 
-  // Check immediately, then every 60 seconds for more precise reminder
   checkAndNotify();
   setInterval(checkAndNotify, 60 * 1000);
 
-  // Also use Notification API for system-level push
   if ('Notification' in window) {
     const scheduleWebNotif = () => {
       const now = new Date();
       const target = new Date();
-      target.setHours(23, 0, 0, 0); // 11:00 PM local timezone
+      target.setHours(23, 0, 0, 0);
       if (now >= target) target.setDate(target.getDate() + 1);
       const msUntil = target - now;
-      setTimeout(async () => {
-        // Re-check if today's entry is still empty
+      setTimeout(() => {
         const key = todayKey();
         if (!allEntries[key] || !allEntries[key].some(e => e.trim())) {
           if (Notification.permission === 'granted') {
             new Notification('感恩日记 🌿', {
               body: '午夜前一小时提醒：今天还没有记录感恩，写下三件事吧',
-              icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text y="52" font-size="52">🌿</text></svg>',
               tag: 'gratitude-reminder'
             });
           }
@@ -1091,8 +1189,6 @@ function scheduleReminder() {
         scheduleWebNotif();
       }, msUntil);
     };
-
-    // Request permission on first click
     document.addEventListener('click', function requestPerm() {
       if (Notification.permission === 'default') {
         Notification.requestPermission().then(() => scheduleWebNotif());
@@ -1119,12 +1215,8 @@ initAuth();
 if ('serviceWorker' in navigator) {
   const swPath = new URL('sw.js', window.location.href).pathname;
   navigator.serviceWorker.register(swPath).then(reg => {
-    // Force update on every load to prevent stale cache
     reg.update();
-    console.log('SW registered at', swPath);
-  }).catch(err => {
-    console.log('SW registration skipped:', err.message);
-  });
+  }).catch(() => {});
 }
 </script>
 </body>
