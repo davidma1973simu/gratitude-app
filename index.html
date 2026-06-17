@@ -295,34 +295,18 @@
     .login-hint {
       font-size: 13px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6;
     }
-    .login-sent {
-      display: none;
-      padding: 20px;
-      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius);
-      margin-top: 16px; text-align: left;
+    .login-toggle {
+      color: var(--text-primary); font-weight: 600; text-decoration: none; cursor: pointer;
+      background: none; border: none; font-size: 13px; font-family: inherit; padding: 0;
     }
-    .login-sent h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--success); }
-    .login-sent p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
-
-    /* ─── OTP Code Input ─── */
-    .otp-sent-info {
-      font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6;
+    .login-toggle:hover { opacity: 0.7; }
+    .login-password-wrap { position: relative; }
+    .login-password-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: var(--text-tertiary);
+      padding: 4px; display: flex; align-items: center;
     }
-    .otp-sent-info strong { display: block; color: var(--text-primary); font-weight: 600; margin-top: 2px; }
-    .otp-inputs {
-      display: flex; gap: 8px; justify-content: center; margin-bottom: 24px;
-    }
-    .otp-digit {
-      width: 46px; height: 54px;
-      border: 1.5px solid var(--border); border-radius: 12px;
-      font-size: 22px; font-weight: 600; text-align: center;
-      background: var(--surface); color: var(--text-primary);
-      outline: none; transition: border-color 0.18s, box-shadow 0.18s;
-      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', monospace;
-      caret-color: var(--text-primary);
-    }
-    .otp-digit:focus { border-color: var(--text-primary); box-shadow: 0 0 0 3px rgba(28,25,23,0.08); }
-    .otp-digit.filled { border-color: var(--text-primary); background: var(--accent-soft); }
+    .login-password-toggle:hover { color: var(--text-secondary); }
 
     /* ─── User Menu ─── */
     .user-menu {
@@ -408,35 +392,17 @@
   <div class="login-title">感恩日记</div>
   <div class="login-subtitle">每天记录三件感恩的事<br>跨设备同步，随时随地回顾</div>
 
-  <!-- Step 1: Email input -->
-  <div class="login-form" id="loginStep1">
+  <!-- Email + Password Login Form -->
+  <div class="login-form" id="loginForm">
     <input type="email" class="login-input" id="loginEmail" placeholder="输入你的邮箱" autocomplete="email" />
-    <button class="login-btn" id="loginBtn">获取验证码</button>
-    <div class="login-hint">我们会向你的邮箱发送6位验证码</div>
-  </div>
-
-  <!-- Step 2: OTP code input -->
-  <div class="login-form" id="loginStep2" style="display:none;">
-    <div class="otp-sent-info">
-      <span>验证码已发送至</span>
-      <strong id="otpEmailDisplay"></strong>
+    <div class="login-password-wrap">
+      <input type="password" class="login-input" id="loginPassword" placeholder="设置密码（首次使用将自动注册）" autocomplete="current-password" style="margin-bottom:4px;" />
+      <button type="button" class="login-password-toggle" id="passwordToggle" title="显示/隐藏密码">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
     </div>
-    <div class="otp-inputs" id="otpInputs">
-      <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code" />
-      <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-      <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-      <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-      <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-      <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" />
-    </div>
-    <button class="login-btn" id="verifyBtn" disabled>验证并登录</button>
-    <div class="login-hint" id="resendHint">
-      没收到？<a href="#" id="resendLink" style="color:var(--text-primary);font-weight:600;text-decoration:none;">重新发送</a>
-      <span id="resendTimer"></span>
-    </div>
-    <div class="login-hint" style="margin-top:8px;">
-      <a href="#" id="backToEmail" style="color:var(--text-tertiary);text-decoration:none;">← 换个邮箱</a>
-    </div>
+    <button class="login-btn" id="loginBtn">登 录</button>
+    <div class="login-hint">首次使用将自动注册账号，密码至少 6 位</div>
   </div>
 </div>
 
@@ -560,18 +526,12 @@
 <div class="notif-banner" id="notifBanner"></div>
 
 <script>
-// ─── Path fix: if user lands on root (from wrong magic link redirect), go to /gratitude-app ──
+// ─── Path fix: ensure user is on /gratitude-app ──
 (function() {
   var basePath = '/gratitude-app';
-  // If we're on the root but should be on /gratitude-app, redirect preserving everything
   if (location.pathname !== basePath && location.pathname !== basePath + '/' &&
       !location.pathname.startsWith(basePath)) {
-    // Check if there's a hash with access_token (magic link callback)
-    var hash = location.hash;
-    var search = location.search;
-    if (hash || search) {
-      location.replace(basePath + '/' + search + hash);
-    }
+    location.replace(basePath + '/');
   }
 })();
 
@@ -628,37 +588,22 @@ const SB = {
     return data;
   },
 
-  // ── Auth methods ──
-  async sendMagicLink(email) {
-    // Always use absolute path for redirect — works even if user is on root
-    var redirectTo = window.location.origin + '/gratitude-app/';
-    return this._api('/auth/v1/otp', {
+  // ── Auth methods: Password-based (no email template needed) ──
+  async signUp(email, password) {
+    return this._api('/auth/v1/signup', {
       method: 'POST',
-      body: JSON.stringify({
-        email,
-        create_user: true,
-        options: {
-          emailRedirectTo: redirectTo
-        }
-      }),
+      body: JSON.stringify({ email, password }),
     });
   },
 
-  async verifyOtp(email, token) {
-    const res = await fetch(`${SB_URL}/auth/v1/verify`, {
+  async signInWithPassword(email, password) {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
-      headers: {
-        'apikey': SB_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: 'email',
-        email: email,
-        token: token,
-      }),
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || '验证失败');
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || '登录失败');
     // Save session
     if (data.access_token) {
       let user = null;
@@ -720,41 +665,6 @@ const SB = {
     this._saveTokens(data);
     this._notify('TOKEN_REFRESHED', data);
     return data;
-  },
-
-  // Handle magic link callback (access_token in URL hash/params)
-  handleCallback() {
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const expiresIn = params.get('expires_in');
-
-    if (accessToken) {
-      // Parse JWT to get user info
-      let user = null;
-      try {
-        const payload = JSON.parse(atob(accessToken.split('.')[1]));
-        user = {
-          id: payload.sub,
-          email: payload.email,
-          aud: payload.aud,
-        };
-      } catch {}
-
-      const session = {
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
-        expires_at: expiresIn ? Date.now() / 1000 + parseInt(expiresIn) : Date.now() / 1000 + 3600,
-        user,
-      };
-      this._saveTokens(session);
-      // Clean URL
-      window.history.replaceState(null, '', window.location.pathname);
-      this._notify('SIGNED_IN', session);
-      return session;
-    }
-    return null;
   },
 
   async signOut() {
@@ -901,16 +811,7 @@ function showApp() {
 
 async function initAuth() {
   try {
-    // 1. Check if returning from magic link (token in URL)
-    const callbackSession = SB.handleCallback();
-    if (callbackSession) {
-      currentUser = callbackSession.user;
-      showApp();
-      await startApp();
-      return;
-    }
-
-    // 2. Check stored session
+    // Check stored session
     const session = await SB.getSession();
     if (session?.user) {
       currentUser = session.user;
@@ -922,7 +823,7 @@ async function initAuth() {
     console.error('initAuth error:', e);
   }
 
-  // 3. No session → show login
+  // No session → show login
   showLogin();
 }
 
@@ -949,166 +850,66 @@ SB.onAuthStateChange(async (event, session) => {
   }
 });
 
-// Login — Step 1: Send OTP
-let loginEmail = '';
-let resendCooldown = 0;
-
+// ── Login: Email + Password ──
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
   if (!email) { showBanner('请输入邮箱地址'); return; }
+  if (!password) { showBanner('请输入密码'); return; }
+  if (password.length < 6) { showBanner('密码至少需要 6 位'); return; }
 
   const btn = document.getElementById('loginBtn');
   btn.disabled = true;
-  btn.textContent = '发送中…';
+  btn.textContent = '登录中…';
 
   try {
-    await SB.sendMagicLink(email);
-    loginEmail = email;
-    // Switch to step 2
-    document.getElementById('loginStep1').style.display = 'none';
-    document.getElementById('loginStep2').style.display = 'block';
-    document.getElementById('otpEmailDisplay').textContent = email;
-    // Focus first OTP input
-    const firstDigit = document.querySelector('.otp-digit');
-    if (firstDigit) firstDigit.focus();
-    // Start resend cooldown
-    startResendCooldown();
+    // Try sign in first (existing user)
+    try {
+      const session = await SB.signInWithPassword(email, password);
+      currentUser = session.user;
+      showApp();
+      await startApp();
+      return;
+    } catch (signInErr) {
+      // If "Invalid login credentials" → user doesn't exist yet, try signup
+      if (signInErr.message && signInErr.message.includes('Invalid login credentials')) {
+        await SB.signUp(email, password);
+        // After signup, sign in
+        const session = await SB.signInWithPassword(email, password);
+        currentUser = session.user;
+        showApp();
+        await startApp();
+        return;
+      }
+      throw signInErr;
+    }
   } catch (e) {
-    console.error('Send OTP error:', e);
-    showBanner('发送失败：' + e.message);
+    console.error('Login error:', e);
+    showBanner(e.message || '登录失败，请重试');
     btn.disabled = false;
-    btn.textContent = '获取验证码';
+    btn.textContent = '登 录';
   }
 });
 
-// Enter key on email input
-document.getElementById('loginEmail').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') document.getElementById('loginBtn').click();
-});
-
-// OTP digit inputs — auto-advance and auto-verify
-const otpDigits = document.querySelectorAll('.otp-digit');
-otpDigits.forEach((input, idx) => {
-  input.addEventListener('input', (e) => {
-    const val = e.target.value.replace(/[^0-9]/g, '');
-    e.target.value = val.slice(0, 1);
-    if (val && idx < 5) {
-      otpDigits[idx + 1].focus();
-    }
-    // Update visual state
-    e.target.classList.toggle('filled', !!val);
-    updateVerifyBtn();
-    // Auto-verify when all 6 digits filled
-    if (getOtpCode().length === 6) {
-      document.getElementById('verifyBtn').click();
-    }
-  });
-
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Backspace' && !e.target.value && idx > 0) {
-      otpDigits[idx - 1].focus();
-      otpDigits[idx - 1].value = '';
-      otpDigits[idx - 1].classList.remove('filled');
-      updateVerifyBtn();
-    }
-  });
-
-  // Handle paste
-  input.addEventListener('paste', (e) => {
-    e.preventDefault();
-    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
-    for (let i = 0; i < Math.min(paste.length, 6); i++) {
-      otpDigits[i].value = paste[i];
-      otpDigits[i].classList.add('filled');
-    }
-    updateVerifyBtn();
-    // Focus next empty or last
-    const nextEmpty = Array.from(otpDigits).findIndex(d => !d.value);
-    if (nextEmpty >= 0) otpDigits[nextEmpty].focus();
-    else otpDigits[5].focus();
-    // Auto-verify if complete
-    if (getOtpCode().length === 6) {
-      document.getElementById('verifyBtn').click();
-    }
+// Enter key on inputs
+['loginEmail', 'loginPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
   });
 });
 
-function getOtpCode() {
-  return Array.from(otpDigits).map(d => d.value).join('');
-}
-
-function updateVerifyBtn() {
-  const code = getOtpCode();
-  document.getElementById('verifyBtn').disabled = code.length < 6;
-}
-
-// Login — Step 2: Verify OTP
-document.getElementById('verifyBtn').addEventListener('click', async () => {
-  const code = getOtpCode();
-  if (code.length < 6) return;
-
-  const btn = document.getElementById('verifyBtn');
-  btn.disabled = true;
-  btn.textContent = '验证中…';
-
-  try {
-    const session = await SB.verifyOtp(loginEmail, code);
-    currentUser = session.user;
-    showApp();
-    await startApp();
-  } catch (e) {
-    console.error('Verify OTP error:', e);
-    showBanner('验证失败：' + e.message);
-    btn.disabled = false;
-    btn.textContent = '验证并登录';
-    // Clear OTP inputs for retry
-    otpDigits.forEach(d => { d.value = ''; d.classList.remove('filled'); });
-    otpDigits[0].focus();
-    updateVerifyBtn();
+// Password visibility toggle
+document.getElementById('passwordToggle').addEventListener('click', () => {
+  const pwInput = document.getElementById('loginPassword');
+  const eyeIcon = document.getElementById('eyeIcon');
+  if (pwInput.type === 'password') {
+    pwInput.type = 'text';
+    eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    pwInput.type = 'password';
+    eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
   }
-});
-
-// Resend
-function startResendCooldown() {
-  resendCooldown = 60;
-  const link = document.getElementById('resendLink');
-  const timer = document.getElementById('resendTimer');
-  link.style.display = 'none';
-  timer.textContent = `（${resendCooldown}s）`;
-
-  const interval = setInterval(() => {
-    resendCooldown--;
-    if (resendCooldown <= 0) {
-      clearInterval(interval);
-      link.style.display = 'inline';
-      timer.textContent = '';
-    } else {
-      timer.textContent = `（${resendCooldown}s）`;
-    }
-  }, 1000);
-}
-
-document.getElementById('resendLink').addEventListener('click', async (e) => {
-  e.preventDefault();
-  try {
-    await SB.sendMagicLink(loginEmail);
-    showBanner('✅ 新验证码已发送');
-    startResendCooldown();
-  } catch (err) {
-    showBanner('发送失败，请稍后重试');
-  }
-});
-
-// Back to email
-document.getElementById('backToEmail').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('loginStep2').style.display = 'none';
-  document.getElementById('loginStep1').style.display = 'block';
-  document.getElementById('loginBtn').disabled = false;
-  document.getElementById('loginBtn').textContent = '获取验证码';
-  // Clear OTP inputs
-  otpDigits.forEach(d => { d.value = ''; d.classList.remove('filled'); });
-  updateVerifyBtn();
 });
 
 // Logout
@@ -1471,25 +1272,6 @@ function showBanner(msg) {
 }
 
 // ─── Boot ──────────────────────────────────────────────────────────────────
-// Show friendly message if coming from expired/error magic link
-(function() {
-  var params = new URLSearchParams(location.search);
-  var errCode = params.get('error_code');
-  var errMsg = params.get('error_description');
-  if (errCode) {
-    // Clean up the URL
-    history.replaceState(null, '', location.pathname);
-    // Show message after initAuth runs and login page is shown
-    setTimeout(function() {
-      if (errCode === 'otp_expired') {
-        showBanner('登录链接已过期，请重新发送');
-      } else {
-        showBanner(errMsg || '登录出现问题，请重试');
-      }
-    }, 500);
-  }
-})();
-
 initAuth();
 
 // ─── Service Worker Registration ────────────────────────────────────────────
