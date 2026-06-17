@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gratitude-v3';
+const CACHE_NAME = 'gratitude-v4';
 // Use relative paths that work on GitHub Pages subdirectory
 const BASE = self.location.pathname.replace('/sw.js', '');
 const ASSETS = [
@@ -8,32 +8,35 @@ const ASSETS = [
   BASE + '/icon-512.png'
 ];
 
-// Install: cache core assets
+// Install: clear ALL old caches first, then cache core assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.keys().then((keys) => {
+      // Delete every old cache before installing new one
+      return Promise.all(keys.map((k) => caches.delete(k)));
+    }).then(() => {
+      return caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS));
+    })
   );
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: clean old caches + claim all clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // Fetch: network-first for HTML (always get latest), cache-first for static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.mode === 'navigate' || request.url.endsWith('.html')) {
+  if (request.mode === 'navigate' || request.url.endsWith('.html') || request.url.endsWith('/')) {
     // Network-first for HTML — always try to get the latest version
     event.respondWith(
       fetch(request).then(response => {
-        // Cache the fresh copy
         const clone = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
         return response;

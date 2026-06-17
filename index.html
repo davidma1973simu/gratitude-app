@@ -10,8 +10,6 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <meta name="apple-mobile-web-app-title" content="感恩日记" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -36,7 +34,7 @@
 
     html, body {
       height: 100%;
-      font-family: -apple-system, 'SF Pro Text', 'Inter', sans-serif;
+      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
       background: var(--bg);
       color: var(--text-primary);
       -webkit-font-smoothing: antialiased;
@@ -364,6 +362,25 @@
   </style>
 </head>
 <body>
+<!-- Force-clear old Service Worker caches from pre-login version -->
+<script>
+(function(){
+  // If this is an old cached version without login, force reload
+  if (!document.currentScript) return;
+  // Unregister all old service workers immediately
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(reg) { reg.unregister(); });
+    });
+    // Also clear all caches
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        names.forEach(function(name) { caches.delete(name); });
+      });
+    }
+  }
+})();
+</script>
 
 <!-- ═══ Login View (default visible — hidden only after confirmed auth) ═══ -->
 <div id="loginView" class="login-view">
@@ -561,7 +578,9 @@ const SB = {
       body: JSON.stringify({
         email,
         create_user: true,
-        gotrue_meta_security: {},
+        options: {
+          emailRedirectTo: window.location.origin + window.location.pathname
+        }
       }),
     });
   },
@@ -787,27 +806,41 @@ function showApp() {
 }
 
 async function initAuth() {
-  // 1. Check if returning from magic link (token in URL)
-  const callbackSession = SB.handleCallback();
-  if (callbackSession) {
-    currentUser = callbackSession.user;
-    showApp();
-    await startApp();
-    return;
-  }
+  try {
+    // 1. Check if returning from magic link (token in URL)
+    const callbackSession = SB.handleCallback();
+    if (callbackSession) {
+      currentUser = callbackSession.user;
+      showApp();
+      await startApp();
+      return;
+    }
 
-  // 2. Check stored session
-  const session = await SB.getSession();
-  if (session?.user) {
-    currentUser = session.user;
-    showApp();
-    await startApp();
-    return;
+    // 2. Check stored session
+    const session = await SB.getSession();
+    if (session?.user) {
+      currentUser = session.user;
+      showApp();
+      await startApp();
+      return;
+    }
+  } catch (e) {
+    console.error('initAuth error:', e);
   }
 
   // 3. No session → show login
   showLogin();
 }
+
+// Safety: ensure login is visible within 3 seconds even if auth check hangs
+setTimeout(function() {
+  var lv = document.getElementById('loginView');
+  var as = document.getElementById('appShell');
+  if (lv && as && lv.style.display === 'none' && as.style.display === 'none') {
+    // Neither view is showing — force login
+    showLogin();
+  }
+}, 3000);
 
 // Listen for auth events
 SB.onAuthStateChange(async (event, session) => {
