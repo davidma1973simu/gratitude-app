@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="感恩日记" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="console.error('Supabase SDK failed to load')"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -506,7 +506,19 @@
 const SUPABASE_URL = 'https://reaoliuszbameeibzjvl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlYW9saXVzemJhbWVlaWJ6anZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzNjYsImV4cCI6MjA5NzI3NDM2Nn0.36r_ubgSCFAiQGoCsj_OmqWshPPX1KVHAlcF-8l0F_8';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Defensive: ensure Supabase SDK loaded
+let supabase;
+try {
+  if (!window.supabase || !window.supabase.createClient) {
+    throw new Error('Supabase SDK not loaded');
+  }
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (e) {
+  console.error('Supabase init failed:', e);
+  // Show error on login page
+  document.getElementById('loginBtn').textContent = '加载失败，请刷新重试';
+  document.getElementById('loginBtn').disabled = true;
+}
 
 // ─── Storage ───────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'gratitude_entries_v1';
@@ -529,6 +541,7 @@ function todayKey() {
 let allEntries = {};  // merged: local + cloud
 
 async function loadCloud() {
+  if (!supabase) return {};
   const user = supabase.auth.getUser ? (await supabase.auth.getUser()).data.user : null;
   if (!user) return {};
   try {
@@ -553,6 +566,7 @@ async function loadCloud() {
 }
 
 async function saveCloud(dateKey, contents) {
+  if (!supabase) return;
   const user = (await supabase.auth.getUser()).data.user;
   if (!user) return;
   try {
@@ -576,6 +590,7 @@ async function saveCloud(dateKey, contents) {
 }
 
 async function migrateLocalToCloud() {
+  if (!supabase) return;
   const localData = loadLocal();
   const keys = Object.keys(localData);
   if (!keys.length) return;
@@ -640,6 +655,11 @@ function showApp() {
 let authInitialized = false;
 
 async function initAuth() {
+  if (!supabase) {
+    showLogin();
+    authInitialized = true;
+    return;
+  }
   try {
     // Check for magic link callback
     const { data, error } = await supabase.auth.getSession();
@@ -659,38 +679,49 @@ async function initAuth() {
 }
 
 // Listen for auth changes (magic link callback)
-supabase.auth.onAuthStateChange(async (event, session) => {
-  // Ignore INITIAL_SESSION — handled by initAuth()
-  if (event === 'INITIAL_SESSION') return;
+if (supabase) {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    // Ignore INITIAL_SESSION — handled by initAuth()
+    if (event === 'INITIAL_SESSION') return;
 
-  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-    currentUser = session.user;
-    showApp();
-    await startApp();
-  } else if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    allEntries = {};
-    showLogin();
-  }
-});
+    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+      currentUser = session.user;
+      showApp();
+      await startApp();
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      allEntries = {};
+      showLogin();
+    }
+  });
+}
 
 // Login
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
   if (!email) { showBanner('请输入邮箱地址'); return; }
+  if (!supabase) { showBanner('服务加载失败，请刷新页面重试'); return; }
+
   const btn = document.getElementById('loginBtn');
   btn.disabled = true;
   btn.textContent = '发送中…';
+
   try {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: window.location.origin + window.location.pathname }
     });
-    if (error) { showBanner('发送失败：' + error.message); btn.disabled = false; btn.textContent = '发送登录链接'; return; }
+    if (error) {
+      showBanner('发送失败：' + error.message);
+      btn.disabled = false;
+      btn.textContent = '发送登录链接';
+      return;
+    }
     document.getElementById('loginSent').style.display = 'block';
     btn.textContent = '重新发送';
     btn.disabled = false;
   } catch (e) {
+    console.error('Login error:', e);
     showBanner('发送失败，请重试');
     btn.disabled = false;
     btn.textContent = '发送登录链接';
@@ -704,10 +735,11 @@ document.getElementById('loginEmail').addEventListener('keydown', (e) => {
 
 // Logout
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await supabase.auth.signOut();
+  if (supabase) await supabase.auth.signOut();
   document.getElementById('userMenu').classList.remove('show');
   allEntries = {};
   currentUser = null;
+  showLogin();
 });
 
 // User avatar / menu
