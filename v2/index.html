@@ -167,6 +167,38 @@
     }
     .edit-btn:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--text-tertiary); }
 
+    /* ─── v2: Past Light entry in completed state ─── */
+    .past-light {
+      margin-top: 28px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .past-light.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .past-light:hover { opacity: 0.85; }
+    .past-light-text {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      font-weight: 400;
+      font-style: italic;
+      transition: color 0.3s;
+    }
+    .past-light:hover .past-light-text { color: var(--text-secondary); }
+    .past-light-arrow {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      transition: color 0.3s, transform 0.3s;
+    }
+    .past-light:hover .past-light-arrow { color: var(--text-secondary); transform: translateX(2px); }
+
     /* ─── History View ─── */
     .history-header { margin-bottom: 24px; }
     .history-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
@@ -703,6 +735,11 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         <span data-i18n="edit_btn">修改今天的记录</span>
       </button>
+      <!-- v2: Completed-state entry to past light — subtle, poetic -->
+      <div class="past-light" id="pastLight" style="display:none;">
+        <span class="past-light-text" id="pastLightText"></span>
+        <span class="past-light-arrow">→</span>
+      </div>
     </div>
 
   </div>
@@ -862,6 +899,8 @@ const I18N = {
     reunion_hint: '你曾为这些瞬间心动',
     reunion_keep: '留住这束光',
     reunion_save: '保存图片',
+    past_light_text: '曾经的微光',
+    past_light_none: '每一束光，都在等待被记住',
     reunion_share: '分享',
     reunion_saving: '生成中…',
     reunion_saved: '✅ 图片已保存',
@@ -943,6 +982,8 @@ const I18N = {
     reunion_hint: 'You once felt moved by these moments',
     reunion_keep: 'Keep this light',
     reunion_save: 'Save Image',
+    past_light_text: 'A flicker of past light',
+    past_light_none: 'Every light waits to be remembered',
     reunion_share: 'Share',
     reunion_saving: 'Generating…',
     reunion_saved: '✅ Image saved',
@@ -1445,8 +1486,9 @@ function renderToday() {
     container.innerHTML = '';
     entries.forEach((text, i) => { container.appendChild(makeEntryCard(i, text, true)); });
     updateProgress();
-    // v2: Hide watermark when today is done
+    // v2: Hide watermark when today is done, but show past-light entry instead
     document.getElementById('watermark')?.style && (document.getElementById('watermark').style.display = 'none');
+    showPastLight();
     return;
   }
 
@@ -1577,6 +1619,10 @@ function updateSubmitBtn() {
 
 document.getElementById('editBtn').addEventListener('click', () => {
   todayDone = false;
+  // Reset past-light visibility
+  const pastLight = document.getElementById('pastLight');
+  pastLight.style.display = 'none';
+  pastLight.classList.remove('visible');
   renderToday();
 });
 
@@ -1751,6 +1797,46 @@ function showWatermark() {
 
 // Click watermark → open reunion
 document.getElementById('watermark').addEventListener('click', () => {
+  if (currentMemoryData) openReunion(currentMemoryData);
+});
+
+// ─── v2: Past Light (completed-state entry to Reunion) ──────────────────────
+function showPastLight() {
+  const pastLight = document.getElementById('pastLight');
+  const pastLightText = document.getElementById('pastLightText');
+  const memory = pickMemory();
+
+  if (!memory) {
+    // No past memories yet — show poetic placeholder
+    pastLightText.textContent = t('past_light_none');
+    pastLight.style.display = 'flex';
+    // Fade in with delay
+    setTimeout(() => pastLight.classList.add('visible'), 600);
+    currentMemoryData = null;
+    return;
+  }
+
+  const nonEmpty = memory.entries.filter(c => c.trim());
+  if (!nonEmpty.length) {
+    pastLightText.textContent = t('past_light_none');
+    pastLight.style.display = 'flex';
+    setTimeout(() => pastLight.classList.add('visible'), 600);
+    currentMemoryData = null;
+    return;
+  }
+
+  // Show "曾经的微光" with a snippet
+  const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  const snippet = chosenText.length > 18 ? chosenText.slice(0, 18) + '…' : chosenText;
+  pastLightText.textContent = t('past_light_text') + ' 「' + snippet + '」';
+  pastLight.style.display = 'flex';
+  currentMemoryData = memory;
+  // Fade in with delay, like a gentle afterthought
+  setTimeout(() => pastLight.classList.add('visible'), 600);
+}
+
+// Click past-light → open reunion (or show poetic message if no data)
+document.getElementById('pastLight').addEventListener('click', () => {
   if (currentMemoryData) openReunion(currentMemoryData);
 });
 
