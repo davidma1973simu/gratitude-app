@@ -404,7 +404,7 @@
       margin-top: 18px;
       opacity: 0.25;
       transition: opacity 0.5s ease;
-      cursor: default;
+      cursor: pointer;
       line-height: 1.6;
     }
     .watermark:hover { opacity: 0.55; }
@@ -413,12 +413,16 @@
       color: var(--text-secondary);
       font-weight: 400;
       font-style: italic;
+      transition: color 0.3s;
     }
+    .watermark:hover .watermark-content { color: var(--text-primary); }
     .watermark-date {
       font-size: 12px;
       color: var(--text-tertiary);
       margin-left: 6px;
+      transition: color 0.3s;
     }
+    .watermark:hover .watermark-date { color: var(--text-secondary); }
 
     /* ─── v2: Echo (in thank-you modal) ─── */
     .echo-section {
@@ -450,12 +454,129 @@
       font-style: italic;
       max-width: 280px;
       margin: 0 auto;
+      cursor: pointer;
+      transition: color 0.2s;
     }
+    .echo-text:hover { color: var(--text-primary); }
     .echo-hint {
       font-size: 12px;
       color: var(--text-tertiary);
       margin-top: 10px;
     }
+
+    /* ─── v2: Reunion Full-screen ─── */
+    .reunion-overlay {
+      position: fixed; inset: 0; z-index: 150;
+      background: #1c1917;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.5s ease;
+      padding: 40px 28px;
+      overflow-y: auto;
+    }
+    .reunion-overlay.show { opacity: 1; pointer-events: auto; }
+
+    .reunion-close {
+      position: absolute; top: 20px; right: 20px;
+      background: none; border: none; cursor: pointer;
+      color: #a8a29e; font-size: 24px; line-height: 1;
+      padding: 8px; transition: color 0.2s;
+      font-family: inherit;
+    }
+    .reunion-close:hover { color: #fafaf9; }
+
+    .reunion-date {
+      font-size: 28px; font-weight: 700; color: #fafaf9;
+      letter-spacing: -0.5px; margin-bottom: 4px;
+      opacity: 0; transform: translateY(16px);
+      transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reunion-overlay.show .reunion-date.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .reunion-date-sub {
+      font-size: 13px; color: #78716c; margin-bottom: 36px;
+      opacity: 0; transform: translateY(12px);
+      transition: opacity 0.8s ease 0.15s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s;
+    }
+    .reunion-overlay.show .reunion-date-sub.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .reunion-entries {
+      max-width: 400px; width: 100%; text-align: center;
+    }
+
+    .reunion-entry {
+      font-size: 16px; line-height: 1.7; color: #d6d3d1;
+      margin-bottom: 24px; font-weight: 400;
+      opacity: 0; transform: translateY(12px);
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reunion-overlay.show .reunion-entry.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+    .reunion-entry:first-child { font-size: 18px; color: #fafaf9; font-weight: 500; }
+    .reunion-entry.empty { color: #57534e; font-style: italic; display: none; }
+
+    .reunion-hint {
+      font-size: 13px; color: #78716c; margin-top: 12px;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reunion-overlay.show .reunion-hint.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .reunion-divider {
+      width: 48px; height: 1px; background: #44403c;
+      margin: 32px auto 16px;
+      opacity: 0; transition: opacity 0.4s ease;
+    }
+    .reunion-overlay.show .reunion-divider.fade-in { opacity: 1; }
+
+    .reunion-keep-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px;
+      background: transparent; border: 1.5px solid #57534e;
+      color: #d6d3d1; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.25s ease; font-family: inherit;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.4s ease, transform 0.4s ease, background 0.25s, color 0.25s, border-color 0.25s;
+    }
+    .reunion-overlay.show .reunion-keep-btn.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+    .reunion-keep-btn:hover {
+      background: #fafaf9; color: #1c1917; border-color: #fafaf9;
+    }
+
+    /* ─── v2: Image Card Preview ─── */
+    .card-preview-overlay {
+      position: fixed; inset: 0; z-index: 160;
+      background: rgba(0,0,0,0.85);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px; gap: 16px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .card-preview-overlay.show { opacity: 1; pointer-events: auto; }
+    .card-preview-img { max-width: 360px; width: 100%; border-radius: 16px; }
+    .card-preview-actions {
+      display: flex; gap: 12px;
+    }
+    .card-action-btn {
+      padding: 12px 24px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; font-family: inherit; transition: opacity 0.2s;
+    }
+    .card-action-btn:hover { opacity: 0.85; }
+    .card-action-btn.primary { background: #fafaf9; color: #1c1917; }
+    .card-action-btn.secondary { background: transparent; color: #d6d3d1; border: 1px solid #57534e; }
 
     [data-view] { display: none; }
     [data-view].active { display: block; }
@@ -629,6 +750,28 @@
   </div>
 </div>
 
+<!-- v2: Reunion Full-screen Overlay -->
+<div class="reunion-overlay" id="reunionOverlay">
+  <button class="reunion-close" id="reunionClose">×</button>
+  <div class="reunion-date" id="reunionDate"></div>
+  <div class="reunion-date-sub" id="reunionDateSub"></div>
+  <div class="reunion-entries" id="reunionEntries"></div>
+  <div class="reunion-divider"></div>
+  <div class="reunion-hint" id="reunionHint"></div>
+  <button class="reunion-keep-btn" id="reunionKeepBtn">
+    🌿 <span data-i18n="reunion_keep">留住这束光</span>
+  </button>
+</div>
+
+<!-- v2: Image Card Preview Overlay -->
+<div class="card-preview-overlay" id="cardPreviewOverlay">
+  <img class="card-preview-img" id="cardPreviewImg" />
+  <div class="card-preview-actions">
+    <button class="card-action-btn primary" id="cardSaveBtn" data-i18n="reunion_save">保存图片</button>
+    <button class="card-action-btn secondary" id="cardCloseBtn" data-i18n="reunion_close">×</button>
+  </div>
+</div>
+
 <!-- Notification Banner -->
 <div class="notif-banner" id="notifBanner"></div>
 
@@ -714,6 +857,16 @@ const I18N = {
     watermark_daysago: '— {n} 天前',
     watermark_yesterday: '— 昨天',
     watermark_lastyear: '— 去年的今天',
+    // ── v2: Reunion + Keep Light ──
+    reunion_close: '×',
+    reunion_hint: '你曾为这些瞬间心动',
+    reunion_keep: '留住这束光',
+    reunion_save: '保存图片',
+    reunion_share: '分享',
+    reunion_saving: '生成中…',
+    reunion_saved: '✅ 图片已保存',
+    card_app_name: '感恩日记 · Gratitude',
+    card_tagline: '留住这束光',
   },
   en: {
     login_title: 'Gratitude',
@@ -785,6 +938,16 @@ const I18N = {
     watermark_daysago: '— {n} days ago',
     watermark_yesterday: '— Yesterday',
     watermark_lastyear: '— This day last year',
+    // ── v2: Reunion + Keep Light ──
+    reunion_close: '×',
+    reunion_hint: 'You once felt moved by these moments',
+    reunion_keep: 'Keep this light',
+    reunion_save: 'Save Image',
+    reunion_share: 'Share',
+    reunion_saving: 'Generating…',
+    reunion_saved: '✅ Image saved',
+    card_app_name: 'Gratitude Journal',
+    card_tagline: 'Keep this light',
   }
 };
 
@@ -1556,16 +1719,20 @@ function showEchoInModal() {
 }
 
 // ─── v2: Watermark Light (homepage subtle past gratitude) ──────────────────
+let currentMemoryData = null; // Store for reuse in reunion
+
 function showWatermark() {
   const memory = pickMemory();
   if (!memory) {
     document.getElementById('watermark').style.display = 'none';
+    currentMemoryData = null;
     return;
   }
 
   const nonEmpty = memory.entries.filter(c => c.trim());
   if (!nonEmpty.length) {
     document.getElementById('watermark').style.display = 'none';
+    currentMemoryData = null;
     return;
   }
 
@@ -1579,7 +1746,240 @@ function showWatermark() {
   watermarkDate.textContent = formatMemoryDate(memory);
 
   watermark.style.display = 'block';
+  currentMemoryData = memory;
 }
+
+// Click watermark → open reunion
+document.getElementById('watermark').addEventListener('click', () => {
+  if (currentMemoryData) openReunion(currentMemoryData);
+});
+
+// ─── v2: Reunion Full-screen ───────────────────────────────────────────────
+function openReunion(memory) {
+  const overlay = document.getElementById('reunionOverlay');
+  const dateEl = document.getElementById('reunionDate');
+  const dateSubEl = document.getElementById('reunionDateSub');
+  const entriesEl = document.getElementById('reunionEntries');
+  const hintEl = document.getElementById('reunionHint');
+
+  // Format date for display
+  const dateObj = new Date(memory.date + 'T00:00:00');
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+
+  if (LANG === 'zh') {
+    dateEl.textContent = `${year}年${month}月${day}日`;
+    const diffDays = Math.floor((new Date(todayKey() + 'T00:00:00') - dateObj) / (1000 * 60 * 60 * 24));
+    dateSubEl.textContent = memory.isAnniversary && memory.yearsAgo === 1
+      ? '去年的今天'
+      : `${diffDays} 天前`;
+  } else {
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    dateEl.textContent = `${monthNames[month-1]} ${day}, ${year}`;
+    const diffDays = Math.floor((new Date(todayKey() + 'T00:00:00') - dateObj) / (1000 * 60 * 60 * 24));
+    dateSubEl.textContent = memory.isAnniversary && memory.yearsAgo === 1
+      ? 'This day last year'
+      : `${diffDays} days ago`;
+  }
+
+  // Build entries HTML
+  entriesEl.innerHTML = '';
+  memory.entries.forEach((text, i) => {
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'reunion-entry' + (text.trim() ? '' : ' empty');
+    entryDiv.textContent = text.trim() || '';
+    entriesEl.appendChild(entryDiv);
+  });
+
+  hintEl.textContent = t('reunion_hint');
+
+  // Store memory for "keep this light" button
+  overlay._memoryData = memory;
+
+  // Show overlay
+  overlay.classList.add('show');
+
+  // Animate elements with staggered delays
+  setTimeout(() => dateEl.classList.add('fade-in'), 100);
+  setTimeout(() => dateSubEl.classList.add('fade-in'), 200);
+  const entryDivs = entriesEl.querySelectorAll('.reunion-entry:not(.empty)');
+  entryDivs.forEach((div, i) => {
+    setTimeout(() => div.classList.add('fade-in'), 400 + i * 300);
+  });
+  setTimeout(() => {
+    const divider = overlay.querySelector('.reunion-divider');
+    if (divider) divider.classList.add('fade-in');
+  }, 400 + entryDivs.length * 300 + 200);
+  setTimeout(() => hintEl.classList.add('fade-in'), 400 + entryDivs.length * 300 + 400);
+  setTimeout(() => document.getElementById('reunionKeepBtn').classList.add('fade-in'), 400 + entryDivs.length * 300 + 600);
+}
+
+// Close reunion
+document.getElementById('reunionClose').addEventListener('click', closeReunion);
+document.getElementById('reunionOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeReunion();
+});
+function closeReunion() {
+  const overlay = document.getElementById('reunionOverlay');
+  overlay.classList.remove('show');
+  // Reset all fade-in classes
+  overlay.querySelectorAll('.fade-in').forEach(el => el.classList.remove('fade-in'));
+}
+
+// ─── v2: 留住这束光 — Generate image card ──────────────────────────────────
+document.getElementById('reunionKeepBtn').addEventListener('click', () => {
+  const overlay = document.getElementById('reunionOverlay');
+  const memory = overlay._memoryData;
+  if (!memory) return;
+  generateCard(memory);
+});
+
+function generateCard(memory) {
+  const canvas = document.createElement('canvas');
+  const W = 720;
+  const H = 960;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Dark background with subtle gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, H);
+  gradient.addColorStop(0, '#292524');
+  gradient.addColorStop(1, '#1c1917');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, W, H);
+
+  // 🌿 icon area — centered, top
+  ctx.font = '56px serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fafaf9';
+  ctx.fillText('🌿', W / 2, 120);
+
+  // Date — large, prominent
+  const dateObj = new Date(memory.date + 'T00:00:00');
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+
+  ctx.font = 'bold 32px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
+  ctx.fillStyle = '#fafaf9';
+  ctx.textAlign = 'center';
+
+  if (LANG === 'zh') {
+    ctx.fillText(`${year}年${month}月${day}日`, W / 2, 200);
+  } else {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    ctx.fillText(`${monthNames[month-1]} ${day}, ${year}`, W / 2, 200);
+  }
+
+  // Thin line divider
+  ctx.strokeStyle = '#44403c';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 32, 240);
+  ctx.lineTo(W / 2 + 32, 240);
+  ctx.stroke();
+
+  // Entries — centered, with word-wrap
+  ctx.font = '22px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
+  ctx.fillStyle = '#d6d3d1';
+  ctx.textAlign = 'center';
+
+  let y = 300;
+  const maxLineWidth = W - 120;
+
+  memory.entries.forEach((text, i) => {
+    if (!text.trim()) return;
+    // First entry slightly larger/brighter
+    if (i === 0) {
+      ctx.font = 'bold 24px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
+      ctx.fillStyle = '#fafaf9';
+    } else {
+      ctx.font = '22px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
+      ctx.fillStyle = '#d6d3d1';
+    }
+
+    const lines = wrapText(ctx, text.trim(), maxLineWidth);
+    lines.forEach(line => {
+      ctx.fillText(line, W / 2, y);
+      y += 36;
+    });
+    y += 20; // Extra spacing between entries
+  });
+
+  // Hint line at bottom area
+  const bottomHintY = H - 160;
+  ctx.font = '14px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
+  ctx.fillStyle = '#78716c';
+  ctx.textAlign = 'center';
+  ctx.fillText(t('reunion_hint'), W / 2, bottomHintY);
+
+  // App name + tagline at bottom
+  ctx.font = '13px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
+  ctx.fillStyle = '#57534e';
+  ctx.fillText(t('card_tagline'), W / 2, H - 90);
+  ctx.fillText('🌿 ' + t('card_app_name'), W / 2, H - 60);
+
+  // Convert to image
+  const dataUrl = canvas.toDataURL('image/png');
+  showCardPreview(dataUrl);
+}
+
+// Word-wrap helper for Canvas
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split('');
+  const lines = [];
+  let currentLine = '';
+
+  for (let i = 0; i < words.length; i++) {
+    const testLine = currentLine + words[i];
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && currentLine.length > 0) {
+      lines.push(currentLine);
+      currentLine = words[i];
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+function showCardPreview(dataUrl) {
+  const previewOverlay = document.getElementById('cardPreviewOverlay');
+  const img = document.getElementById('cardPreviewImg');
+  img.src = dataUrl;
+  previewOverlay.classList.add('show');
+
+  // Save button
+  document.getElementById('cardSaveBtn').onclick = () => {
+    // Create download link
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'gratitude-light.png';
+    a.click();
+    showBanner(t('reunion_saved'));
+  };
+
+  document.getElementById('cardCloseBtn').onclick = () => {
+    previewOverlay.classList.remove('show');
+  };
+}
+
+// Also allow echo text to open reunion (clicking the echo entry)
+document.getElementById('echoText').addEventListener('click', () => {
+  // Re-pick same memory or use the current one
+  // Since we don't store the echo's memory, re-pick
+  const memory = pickMemory();
+  if (memory) {
+    // Close the thanks modal first
+    document.getElementById('thanksOverlay').classList.remove('show');
+    const echoSection = document.getElementById('echoSection');
+    if (echoSection) { echoSection.style.display = 'none'; echoSection.classList.remove('visible'); }
+    setTimeout(() => openReunion(memory), 300);
+  }
+});
 
 // ─── History Render ────────────────────────────────────────────────────────
 function renderHistory(query = '') {
