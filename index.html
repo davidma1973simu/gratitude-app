@@ -761,12 +761,11 @@ const SB = {
       const raw = localStorage.getItem('sb_auth');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed.expires_at && Date.now() / 1000 < parsed.expires_at) {
+        // Return tokens even if expired — getSession will attempt refresh
+        if (parsed.access_token) {
           this._tokens = parsed;
           return parsed;
         }
-        this._tokens = null;
-        localStorage.removeItem('sb_auth');
       }
     } catch { this._tokens = null; }
     return null;
@@ -835,14 +834,30 @@ const SB = {
   async getSession() {
     const tokens = this._loadTokens();
     if (!tokens) return null;
+    // If token expires within 5 minutes, try to refresh
     if (tokens.expires_at && Date.now() / 1000 > tokens.expires_at - 300) {
-      try {
-        const refreshed = await this._refreshToken(tokens.refresh_token);
-        return this._tokens;
-      } catch {
+      if (!tokens.refresh_token) {
+        // No refresh token — can't renew, but keep current tokens if still valid
+        if (Date.now() / 1000 < tokens.expires_at) return tokens;
         localStorage.removeItem('sb_auth');
         this._tokens = null;
         return null;
+      }
+      try {
+        await this._refreshToken(tokens.refresh_token);
+        return this._tokens;
+      } catch (e) {
+        const msg = e.message || '';
+        // Only clear session for real auth errors (bad refresh token)
+        // Don't clear for network errors — user may be offline
+        if (msg.includes('Invalid Refresh Token') || msg.includes('Token has expired') || msg.includes('invalid_grant')) {
+          localStorage.removeItem('sb_auth');
+          this._tokens = null;
+          return null;
+        }
+        // Network error: return current (expired) tokens — app will show cached data
+        console.warn('Token refresh failed (network?), keeping session:', msg);
+        return tokens;
       }
     }
     return tokens;
@@ -1123,9 +1138,14 @@ async function startApp() {
   allEntries = mergeData(localData, updatedCloud);
   saveLocal(allEntries);
   const key = todayKey();
-  if (allEntries[key] && allEntries[key].length === 3) {
+  if (allEntries[key] && allEntries[key].some(c => c.trim())) {
     entries = allEntries[key];
-    todayDone = true;
+    todayDone = isSubmitted(key);
+  }
+  // If not submitted today, check for a draft (overrides partial cloud data)
+  if (!todayDone) {
+    const draft = loadDraft();
+    if (draft) entries = draft;
   }
   setNavDate();
   setGreeting();
@@ -1225,6 +1245,60 @@ function onEntryInput(index, value) {
   updateSubmitBtn();
   const ta = document.getElementById(`entry-${index}`);
   if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  // Auto-save draft immediately — even partial entries
+  saveDraft();
+}
+
+// ─── Draft (unsaved today's entries) ──────────────────────────────────────
+const DRAFT_KEY = 'gratitude_draft_v1';
+const SUBMITTED_KEY = 'gratitude_submitted_v1';
+
+function saveDraft() {
+  // Only save if today's entries are not yet submitted
+  if (todayDone) return;
+  const key = todayKey();
+  if (entries.some(e => e.trim())) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ date: key, entries }));
+  } else {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    // Only valid if draft is for today and today is not yet submitted
+    if (draft.date === todayKey() && !todayDone) return draft.entries;
+    return null;
+  } catch { return null; }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+function isSubmitted(dateKey) {
+  try {
+    const raw = localStorage.getItem(SUBMITTED_KEY);
+    if (!raw) return false;
+    const dates = JSON.parse(raw);
+    return Array.isArray(dates) && dates.includes(dateKey);
+  } catch { return false; }
+}
+
+function markSubmitted(dateKey) {
+  try {
+    const raw = localStorage.getItem(SUBMITTED_KEY);
+    const dates = raw ? JSON.parse(raw) : [];
+    if (!dates.includes(dateKey)) {
+      dates.push(dateKey);
+      // Keep only last 90 days to avoid bloat
+      if (dates.length > 90) dates.splice(0, dates.length - 90);
+      localStorage.setItem(SUBMITTED_KEY, JSON.stringify(dates));
+    }
+  } catch {}
 }
 
 function updateProgress() {
@@ -1237,7 +1311,7 @@ function updateProgress() {
 }
 
 function updateSubmitBtn() {
-  document.getElementById('submitBtn').disabled = !entries.every(e => e.trim().length > 0);
+  document.getElementById('submitBtn').disabled = !entries.some(e => e.trim().length > 0);
 }
 
 document.getElementById('editBtn').addEventListener('click', () => {
@@ -1246,12 +1320,14 @@ document.getElementById('editBtn').addEventListener('click', () => {
 });
 
 document.getElementById('submitBtn').addEventListener('click', async () => {
-  if (!entries.every(e => e.trim())) return;
+  if (!entries.some(e => e.trim())) return;
   const key = todayKey();
   const trimmed = entries.map(e => e.trim());
   allEntries[key] = trimmed;
   saveLocal(allEntries);
   if (currentUser) await saveCloud(key, trimmed);
+  markSubmitted(key);
+  clearDraft();
   todayDone = true;
   renderToday();
   renderHistory();
