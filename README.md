@@ -4,6 +4,25 @@
 
 [Try it now →](https://davidma1973simu.github.io/gratitude-app/)
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/screenshot-login-zh.png" width="280" alt="Login (Chinese)" />
+  <img src="screenshots/screenshot-login-en.png" width="280" alt="Login (English)" />
+</p>
+<p align="center">🔐 Email + password login · Bilingual toggle on login page</p>
+
+<p align="center">
+  <img src="screenshots/screenshot-filled-zh.png" width="280" alt="Writing entries (Chinese)" />
+  <img src="screenshots/screenshot-main-en.png" width="280" alt="Main view (English)" />
+</p>
+<p align="center">✍️ Write 3 gratitudes · Auto-save drafts · Edit anytime before submit</p>
+
+<p align="center">
+  <img src="screenshots/screenshot-history-zh.png" width="280" alt="History view" />
+</p>
+<p align="center">📖 Browse and search all past entries ("Past Light")</p>
+
 ## What is this?
 
 A minimalist gratitude journal that does exactly one thing well: lets you record three things you're grateful for each day. No ads, no social pressure, no gamification, no AI — just you and your light.
