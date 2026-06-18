@@ -1669,7 +1669,7 @@ function pickMemory() {
   const today = todayKey();
   // Remove today and future dates
   const pastKeys = keys.filter(k => k < today && allEntries[k].some(c => c.trim()));
-  if (pastKeys.length < 7) return null; // Too few entries — stay silent
+  if (pastKeys.length < 1) return null; // No past entries — stay silent
 
   // 1. Same-day anniversary: exactly 1 year ago, 2 years ago, etc.
   const todayDate = new Date(today + 'T00:00:00');
@@ -1835,9 +1835,18 @@ function showPastLight() {
   setTimeout(() => pastLight.classList.add('visible'), 600);
 }
 
-// Click past-light → open reunion (or show poetic message if no data)
+// Click past-light → open reunion (or navigate to history if no data)
 document.getElementById('pastLight').addEventListener('click', () => {
-  if (currentMemoryData) openReunion(currentMemoryData);
+  if (currentMemoryData) {
+    openReunion(currentMemoryData);
+  } else {
+    // No past memories — gently guide user to history
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[data-view]').forEach(v => v.classList.remove('active'));
+    document.querySelector('.nav-tab[data-tab="history"]').classList.add('active');
+    document.querySelector('[data-view="history"]').classList.add('active');
+    renderHistory('');
+  }
 });
 
 // ─── v2: Reunion Full-screen ───────────────────────────────────────────────
