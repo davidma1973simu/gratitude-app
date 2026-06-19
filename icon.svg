@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>感恩日记 · Gratitude</title>
+  <desc>PWA App Icon — green leaf branch on emerald background</desc>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#10B981"/>
+
+  <!-- Depth layers -->
+  <circle cx="256" cy="256" r="180" fill="#ECFDF5" opacity="0.12"/>
+  <circle cx="256" cy="256" r="120" fill="#D1FAE5" opacity="0.15"/>
+  <circle cx="256" cy="256" r="70" fill="#6EE7B7" opacity="0.2"/>
+
+  <!-- Light rays -->
+  <line x1="256" y1="256" x2="256" y2="110" stroke="#D1FAE5" stroke-width="6" opacity="0.4" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="208" y2="140" stroke="#D1FAE5" stroke-width="5" opacity="0.3" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="304" y2="140" stroke="#D1FAE5" stroke-width="5" opacity="0.3" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="150" y2="190" stroke="#D1FAE5" stroke-width="4" opacity="0.2" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="362" y2="190" stroke="#D1FAE5" stroke-width="4" opacity="0.2" stroke-linecap="round"/>
+
+  <!-- Central light -->
+  <circle cx="256" cy="256" r="52" fill="#ECFDF5" opacity="0.35"/>
+  <circle cx="256" cy="256" r="34" fill="#D1FAE5" opacity="0.55"/>
+
+  <!-- Leaf branch -->
+  <path d="M256,316 Q252,292 256,270 Q261,248 256,210"
+        stroke="#ECFDF5" stroke-width="7" stroke-linecap="round" fill="none"/>
+
+  <!-- Leaves -->
+  <ellipse cx="230" cy="256" rx="20" ry="34" transform="rotate(-30 230 256)" fill="#ECFDF5" opacity="0.92"/>
+  <ellipse cx="282" cy="250" rx="20" ry="32" transform="rotate(25 282 250)" fill="#D1FAE5" opacity="0.9"/>
+  <ellipse cx="224" cy="300" rx="16" ry="26" transform="rotate(-40 224 300)" fill="#ECFDF5" opacity="0.85"/>
+  <ellipse cx="288" cy="292" rx="16" ry="26" transform="rotate(35 288 292)" fill="#D1FAE5" opacity="0.8"/>
+  <ellipse cx="242" cy="220" rx="14" ry="22" transform="rotate(-20 242 220)" fill="#ECFDF5" opacity="0.9"/>
+  <ellipse cx="270" cy="216" rx="12" ry="20" transform="rotate(20 270 216)" fill="#D1FAE5" opacity="0.85"/>
+
+</svg>

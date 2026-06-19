@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ECFDF5" />
+  <title>感恩日记</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: #fafaf9;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .splash {
+      text-align: center;
+      animation: fadeUp 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    /* ─── Light & Leaf Motif ─── */
+    .motif {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      margin: 0 auto 48px;
+    }
+
+    .motif .glow {
+      position: absolute;
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .glow-1 { width: 140px; height: 140px; background: rgba(236,253,245, 0.8); }
+    .glow-2 { width: 100px; height: 100px; background: rgba(209,250,229, 0.6); }
+    .glow-3 { width: 64px;  height: 64px;  background: rgba(167,243,208, 0.4); }
+
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .ring-1 { width: 68px; height: 68px; border: 1.5px solid rgba(52,211,153, 0.25); }
+    .ring-2 { width: 52px; height: 52px; border: 1.5px solid rgba(16,185,129, 0.3); }
+    .ring-3 { width: 36px; height: 36px; border: 1.5px solid rgba(16,185,129, 0.35); }
+
+    .core {
+      position: absolute;
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    .core-1 { width: 32px; height: 32px; background: rgba(209,250,229, 0.7); }
+    .core-2 { width: 18px; height: 18px; background: rgba(52,211,153, 0.6); }
+
+    /* Rays */
+    .ray {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 2px;
+      height: 40px;
+      background: rgba(16,185,129, 0.3);
+      border-radius: 2px;
+      transform-origin: bottom center;
+      opacity: 0;
+      animation: rayFade 2s ease-in-out infinite;
+    }
+
+    /* ─── Leaf SVG ─── */
+    .leaf-svg {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: leafBreathe 3s ease-in-out infinite;
+    }
+
+    /* ─── Typography ─── */
+    .app-name {
+      font-size: 28px;
+      font-weight: 500;
+      color: #1c1917;
+      letter-spacing: 4px;
+      margin-bottom: 12px;
+    }
+
+    .tagline {
+      font-size: 15px;
+      color: #15803D;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+
+    .divider {
+      width: 120px;
+      height: 1px;
+      background: rgba(167,243,208, 0.5);
+      margin: 0 auto 20px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #6B7280;
+      letter-spacing: 1px;
+    }
+
+    /* ─── Loading dots ─── */
+    .loading {
+      margin-top: 52px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #D1D5DB;
+    }
+    .dot.active {
+      background: #10B981;
+      animation: dotPulse 1.4s ease-in-out infinite;
+    }
+
+    /* ─── Animations ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.55; }
+      50%      { transform: translate(-50%, -50%) scale(1.08); opacity: 0.7; }
+    }
+    @keyframes leafBreathe {
+      0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+      50%      { transform: translate(-50%, -50%) scale(1.04) rotate(1deg); }
+    }
+    @keyframes dotPulse {
+      0%, 100% { opacity: 0.4; transform: scale(0.9); }
+      50%      { opacity: 1; transform: scale(1.25); }
+    }
+    @keyframes rayFade {
+      0%, 100% { opacity: 0; }
+      50%      { opacity: 0.35; }
+    }
+  </style>
+</head>
+<body>
+  <div class="splash">
+
+    <!-- Light & Leaf Motif -->
+    <div class="motif">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+      <div class="glow glow-3"></div>
+
+      <!-- Rings -->
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+
+      <!-- Rays -->
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(0deg)   translateY(-18px); animation-delay: 0s;"></div>
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(45deg)  translateY(-18px); animation-delay: 0.3s;"></div>
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(90deg)  translateY(-18px); animation-delay: 0.6s;"></div>
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(135deg) translateY(-18px); animation-delay: 0.9s;"></div>
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(180deg) translateY(-18px); animation-delay: 1.2s;"></div>
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(225deg) translateY(-18px); animation-delay: 1.5s;"></div>
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(270deg) translateY(-18px); animation-delay: 1.8s;"></div>
+      <div class="ray" style="transform: translate(-50%,-50%) rotate(315deg) translateY(-18px); animation-delay: 2.1s;"></div>
+
+      <!-- Core -->
+      <div class="core core-1"></div>
+      <div class="core core-2"></div>
+
+      <!-- Leaf SVG -->
+      <svg class="leaf-svg" width="64" height="80" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32,63 Q30,48 32,33 Q35,18 32,3"
+              stroke="#15803D" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="22" cy="21" rx="9" ry="14" transform="rotate(-30 22 21)" fill="#22C55E" opacity="0.9"/>
+        <ellipse cx="42" cy="18" rx="8" ry="13" transform="rotate(25 42 18)" fill="#16A34A" opacity="0.85"/>
+        <ellipse cx="19" cy="40" rx="7" ry="11" transform="rotate(-40 19 40)" fill="#22C55E" opacity="0.8"/>
+        <ellipse cx="45" cy="36" rx="7" ry="11" transform="rotate(35 45 36)" fill="#16A34A" opacity="0.75"/>
+        <ellipse cx="27" cy="9" rx="6" ry="10" transform="rotate(-20 27 9)" fill="#4ADE80" opacity="0.9"/>
+        <ellipse cx="37" cy="6" rx="5" ry="8" transform="rotate(20 37 6)" fill="#22C55E" opacity="0.85"/>
+      </svg>
+    </div>
+
+    <!-- Text -->
+    <h1 class="app-name">感恩日记</h1>
+    <p class="tagline">留住每一束光</p>
+    <div class="divider"></div>
+    <p class="hint">每天记录 · 温柔提醒 · 收藏感动</p>
+
+    <!-- Loading -->
+    <div class="loading">
+      <div class="dot"></div>
+      <div class="dot active"></div>
+      <div class="dot"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // Auto-redirect to main app after splash
+    // Can be triggered by app logic or timeout
+    window.__splashReady = function() {
+      document.querySelector('.splash').style.animation = 'fadeUp 0.4s ease-in reverse both';
+      setTimeout(function() {
+        window.location.href = 'index.html';
+      }, 400);
+    };
+  </script>
+</body>
+</html>
