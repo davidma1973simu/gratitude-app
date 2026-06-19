@@ -618,8 +618,8 @@ const I18N = {
     greeting_evening_sub: '每天三件，点滴积累成改变',
     greeting_welcome: '欢迎回来，\n光一直在等你 ✦',
     greeting_welcome_sub: '今天，写下你想感恩的事',
-    reminder_banner: '🌙 距午夜还有 {n} 分钟，今天还没有写感恩日记',
-    reminder_notif: '午夜前一小时提醒：今天还没有记录感恩，写下三件事吧',
+    reminder_banner: '🌙 今天快结束了，有没有什么想感恩的？',
+    reminder_notif: '睡前，记录一束光吧 ✦',
     reminder_notif_title: '感恩日记 🌿',
     install_title: '添加到主屏幕',
     install_desc: '像原生 App 一样快速打开',
@@ -681,8 +681,8 @@ const I18N = {
     greeting_evening_sub: 'Three a day, small steps change everything',
     greeting_welcome: 'Welcome back,\nthe light has been waiting for you ✦',
     greeting_welcome_sub: 'Today, write what you\'re grateful for',
-    reminder_banner: '🌙 {n} min until midnight — no gratitude entry yet',
-    reminder_notif: 'One hour before midnight reminder: write your 3 gratitudes today',
+    reminder_banner: '🌙 The day is almost over. Anything you\'re grateful for?',
+    reminder_notif: 'Before sleep, capture a beam of light ✦',
     reminder_notif_title: 'Gratitude 🌿',
     install_title: 'Add to Home Screen',
     install_desc: 'Open like a native app',
@@ -1442,19 +1442,17 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
 
 // ─── Reminder ──────────────────────────────────────────────────────────────
 function scheduleReminder() {
-  let lastBannerMinute = -1;
+  let reminderBannerShown = false;
   function checkAndNotify() {
     const key = todayKey();
-    if (allEntries[key] && allEntries[key].length === 3 && allEntries[key].some(e => e.trim())) return;
+    if (allEntries[key] && allEntries[key].some(e => e.trim())) return;
     const now = new Date();
     const h = now.getHours(), m = now.getMinutes();
-    const currentMinute = h * 60 + m;
-    if (h === 23 && currentMinute !== lastBannerMinute) {
-      lastBannerMinute = currentMinute;
-      const remaining = 60 - m;
-      showBanner(t('reminder_banner', { n: remaining }));
+    if (h === 23 && m === 0 && !reminderBannerShown) {
+      reminderBannerShown = true;
+      showBanner(t('reminder_banner'));
     }
-  }
+    if (h === 0) reminderBannerShown = false;
   checkAndNotify();
   setInterval(checkAndNotify, 60 * 1000);
 
