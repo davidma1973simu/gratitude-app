@@ -1475,17 +1475,6 @@ let currentUser = null;
 let reminderBannerShown = false;
 
 // ─── Auth UI ───────────────────────────────────────────────────────────────
-function showLogin() {
-  document.getElementById('loginView').style.display = 'flex';
-  document.getElementById('appShell').style.display = 'none';
-}
-function showApp() {
-  document.getElementById('loginView').style.display = 'none';
-  document.getElementById('appShell').style.display = 'block';
-  // Hide splash after app is ready
-  hideSplash();
-}
-
 function hideSplash() {
   var splash = document.getElementById('splashOverlay');
   if (!splash || splash.classList.contains('hidden')) return;
@@ -1493,6 +1482,22 @@ function hideSplash() {
   setTimeout(function() {
     splash.style.display = 'none';
   }, 500);
+}
+
+// Auto-hide splash after 2 seconds, or tap anywhere to dismiss immediately
+document.getElementById('splashOverlay').addEventListener('click', hideSplash);
+document.getElementById('splashOverlay').addEventListener('touchstart', hideSplash);
+setTimeout(hideSplash, 2000);
+
+function showLogin() {
+  document.getElementById('loginView').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+  hideSplash();
+}
+function showApp() {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  hideSplash();
 }
 
 async function initAuth() {

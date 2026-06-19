@@ -1117,19 +1117,27 @@ let todayDone = false;
 let currentUser = null;
 
 // ─── Auth UI ───────────────────────────────────────────────────────────────
+function hideSplash() {
+  var splash = document.getElementById('splashOverlay');
+  if (!splash || splash.classList.contains('hidden')) return;
+  splash.classList.add('hidden');
+  setTimeout(function() { splash.style.display = 'none'; }, 500);
+}
+
+// Auto-hide splash after 2 seconds, or tap anywhere to dismiss immediately
+document.getElementById('splashOverlay').addEventListener('click', hideSplash);
+document.getElementById('splashOverlay').addEventListener('touchstart', hideSplash);
+setTimeout(hideSplash, 2000);
+
 function showLogin() {
   document.getElementById('loginView').style.display = 'flex';
   document.getElementById('appShell').style.display = 'none';
+  hideSplash();
 }
 function showApp() {
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
-  // Hide splash screen after app is ready
-  var splash = document.getElementById('splashOverlay');
-  if (splash && !splash.classList.contains('hidden')) {
-    splash.classList.add('hidden');
-    setTimeout(function() { splash.style.display = 'none'; }, 500);
-  }
+  hideSplash();
 }
 
 async function initAuth() {
