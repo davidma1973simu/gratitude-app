@@ -1376,53 +1376,78 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = t('login_btn_loading');
 
-  try {
-    try {
-      const session = await SB.signInWithPassword(email, password);
-      currentUser = session.user;
-      showApp();
-      await startApp();
-      return;
-    } catch (signInErr) {
-      const errMsg = signInErr.message || '';
-      if (errMsg.includes('Invalid login credentials')) {
-        const signUpResult = await SB.signUp(email, password);
-        if (signUpResult.access_token) {
-          let user = null;
-          try {
-            const payload = JSON.parse(atob(signUpResult.access_token.split('.')[1]));
-            user = { id: payload.sub, email: payload.email, aud: payload.aud };
-          } catch {}
-          const session = {
-            access_token: signUpResult.access_token,
-            refresh_token: signUpResult.refresh_token || '',
-            expires_at: signUpResult.expires_at || (Date.now() / 1000 + 3600),
-            user: user || signUpResult.user,
-          };
-          SB._saveTokens(session);
-          currentUser = session.user;
-          showApp();
-          await startApp();
-          return;
-        }
+  // Helper: login with auto-retry for transient errors (rate limits, network)
+  async function doLoginWithRetry(maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
         try {
           const session = await SB.signInWithPassword(email, password);
           currentUser = session.user;
           showApp();
           await startApp();
-          return;
-        } catch (_) {
-          throw new Error(t('err_confirm_email'));
+          return; // success
+        } catch (signInErr) {
+          const errMsg = signInErr.message || '';
+          // If it's a rate-limit / too-many-requests error and we have retries left, wait and retry
+          if ((errMsg.includes('429') || errMsg.includes('Too Many Requests') || errMsg.includes('rate_limit') || errMsg.includes('limit') || errMsg.includes('overloaded') || errMsg.includes('503') || errMsg.includes('502')) && attempt < maxRetries) {
+            const waitMs = Math.pow(2, attempt + 1) * 3000; // 3s, 6s
+            console.warn(`Login rate limited, retrying in ${waitMs}ms... (attempt ${attempt + 1}/${maxRetries})`);
+            await new Promise(r => setTimeout(r, waitMs));
+            continue;
+          }
+          // Non-retryable sign-in error → try signup path
+          if (errMsg.includes('Invalid login credentials')) {
+            const signUpResult = await SB.signUp(email, password);
+            if (signUpResult.access_token) {
+              let user = null;
+              try {
+                const payload = JSON.parse(atob(signUpResult.access_token.split('.')[1]));
+                user = { id: payload.sub, email: payload.email, aud: payload.aud };
+              } catch {}
+              const session = {
+                access_token: signUpResult.access_token,
+                refresh_token: signUpResult.refresh_token || '',
+                expires_at: signUpResult.expires_at || (Date.now() / 1000 + 3600),
+                user: user || signUpResult.user,
+              };
+              SB._saveTokens(session);
+              currentUser = session.user;
+              showApp();
+              await startApp();
+              return;
+            }
+            try {
+              const session = await SB.signInWithPassword(email, password);
+              currentUser = session.user;
+              showApp();
+              await startApp();
+              return;
+            } catch (_) {
+              throw new Error(t('err_confirm_email'));
+            }
+          }
+          if (errMsg.includes('Email not confirmed')) {
+            throw new Error(t('err_email_not_confirmed'));
+          }
+          throw signInErr;
         }
+      } catch (e) {
+        if (attempt === maxRetries) throw e;
       }
-      if (errMsg.includes('Email not confirmed')) {
-        throw new Error(t('err_email_not_confirmed'));
-      }
-      throw signInErr;
     }
+  }
+
+  try {
+    await doLoginWithRetry();
   } catch (e) {
     console.error('Login error:', e);
-    showBanner(e.message || t('err_login'));
+    const msg = e.message || '';
+    // Friendly message for rate limit
+    if (msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('rate_limit') || msg.includes('limit') || msg.includes('overloaded')) {
+      showBanner(LANG === 'zh' ? '服务器繁忙，请稍后再试' : 'Server busy, please try again shortly');
+    } else {
+      showBanner(msg || t('err_login'));
+    }
     btn.disabled = false;
     btn.textContent = t('login_btn');
   }
@@ -1525,6 +1550,10 @@ function setGreeting() {
       return;
     }
   }
+
+  // Note: M1/M2 milestones show in the thank-you modal (not here).
+  // M3/M4/M5 are handled above. Continue to time-based greeting.
+
   const h = new Date().getHours();
   let titleKey, subKey;
   if (h < 6)       { titleKey = 'greeting_night'; subKey = 'greeting_night_sub'; }
@@ -1770,11 +1799,15 @@ function checkMilestone(mode) {
 
 // Show milestone message in the thank-you modal (M1, M2)
 function showMilestoneInModal(msNum) {
-  const titleEl = document.getElementById('thanksTitle');
-  const subEl = document.getElementById('thanksSubtitle');
+  const titleEl = document.getElementById('modalTitle');  // data-i18n="modal_title"
+  const subEl = document.getElementById('modalDesc');     // data-i18n="modal_desc"
   if (titleEl && subEl) {
     titleEl.textContent = t('ms_' + msNum + '_title');
     subEl.textContent = t('ms_' + msNum + '_sub');
+    // Make it warm and noticeable
+    titleEl.style.color = '#b45309';
+    titleEl.style.fontSize = '24px';
+    subEl.style.color = '#a16207';
   }
 }
 
@@ -1785,13 +1818,21 @@ function showMilestoneInGreeting(msNum) {
   if (titleEl && subEl) {
     titleEl.textContent = t('ms_' + msNum + '_title').replace(/\n/g, '\n');
     subEl.textContent = t('ms_' + msNum + '_sub');
+    // Make milestone greeting stand out — gentle warm highlight
+    titleEl.style.color = '#b45309';   // warm amber
+    subEl.style.color = '#a16207';
     // Subtle pulse animation for the greeting container
-    const gContainer = titleEl.closest('.greeting') || titleEl.parentElement;
+    const gContainer = titleEl.closest('.today-header') || titleEl.parentElement;
     if (gContainer) {
-      gContainer.style.transition = 'opacity 0.6s ease';
+      gContainer.style.transition = 'opacity 0.8s ease';
       gContainer.style.opacity = '0';
-      setTimeout(() => { gContainer.style.opacity = '1'; }, 100);
+      setTimeout(() => { gContainer.style.opacity = '1'; }, 150);
     }
+    // Reset color after user sees it (on next interaction)
+    setTimeout(() => {
+      if (titleEl) titleEl.style.color = '';
+      if (subEl) subEl.style.color = '';
+    }, 8000);
   }
 }
 
@@ -2063,14 +2104,22 @@ function openReunion(memory) {
       : `${diffDays} days ago`;
   }
 
-  // Build entries HTML
+  // ── Pick ONE random non-empty entry (syncs with card) ──
+  const nonEmptyEntries = memory.entries.filter(t => t.trim());
+  const chosenEntry = nonEmptyEntries.length > 0
+    ? nonEmptyEntries[Math.floor(Math.random() * nonEmptyEntries.length)]
+    : '';
+  // Store chosen entry so card generation uses the exact same one
+  overlay._chosenEntry = chosenEntry;
+
+  // Build entries HTML — only ONE entry
   entriesEl.innerHTML = '';
-  memory.entries.forEach((text, i) => {
+  if (chosenEntry.trim()) {
     const entryDiv = document.createElement('div');
-    entryDiv.className = 'reunion-entry' + (text.trim() ? '' : ' empty');
-    entryDiv.textContent = text.trim() || '';
+    entryDiv.className = 'reunion-entry';
+    entryDiv.textContent = chosenEntry.trim();
     entriesEl.appendChild(entryDiv);
-  });
+  }
 
   hintEl.textContent = t('reunion_hint');
 
@@ -2083,16 +2132,17 @@ function openReunion(memory) {
   // Animate elements with staggered delays
   setTimeout(() => dateEl.classList.add('fade-in'), 100);
   setTimeout(() => dateSubEl.classList.add('fade-in'), 200);
-  const entryDivs = entriesEl.querySelectorAll('.reunion-entry:not(.empty)');
+  const entryDivs = entriesEl.querySelectorAll('.reunion-entry');
   entryDivs.forEach((div, i) => {
     setTimeout(() => div.classList.add('fade-in'), 400 + i * 300);
   });
+  const baseDelay = 400 + entryDivs.length * 300;
   setTimeout(() => {
     const divider = overlay.querySelector('.reunion-divider');
     if (divider) divider.classList.add('fade-in');
-  }, 400 + entryDivs.length * 300 + 200);
-  setTimeout(() => hintEl.classList.add('fade-in'), 400 + entryDivs.length * 300 + 400);
-  setTimeout(() => document.getElementById('reunionKeepBtn').classList.add('fade-in'), 400 + entryDivs.length * 300 + 600);
+  }, baseDelay + 200);
+  setTimeout(() => hintEl.classList.add('fade-in'), baseDelay + 400);
+  setTimeout(() => document.getElementById('reunionKeepBtn').classList.add('fade-in'), baseDelay + 600);
 }
 
 // Close reunion
@@ -2122,11 +2172,17 @@ function generateCard(memory) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // ─── Pick ONE random non-empty entry ───
-  const nonEmpty = memory.entries.filter(t => t.trim());
-  if (!nonEmpty.length) return;
-  const pickOne = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
-  const entryText = pickOne.trim();
+  // ─── Use the SAME entry that reunion displays (sync) ───
+  let entryText = '';
+  const reunionOverlay = document.getElementById('reunionOverlay');
+  if (reunionOverlay._chosenEntry && reunionOverlay._chosenEntry.trim()) {
+    entryText = reunionOverlay._chosenEntry.trim();
+  } else {
+    // Fallback: pick one random non-empty entry
+    const nonEmpty = memory.entries.filter(t => t.trim());
+    if (!nonEmpty.length) return;
+    entryText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)].trim();
+  }
 
   // ─── Polaroid dimensions ───
   const BORDER = 20;
@@ -2244,21 +2300,23 @@ function generateCard(memory) {
       ? '"PingFang SC", "SF Pro Display", "-apple-system", "Helvetica Neue Light", sans-serif'
       : '"SF Pro Display Light", "Helvetica Neue Light", "-apple-system", sans-serif';
 
-    // Date — small, left-aligned, very quiet
+    // Date — darker gray (+2 levels), larger (+20%), left-aligned, quiet
     const d = new Date(memory.date + 'T00:00:00');
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const dateStr = `${year}.${month}.${day}`;
 
-    ctx.font = '300 13px ' + peaceFont;
-    ctx.fillStyle = 'rgba(150,140,125,0.35)';
+    ctx.font = '300 16px ' + peaceFont;
+    ctx.fillStyle = 'rgba(110,100,85,0.60)';
     ctx.textAlign = 'left';
-    ctx.fillText(dateStr, BORDER + 16, capTop + 22);
+    ctx.fillText(dateStr, BORDER + 16, capTop + 26);
 
     // Main entry text — LARGE (2x), thin weight, dark ink on cream
-    const textStartY = capTop + 70;
-    const maxTextW = W - 64;
+    // Layout: left 20% padding, right-aligned (peaceful, like margin notes)
+    const textStartY = capTop + 76;
+    const textLeft = Math.round(W * 0.20);   // 20% from left
+    const maxTextW = W - textLeft - 32;       // remaining width minus right margin
 
     let fSize = 80;
     if (entryText.length > 6) fSize = 72;
@@ -2270,12 +2328,13 @@ function generateCard(memory) {
 
     ctx.font = `200 ${fSize}px ${peaceFont}`;
     ctx.fillStyle = 'rgba(25,22,18,0.82)';
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'right';
 
     // Clean lines, no decoration, no wobble — peaceful
+    // Right-aligned within 80% width (20% left padding)
     const lines = wrapText(ctx, entryText, maxTextW);
     lines.forEach((ln, i) => {
-      ctx.fillText(ln, capCenterX, textStartY + i * Math.round(fSize * 1.75));
+      ctx.fillText(ln, W - 32, textStartY + i * Math.round(fSize * 1.75));
     });
 
     const dataUrl = canvas.toDataURL('image/png');
