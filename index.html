@@ -1455,6 +1455,7 @@ function scheduleReminder() {
       showBanner(t('reminder_banner'));
     }
     if (h === 0) reminderBannerShown = false;
+  }
   checkAndNotify();
   setInterval(checkAndNotify, 60 * 1000);
 
