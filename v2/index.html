@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="theme-color" content="#fafaf9" />
   <title>感恩日记 · Gratitude</title>
@@ -2315,7 +2315,11 @@ initAuth();
 // ─── Service Worker ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   const swPath = new URL('sw.js', window.location.href).pathname;
-  navigator.serviceWorker.register(swPath).then(reg => { reg.update(); }).catch(() => {});
+  navigator.serviceWorker.register(swPath + '?v=3').then(reg => {
+    reg.update();
+  }).catch(err => {
+    console.warn('[SW] Registration failed:', err.message);
+  });
 }
 
 // ─── PWA Install Prompt ───────────────────────────────────────────────────
