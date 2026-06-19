@@ -89,26 +89,23 @@
     .today-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; line-height: 1.2; }
     .today-header p { font-size: 15px; color: var(--text-secondary); margin-top: 6px; font-weight: 400; }
 
-    /* ─── Encouragement / Milestone Area ─── */
+    /* ─── Encouragement / Milestone Area — whisper-quiet, no visual noise ─── */
     .encouragement-area {
-      margin-top: 16px;
-      padding: 12px 18px;
-      background: linear-gradient(135deg, #fffbeb, #fef3c7);
-      border-radius: 12px;
-      border-left: 3px solid #d97706;
+      margin-top: 12px;
+      padding: 0;
       opacity: 0;
-      transform: translateY(8px);
-      transition: opacity 0.7s ease, transform 0.7s ease;
+      transition: opacity 1.2s ease;
     }
     .encouragement-area.visible {
       opacity: 1;
-      transform: translateY(0);
     }
     .encouragement-text {
-      font-size: 14px;
-      color: #92400e;
-      line-height: 1.65;
-      font-weight: 500;
+      font-size: 13px;
+      color: #86a882;
+      line-height: 1.7;
+      font-family: 'Ma Shan Zheng', 'Zhi Mang Xing', 'Caveat', cursive, serif;
+      font-weight: 400;
+      letter-spacing: 0.3px;
     }
 
     .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
