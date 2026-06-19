@@ -616,6 +616,8 @@ const I18N = {
     greeting_afternoon_sub: '在一天结束前，记录三件感恩的事',
     greeting_evening: '今天，\n你感恩什么？',
     greeting_evening_sub: '每天三件，点滴积累成改变',
+    greeting_welcome: '欢迎回来，\n光一直在等你 ✦',
+    greeting_welcome_sub: '今天，写下你想感恩的事',
     reminder_banner: '🌙 距午夜还有 {n} 分钟，今天还没有写感恩日记',
     reminder_notif: '午夜前一小时提醒：今天还没有记录感恩，写下三件事吧',
     reminder_notif_title: '感恩日记 🌿',
@@ -677,6 +679,8 @@ const I18N = {
     greeting_afternoon_sub: 'Before the day ends, record three gratitudes',
     greeting_evening: 'Today,\nwhat are you grateful for?',
     greeting_evening_sub: 'Three a day, small steps change everything',
+    greeting_welcome: 'Welcome back,\nthe light has been waiting for you ✦',
+    greeting_welcome_sub: 'Today, write what you\'re grateful for',
     reminder_banner: '🌙 {n} min until midnight — no gratitude entry yet',
     reminder_notif: 'One hour before midnight reminder: write your 3 gratitudes today',
     reminder_notif_title: 'Gratitude 🌿',
@@ -1163,6 +1167,18 @@ function setNavDate() {
 }
 
 function setGreeting() {
+  // Check if user is returning after 2+ days — show welcome-back greeting
+  const lastWritten = localStorage.getItem('gratitude_last_written');
+  if (lastWritten) {
+    const lastDate = new Date(lastWritten + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 2) {
+      document.getElementById('greetingTitle').innerText = t('greeting_welcome').replace(/\\n/g, '\n');
+      document.getElementById('greetingSubtitle').textContent = t('greeting_welcome_sub');
+      return;
+    }
+  }
   const h = new Date().getHours();
   let titleKey, subKey;
   if (h < 6)       { titleKey = 'greeting_night'; subKey = 'greeting_night_sub'; }
@@ -1294,10 +1310,11 @@ function markSubmitted(dateKey) {
     const dates = raw ? JSON.parse(raw) : [];
     if (!dates.includes(dateKey)) {
       dates.push(dateKey);
-      // Keep only last 90 days to avoid bloat
       if (dates.length > 90) dates.splice(0, dates.length - 90);
       localStorage.setItem(SUBMITTED_KEY, JSON.stringify(dates));
     }
+    // Save last written date for welcome-back greeting
+    localStorage.setItem('gratitude_last_written', dateKey);
   } catch {}
 }
 
