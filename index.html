@@ -1490,7 +1490,7 @@ function updateProgress() {
 }
 
 function updateSubmitBtn() {
-  document.getElementById('submitBtn').disabled = !entries.some(e => e.trim().length > 0);
+  document.getElementById('submitBtn').disabled = !entries.some(e => e.trim().length >= 5);
 }
 
 document.getElementById('editBtn').addEventListener('click', () => {
