@@ -908,6 +908,7 @@ const I18N = {
     reunion_saved: '✅ 图片已保存',
     card_app_name: '感恩日记 · Gratitude',
     card_tagline: '留住这束光',
+    card_date_dot: '{year}.{month}.{day}',
   },
   en: {
     login_title: 'Gratitude',
@@ -993,10 +994,47 @@ const I18N = {
     reunion_saved: '✅ Image saved',
     card_app_name: 'Gratitude Journal',
     card_tagline: 'Keep this light',
+    card_date_dot: '{year}.{month}.{day}',
   }
 };
 
 let LANG = localStorage.getItem('lang') || 'zh';
+
+// ─── Card Background Images (Unsplash, no API key needed) ──────────────
+// 20+ curated image IDs — natural light, mist, water, plants, minimal
+// Fallback: dark gradient if image fails to load
+const CARD_BG_IDS = [
+  'MGd5eYbz4w', // misty forest path
+  '6sAl6aQ4OWI', // soft dawn light
+  'c3LbNUVcY_U', // calm lake reflection
+  '1K9Tdq7qCfU', // green leaves close-up
+  'wD1KQ7_ZnJw', // mountain lake sunrise
+  'yC_YFREoffk', // ocean waves soft
+  'LNRyGwHiOhQ', // pink flowers minimal
+  'pL9 phfVG2s', // foggy bridge
+  'JjGxmUpGfA', // sunlight through trees
+  'gF0NhiR_CnM', // lotus flower water
+  'b0we8fQy_c', // stones in stream
+  'FT2WbN9Hc6Q', // golden hour grass
+  'wMntpxxsQ9k', // cherry blossoms
+  'jFaq1xZTd_E', // morning dew leaves
+  '4_jhV8K-Xk', // minimal architecture
+  '7_sF2ZP066U', // aerial beach soft
+  'j5M5a_Sy_s', // bamboo forest
+  'S55PSo6rFb', // sunset over water
+  'sFeS-P13knQ', // frost on leaves
+  'aZjvRj6nXc', // soft cloud sky
+  'lkAzenKPag', // wheat field golden
+  'Jyk_ysxxO8', // quiet library light
+  'q9gvRNOn-Vc', // raindrops on glass
+  'eOZUwF1Wo8', // candlelight dark
+  'rzBMPH1RKB', // snowy branch minimal
+  'cG-e03uNMI', // sunrise over hills
+  'pLeBOeK_22', // lotus pond mist
+];
+function pickCardBg() {
+  return CARD_BG_IDS[Math.floor(Math.random() * CARD_BG_IDS.length)];
+}
 
 function t(key, vars) {
   let s = I18N[LANG]?.[key] || I18N.zh[key] || key;
@@ -1950,93 +1988,140 @@ document.getElementById('reunionKeepBtn').addEventListener('click', () => {
 
 function generateCard(memory) {
   const canvas = document.createElement('canvas');
-  const W = 720;
-  const H = 960;
-  canvas.width = W;
-  canvas.height = H;
+  const W = 720, H = 960;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Dark background with subtle gradient
-  const gradient = ctx.createLinearGradient(0, 0, 0, H);
-  gradient.addColorStop(0, '#292524');
-  gradient.addColorStop(1, '#1c1917');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, W, H);
+  // ─── Background: Unsplash image or gradient fallback ───
+  const imgId = pickCardBg();
+  const bgUrl = `https://images.unsplash.com/photo-${imgId}?w=${W}&h=${H}&fit=crop&q=80&auto=format`;
 
-  // 🌿 icon area — centered, top
-  ctx.font = '56px serif';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#fafaf9';
-  ctx.fillText('🌿', W / 2, 120);
-
-  // Date — large, prominent
-  const dateObj = new Date(memory.date + 'T00:00:00');
-  const year = dateObj.getFullYear();
-  const month = dateObj.getMonth() + 1;
-  const day = dateObj.getDate();
-
-  ctx.font = 'bold 32px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-  ctx.fillStyle = '#fafaf9';
-  ctx.textAlign = 'center';
-
-  if (LANG === 'zh') {
-    ctx.fillText(`${year}年${month}月${day}日`, W / 2, 200);
-  } else {
-    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    ctx.fillText(`${monthNames[month-1]} ${day}, ${year}`, W / 2, 200);
-  }
-
-  // Thin line divider
-  ctx.strokeStyle = '#44403c';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - 32, 240);
-  ctx.lineTo(W / 2 + 32, 240);
-  ctx.stroke();
-
-  // Entries — centered, with word-wrap
-  ctx.font = '22px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-  ctx.fillStyle = '#d6d3d1';
-  ctx.textAlign = 'center';
-
-  let y = 300;
-  const maxLineWidth = W - 120;
-
-  memory.entries.forEach((text, i) => {
-    if (!text.trim()) return;
-    // First entry slightly larger/brighter
-    if (i === 0) {
-      ctx.font = 'bold 24px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-      ctx.fillStyle = '#fafaf9';
+  const drawCard = (bgLoaded) => {
+    if (bgLoaded) {
+      // Dark overlay so text is readable
+      ctx.fillStyle = 'rgba(18,18,18,0.62)';
+      ctx.fillRect(0, 0, W, H);
+      // Subtle warm tint on overlay
+      ctx.fillStyle = 'rgba(120,90,60,0.08)';
+      ctx.fillRect(0, 0, W, H);
     } else {
-      ctx.font = '22px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-      ctx.fillStyle = '#d6d3d1';
+      // Elegant gradient fallback
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#1a1918');
+      g.addColorStop(0.5, '#1e1c1a');
+      g.addColorStop(1, '#121110');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
     }
 
-    const lines = wrapText(ctx, text.trim(), maxLineWidth);
-    lines.forEach(line => {
-      ctx.fillText(line, W / 2, y);
-      y += 36;
+    // ─── Decorative top line (very thin, warm) ───
+    ctx.strokeStyle = 'rgba(210,180,140,0.25)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.2, 180);
+    ctx.lineTo(W * 0.8, 180);
+    ctx.stroke();
+
+    // ─── ✦ symbol at top center ───
+    ctx.font = '18px serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(210,180,140,0.45)';
+    ctx.fillText('✦', W / 2, 210);
+
+    // ─── Date (elegant, small, in lower third area) ───
+    const d = new Date(memory.date + 'T00:00:00');
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = t('card_date_dot')
+      .replace('{year}', year).replace('{month}', month).replace('{day}', day);
+
+    ctx.font = '300 13px Georgia, "Noto Serif SC", "STSong", serif';
+    ctx.fillStyle = 'rgba(210,180,140,0.55)';
+    ctx.textAlign = 'center';
+    ctx.fillText(dateStr, W / 2, 245);
+
+    // ─── Thin divider after date ───
+    ctx.strokeStyle = 'rgba(210,180,140,0.18)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 40, 268);
+    ctx.lineTo(W / 2 + 40, 268);
+    ctx.stroke();
+
+    // ─── Entries: serif, warm off-white, in lower third ───
+    // Start Y position: lower third (~H * 0.38)
+    let y = H * 0.38;
+    const maxW = W - 140;
+    const lineH = 34;
+
+    // Use serif typography
+    const bodyFont = LANG === 'zh'
+      ? '"Noto Serif SC", "STSong", "Songti SC", Georgia, serif'
+      : 'Georgia, "Noto Serif", serif';
+
+    memory.entries.forEach((text, i) => {
+      if (!text.trim()) return;
+
+      // ✦ before each entry (except first)
+      if (i > 0) {
+        ctx.font = '10px serif';
+        ctx.fillStyle = 'rgba(210,180,140,0.3)';
+        ctx.textAlign = 'center';
+        ctx.fillText('✦', W / 2, y);
+        y += 24;
+      }
+
+      // Entry text — larger, warmer for first entry
+      const fontSize = i === 0 ? 20 : 17;
+      const alpha = i === 0 ? 0.92 : 0.72;
+      ctx.font = `${fontSize}px ${bodyFont}`;
+      ctx.fillStyle = `rgba(230,220,208,${alpha})`;
+      ctx.textAlign = 'center';
+
+      const lines = wrapText(ctx, text.trim(), maxW);
+      lines.forEach(ln => {
+        ctx.fillText(ln, W / 2, y);
+        y += lineH;
+      });
+      y += 18; // space between entries
     });
-    y += 20; // Extra spacing between entries
-  });
 
-  // Hint line at bottom area
-  const bottomHintY = H - 160;
-  ctx.font = '14px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-  ctx.fillStyle = '#78716c';
-  ctx.textAlign = 'center';
-  ctx.fillText(t('reunion_hint'), W / 2, bottomHintY);
+    // ─── Bottom hint: "一束光" tagline ───
+    ctx.font = '300 11px Georgia, "Noto Serif SC", serif';
+    ctx.fillStyle = 'rgba(210,180,140,0.32)';
+    ctx.textAlign = 'center';
+    ctx.fillText(t('card_tagline'), W / 2, H - 80);
 
-  // App name + tagline at bottom
-  ctx.font = '13px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-  ctx.fillStyle = '#57534e';
-  ctx.fillText(t('card_tagline'), W / 2, H - 90);
-  ctx.fillText('🌿 ' + t('card_app_name'), W / 2, H - 60);
+    // ─── App name (very subtle) ───
+    ctx.font = '300 10px Georgia, "Noto Serif SC", serif';
+    ctx.fillStyle = 'rgba(210,180,140,0.22)';
+    ctx.fillText('🌿 ' + t('card_app_name'), W / 2, H - 56);
 
-  // Convert to image
-  const dataUrl = canvas.toDataURL('image/png');
-  showCardPreview(dataUrl);
+    // ─── Thin bottom line ───
+    ctx.strokeStyle = 'rgba(210,180,140,0.15)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.25, H - 110);
+    ctx.lineTo(W * 0.75, H - 110);
+    ctx.stroke();
+
+    const dataUrl = canvas.toDataURL('image/png');
+    showCardPreview(dataUrl);
+  };
+
+  // ─── Load background image ───
+  const bgImg = new Image();
+  bgImg.crossOrigin = 'anonymous';
+  bgImg.onload = () => {
+    // Draw image with subtle warm tone
+    ctx.drawImage(bgImg, 0, 0, W, H);
+    drawCard(true);
+  };
+  bgImg.onerror = () => {
+    drawCard(false);
+  };
+  bgImg.src = bgUrl;
 }
 
 // Word-wrap helper for Canvas
