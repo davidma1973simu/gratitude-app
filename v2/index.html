@@ -89,6 +89,28 @@
     .today-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; line-height: 1.2; }
     .today-header p { font-size: 15px; color: var(--text-secondary); margin-top: 6px; font-weight: 400; }
 
+    /* ─── Encouragement / Milestone Area ─── */
+    .encouragement-area {
+      margin-top: 16px;
+      padding: 12px 18px;
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      border-radius: 12px;
+      border-left: 3px solid #d97706;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .encouragement-area.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .encouragement-text {
+      font-size: 14px;
+      color: #92400e;
+      line-height: 1.65;
+      font-weight: 500;
+    }
+
     .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
     .progress-dots { display: flex; gap: 6px; }
     .dot {
@@ -707,6 +729,10 @@
     <div class="today-header fade-in-up">
       <h1 id="greetingTitle">今天，<br>你感恩什么？</h1>
       <p id="greetingSubtitle">写下今天让你心怀感激的三件事</p>
+      <!-- v2: Encouragement / milestone area — always visible -->
+      <div class="encouragement-area" id="encouragementArea" style="display:none;">
+        <span class="encouragement-text" id="encouragementText"></span>
+      </div>
       <!-- v2: Watermark light — a faint past gratitude, like light in the air -->
       <div class="watermark" id="watermark" style="display:none;">
         <span class="watermark-content" id="watermarkContent"></span>
@@ -864,16 +890,16 @@ const I18N = {
     prompt_0: '今天有哪个人让你感激？',
     prompt_1: '今天有哪件小事让你微笑？',
     prompt_2: '今天有什么是你习以为常但值得珍惜的？',
-    greeting_night: '深夜的安静，\n也是一种感恩',
-    greeting_night_sub: '睡前，写下今天三件让你感激的事',
-    greeting_morning: '早安，\n今天感恩什么？',
-    greeting_morning_sub: '清晨，是开始感恩练习的好时机',
-    greeting_noon: '午后，\n来记录今天的美好',
-    greeting_noon_sub: '写下今天让你心怀感激的三件事',
-    greeting_afternoon: '下午好，\n今天感谢谁了吗？',
-    greeting_afternoon_sub: '在一天结束前，记录三件感恩的事',
-    greeting_evening: '今天，\n你感恩什么？',
-    greeting_evening_sub: '每天三件，点滴积累成改变',
+    greeting_night: '感谢今天的，\n照到我身上的光',
+    greeting_night_sub: '记录三件让你心怀感激的事',
+    greeting_morning: '感谢今天的，\n照到我身上的光',
+    greeting_morning_sub: '清晨的光，值得被记住',
+    greeting_noon: '感谢今天的，\n照到我身上的光',
+    greeting_noon_sub: '午后的光，也值得被收藏',
+    greeting_afternoon: '感谢今天的，\n照到我身上的光',
+    greeting_afternoon_sub: '每一天的光都不同',
+    greeting_evening: '感谢今天的，\n照到我身上的光',
+    greeting_evening_sub: '傍晚的光，最温柔',
     greeting_welcome: '欢迎回来，\n光一直在等你 ✦',
     greeting_welcome_sub: '今天，写下你想感恩的事',
     reminder_banner: '🌙 今天快结束了，有没有什么想感恩的？',
@@ -960,16 +986,16 @@ const I18N = {
     prompt_0: 'Who are you grateful for today?',
     prompt_1: 'What small thing made you smile today?',
     prompt_2: 'What do you take for granted but truly cherish?',
-    greeting_night: 'The quiet of night\nis gratitude too',
-    greeting_night_sub: 'Before sleep, write three things you\'re grateful for',
-    greeting_morning: 'Good morning,\nwhat are you grateful for?',
-    greeting_morning_sub: 'A perfect time to start your gratitude practice',
-    greeting_noon: 'Afternoon—\nrecord something beautiful',
-    greeting_noon_sub: 'Write three things you\'re grateful for today',
-    greeting_afternoon: 'Good afternoon,\nwho are you thankful for?',
-    greeting_afternoon_sub: 'Before the day ends, record three gratitudes',
-    greeting_evening: 'Today,\nwhat are you grateful for?',
-    greeting_evening_sub: 'Three a day, small steps change everything',
+    greeting_night: 'Grateful for the light\nthat found me today',
+    greeting_night_sub: 'Write three things you\'re grateful for',
+    greeting_morning: 'Grateful for the light\nthat found me today',
+    greeting_morning_sub: 'Morning light deserves to be remembered',
+    greeting_noon: 'Grateful for the light\nthat found me today',
+    greeting_noon_sub: 'Afternoon light is worth keeping too',
+    greeting_afternoon: 'Grateful for the light\nthat found me today',
+    greeting_afternoon_sub: 'Every day\'s light is different',
+    greeting_evening: 'Grateful for the light\nthat found me today',
+    greeting_evening_sub: 'Evening light is the gentlest',
     greeting_welcome: 'Welcome back,\nthe light has been waiting for you ✦',
     greeting_welcome_sub: 'Today, write what you\'re grateful for',
     reminder_banner: '🌙 The day is almost over. Anything you\'re grateful for?',
@@ -1563,6 +1589,9 @@ function setGreeting() {
   else             { titleKey = 'greeting_evening'; subKey = 'greeting_evening_sub'; }
   document.getElementById('greetingTitle').innerText = t(titleKey).replace(/\\n/g, '\n');
   document.getElementById('greetingSubtitle').textContent = t(subKey);
+
+  // Always show gentle encouragement hint (even without milestones)
+  showEncouragementHint();
 }
 
 // ─── Today Render ──────────────────────────────────────────────────────────
@@ -1806,8 +1835,17 @@ function showMilestoneInModal(msNum) {
     subEl.textContent = t('ms_' + msNum + '_sub');
     // Make it warm and noticeable
     titleEl.style.color = '#b45309';
-    titleEl.style.fontSize = '24px';
+    titleEl.style.fontSize = '22px';
     subEl.style.color = '#a16207';
+  }
+
+  // ALSO show in dedicated encouragement area
+  const encArea = document.getElementById('encouragementArea');
+  const encText = document.getElementById('encouragementText');
+  if (encArea && encText) {
+    encText.textContent = t('ms_' + msNum + '_title').replace(/\n/g, ' ') + ' — ' + t('ms_' + msNum + '_sub');
+    encArea.style.display = 'block';
+    requestAnimationFrame(() => { encArea.classList.add('visible'); });
   }
 }
 
@@ -1821,19 +1859,51 @@ function showMilestoneInGreeting(msNum) {
     // Make milestone greeting stand out — gentle warm highlight
     titleEl.style.color = '#b45309';   // warm amber
     subEl.style.color = '#a16207';
-    // Subtle pulse animation for the greeting container
-    const gContainer = titleEl.closest('.today-header') || titleEl.parentElement;
-    if (gContainer) {
-      gContainer.style.transition = 'opacity 0.8s ease';
-      gContainer.style.opacity = '0';
-      setTimeout(() => { gContainer.style.opacity = '1'; }, 150);
-    }
-    // Reset color after user sees it (on next interaction)
-    setTimeout(() => {
-      if (titleEl) titleEl.style.color = '';
-      if (subEl) subEl.style.color = '';
-    }, 8000);
   }
+
+  // ALSO show in dedicated encouragement area (prominent, persistent)
+  const encArea = document.getElementById('encouragementArea');
+  const encText = document.getElementById('encouragementText');
+  if (encArea && encText) {
+    encText.textContent = t('ms_' + msNum + '_title').replace(/\n/g, ' ') + ' — ' + t('ms_' + msNum + '_sub');
+    encArea.style.display = 'block';
+    requestAnimationFrame(() => { encArea.classList.add('visible'); });
+  }
+}
+
+// Show gentle encouragement hint in the dedicated area (always visible, no milestone needed)
+function showEncouragementHint() {
+  const count = getTotalCount();
+  const encArea = document.getElementById('encouragementArea');
+  const encText = document.getElementById('encouragementText');
+  if (!encArea || !encText) return;
+
+  let hint = '';
+  if (count === 0) {
+    hint = LANG === 'zh'
+      ? '✦ 每一束光都值得被记录，从今天开始吧'
+      : '✦ Every ray of light deserves to be recorded — start today';
+  } else if (count < 3) {
+    hint = LANG === 'zh'
+      ? '✦ 你已经记录了 ' + count + ' 束光，继续收集'
+      : '✦ You\'ve recorded ' + count + ' rays of light. Keep collecting.';
+  } else if (count < 7) {
+    hint = LANG === 'zh'
+      ? '✦ 已记录 ' + count + ' 束光，光是会蔓延的'
+      : '✦ ' + count + ' rays recorded. Light spreads gently.';
+  } else if (count < 20) {
+    hint = LANG === 'zh'
+      ? '✦ 光的收藏家，已收集 ' + count + ' 束光'
+      : '✦ Collector of light — ' + count + ' rays gathered';
+  } else {
+    hint = LANG === 'zh'
+      ? '✦ ' + count + ' 束光，你的气场已被净化'
+      : '✦ ' + count + ' rays — your spirit field is purified';
+  }
+
+  encText.textContent = hint;
+  encArea.style.display = 'block';
+  requestAnimationFrame(() => { encArea.classList.add('visible'); });
 }
 
 document.getElementById('editBtn').addEventListener('click', () => {
@@ -2312,27 +2382,38 @@ function generateCard(memory) {
     ctx.textAlign = 'left';
     ctx.fillText(dateStr, BORDER + 16, capTop + 26);
 
-    // Main entry text — LARGE (2x), thin weight, dark ink on cream
+    // Main entry text — adaptive size based on content length
     // Layout: left 20% padding, right-aligned (peaceful, like margin notes)
-    const textStartY = capTop + 76;
+    const textStartY = capTop + 56;
     const textLeft = Math.round(W * 0.20);   // 20% from left
     const maxTextW = W - textLeft - 32;       // remaining width minus right margin
+    const capBottom = H - BORDER;             // bottom edge of caption area
+    const availH = capBottom - textStartY;     // available height for text
 
-    let fSize = 80;
-    if (entryText.length > 6) fSize = 72;
-    if (entryText.length > 10) fSize = 62;
-    if (entryText.length > 16) fSize = 52;
-    if (entryText.length > 24) fSize = 44;
-    if (entryText.length > 36) fSize = 36;
-    if (entryText.length > 55) fSize = 30;
+    // Start with a reasonable base, shrink based on content length AND line count
+    let fSize = 36;
+    if (entryText.length > 6) fSize = 30;
+    if (entryText.length > 10) fSize = 26;
+    if (entryText.length > 16) fSize = 22;
+    if (entryText.length > 24) fSize = 19;
+    if (entryText.length > 36) fSize = 16;
+    if (entryText.length > 55) fSize = 14;
 
+    // Adaptive: if lines would overflow, keep shrinking until they fit
     ctx.font = `200 ${fSize}px ${peaceFont}`;
+    let lines = wrapText(ctx, entryText, maxTextW);
+    let neededH = lines.length * Math.round(fSize * 1.75);
+    while (neededH > availH && fSize > 12) {
+      fSize -= 1;
+      ctx.font = `200 ${fSize}px ${peaceFont}`;
+      lines = wrapText(ctx, entryText, maxTextW);
+      neededH = lines.length * Math.round(fSize * 1.75);
+    }
     ctx.fillStyle = 'rgba(25,22,18,0.82)';
     ctx.textAlign = 'right';
 
     // Clean lines, no decoration, no wobble — peaceful
     // Right-aligned within 80% width (20% left padding)
-    const lines = wrapText(ctx, entryText, maxTextW);
     lines.forEach((ln, i) => {
       ctx.fillText(ln, W - 32, textStartY + i * Math.round(fSize * 1.75));
     });
