@@ -914,6 +914,17 @@ const I18N = {
     reunion_saved: '✅ 图片已保存',
     card_app_name: '感恩日记 · Gratitude',
     card_tagline: '留住这束光',
+    // ── Milestone Encouragement System ──
+    ms_1_title: '第一束光，点亮了 ✦',
+    ms_1_sub: '你开始了一段旅程',
+    ms_2_title: '光开始有了温度 ✦',
+    ms_2_sub: '你让这束光不再孤单',
+    ms_3_title: '三天连续，小习惯初现 ✦',
+    ms_3_sub: '光是会蔓延的',
+    ms_4_title: '你已是光的收藏家 ✦',
+    ms_4_sub: '七束光，已足以照亮一段路',
+    ms_5_title: '你的气场，已被净化 ✦',
+    ms_5_sub: '感恩不再是习惯，而是你的一部分',
   },
   en: {
     login_title: 'Gratitude',
@@ -999,6 +1010,17 @@ const I18N = {
     reunion_saved: '✅ Image saved',
     card_app_name: 'Gratitude Journal',
     card_tagline: 'Keep this light',
+    // ── Milestone Encouragement System ──
+    ms_1_title: 'Your first light shines ✦',
+    ms_1_sub: 'A journey has begun',
+    ms_2_title: 'Your light grows warm ✦',
+    ms_2_sub: 'It no longer stands alone',
+    ms_3_title: 'Three days, a habit takes shape ✦',
+    ms_3_sub: 'Light spreads gently',
+    ms_4_title: 'You are a collector of light ✦',
+    ms_4_sub: 'Seven lights, enough to illuminate a path',
+    ms_5_title: 'Your spirit field is purified ✦',
+    ms_5_sub: 'Gratitude is no longer a habit — it is you',
   },
 };
 
@@ -1484,7 +1506,14 @@ function setNavDate() {
 }
 
 function setGreeting() {
-  // Check if user is returning after 2+ days — show welcome-back greeting
+  // Priority 1: Check milestones that show in greeting area (M3, M4, M5)
+  const ms = checkMilestone('greeting');
+  if (ms === 3 || ms === 4 || ms === 5) {
+    showMilestoneInGreeting(ms);
+    return;
+  }
+
+  // Priority 2: Check if user is returning after 2+ days — show welcome-back greeting
   const lastWritten = localStorage.getItem('gratitude_last_written');
   if (lastWritten) {
     const lastDate = new Date(lastWritten + 'T00:00:00');
@@ -1637,6 +1666,8 @@ function markSubmitted(dateKey) {
     }
     // Save last written date for welcome-back greeting
     localStorage.setItem('gratitude_last_written', dateKey);
+    // Milestone: count total submissions
+    incrementTotalCount();
   } catch {}
 }
 
@@ -1651,6 +1682,117 @@ function updateProgress() {
 
 function updateSubmitBtn() {
   document.getElementById('submitBtn').disabled = !entries.some(e => e.trim().length > 0);
+}
+
+// ─── Milestone Encouragement System ──────────────────────────────────────
+// 5 progressive milestones to gently encourage habit formation
+// Each triggers ONLY ONCE, stored in localStorage
+
+const MS_PREFIX = 'gratitude_ms_'; // gratitude_ms_1 through gratitude_ms_5
+const MS_COUNT_KEY = 'gratitude_total_count';
+
+function getTotalCount() {
+  return parseInt(localStorage.getItem(MS_COUNT_KEY) || '0', 10);
+}
+
+function incrementTotalCount() {
+  const n = getTotalCount() + 1;
+  localStorage.setItem(MS_COUNT_KEY, String(n));
+  return n;
+}
+
+function msDone(n) {
+  return localStorage.getItem(MS_PREFIX + n) === 'true';
+}
+
+function markMsDone(n) {
+  localStorage.setItem(MS_PREFIX + n, 'true');
+}
+
+// Check if last 3 days are consecutive (for M3)
+function checkConsecutive3() {
+  const raw = localStorage.getItem(SUBMITTED_KEY);
+  if (!raw) return false;
+  const dates = JSON.parse(raw);
+  if (dates.length < 3) return false;
+
+  const sorted = dates.slice().sort().reverse();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d1 = new Date(sorted[0] + 'T00:00:00');
+  const d2 = new Date(sorted[1] + 'T00:00:00');
+  const d3 = new Date(sorted[2] + 'T00:00:00');
+
+  const diff1 = Math.round((today - d1) / 86400000); // today vs most recent
+  const diff12 = Math.round((d1 - d2) / 86400000);
+  const diff23 = Math.round((d2 - d3) / 86400000);
+
+  return diff1 === 0 && diff12 === 1 && diff23 === 1;
+}
+
+// Returns milestone number that just triggered, or 0
+// mode: 'submit' = called after submission (checks M1,M2,M3,M4,M5)
+//       'greeting' = called on page load (checks M3,M4,M5 only)
+function checkMilestone(mode) {
+  const count = getTotalCount();
+
+  // M1: First time ever
+  if (count >= 1 && !msDone(1)) {
+    markMsDone(1);
+    return 1;
+  }
+
+  // M2: Second time ever (submit-only)
+  if (mode === 'submit' && count >= 2 && !msDone(2)) {
+    markMsDone(2);
+    return 2;
+  }
+
+  // M3: 3 consecutive days (either mode — show in greeting area)
+  if (!msDone(3) && checkConsecutive3()) {
+    markMsDone(3);
+    return 3;
+  }
+
+  // M4: 7+ total submissions
+  if (count >= 7 && !msDone(4)) {
+    markMsDone(4);
+    return 4;
+  }
+
+  // M5: 20+ total submissions
+  if (count >= 20 && !msDone(5)) {
+    markMsDone(5);
+    return 5;
+  }
+
+  return 0;
+}
+
+// Show milestone message in the thank-you modal (M1, M2)
+function showMilestoneInModal(msNum) {
+  const titleEl = document.getElementById('thanksTitle');
+  const subEl = document.getElementById('thanksSubtitle');
+  if (titleEl && subEl) {
+    titleEl.textContent = t('ms_' + msNum + '_title');
+    subEl.textContent = t('ms_' + msNum + '_sub');
+  }
+}
+
+// Show milestone message in greeting area (M3, M4, M5)
+function showMilestoneInGreeting(msNum) {
+  const titleEl = document.getElementById('greetingTitle');
+  const subEl = document.getElementById('greetingSubtitle');
+  if (titleEl && subEl) {
+    titleEl.textContent = t('ms_' + msNum + '_title').replace(/\n/g, '\n');
+    subEl.textContent = t('ms_' + msNum + '_sub');
+    // Subtle pulse animation for the greeting container
+    const gContainer = titleEl.closest('.greeting') || titleEl.parentElement;
+    if (gContainer) {
+      gContainer.style.transition = 'opacity 0.6s ease';
+      gContainer.style.opacity = '0';
+      setTimeout(() => { gContainer.style.opacity = '1'; }, 100);
+    }
+  }
 }
 
 document.getElementById('editBtn').addEventListener('click', () => {
@@ -1674,11 +1816,18 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   todayDone = true;
   renderToday();
   renderHistory();
-  showThanksModal();
+
+  // Check milestones on submit
+  const ms = checkMilestone('submit');
+  showThanksModal(ms);
 });
 
-function showThanksModal() {
+function showThanksModal(milestoneNum) {
   document.getElementById('thanksOverlay').classList.add('show');
+  // If a milestone just triggered, show milestone message instead of default
+  if (milestoneNum && (milestoneNum === 1 || milestoneNum === 2)) {
+    showMilestoneInModal(milestoneNum);
+  }
   // v2: Show echo in modal (past gratitude fading in after 2s)
   showEchoInModal();
 }
@@ -1968,8 +2117,8 @@ document.getElementById('reunionKeepBtn').addEventListener('click', () => {
 
 function generateCard(memory) {
   const canvas = document.createElement('canvas');
-  // Polaroid proportions — photo ~76%, bottom caption ~24%
-  const W = 720, H = 980;
+  // Polaroid proportions — photo ~68%, bottom caption ~32% (larger text)
+  const W = 720, H = 1080;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
@@ -1980,8 +2129,8 @@ function generateCard(memory) {
   const entryText = pickOne.trim();
 
   // ─── Polaroid dimensions ───
-  const BORDER = 18;           // white border thickness
-  const BOTTOM_BORDER = 210;   // thick bottom for handwritten caption
+  const BORDER = 20;
+  const BOTTOM_BORDER = 320;   // extra space for large text
   const photoX = BORDER;
   const photoY = BORDER;
   const photoW = W - BORDER * 2;
@@ -2084,50 +2233,49 @@ function generateCard(memory) {
       ctx.stroke();
     }
 
-    // ════════════════════════════════════════════════════════
-    // ─── CAPTION AREA: Handwritten style (like the ref) ───
-    // ════════════════════════════════════════════════════════
-    const capTop = photoY + photoH + 14;
+    // ══════════════════════════════════════════════════
+    // ─── CAPTION AREA: Clean, peaceful, readable ───
+    // ══════════════════════════════════════════════════
+    const capTop = photoY + photoH + 18;
     const capCenterX = W / 2;
 
-    // Handwritten font — casual, personal, like writing on a Polaroid
-    const handFont = LANG === 'zh'
-      ? '"Ma Shan Zheng", "Zhi Mang Xing", "Long Cang", cursive'
-      : '"Caveat", "Dancing Script", "Patrick Hand", cursive';
+    // Thin, light system font — ultra-clean, Apple-quality
+    const peaceFont = LANG === 'zh'
+      ? '"PingFang SC", "SF Pro Display", "-apple-system", "Helvetica Neue Light", sans-serif'
+      : '"SF Pro Display Light", "Helvetica Neue Light", "-apple-system", sans-serif';
 
-    // Date — tiny, top-left of caption, very subtle
+    // Date — small, left-aligned, very quiet
     const d = new Date(memory.date + 'T00:00:00');
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const dateStr = `${year}.${month}.${day}`;
 
-    ctx.font = '11px -apple-system, "SF Pro Text", sans-serif';
-    ctx.fillStyle = 'rgba(160,150,135,0.40)';
+    ctx.font = '300 13px ' + peaceFont;
+    ctx.fillStyle = 'rgba(150,140,125,0.35)';
     ctx.textAlign = 'left';
-    ctx.fillText(dateStr, BORDER + 16, capTop + 20);
+    ctx.fillText(dateStr, BORDER + 16, capTop + 22);
 
-    // Main entry text — BIG, handwritten, dark ink
-    const textStartY = capTop + 56;
+    // Main entry text — LARGE (2x), thin weight, dark ink on cream
+    const textStartY = capTop + 70;
     const maxTextW = W - 64;
 
-    let fSize = 40;
-    if (entryText.length > 8) fSize = 37;
-    if (entryText.length > 15) fSize = 33;
-    if (entryText.length > 24) fSize = 29;
-    if (entryText.length > 36) fSize = 25;
-    if (entryText.length > 50) fSize = 21;
+    let fSize = 80;
+    if (entryText.length > 6) fSize = 72;
+    if (entryText.length > 10) fSize = 62;
+    if (entryText.length > 16) fSize = 52;
+    if (entryText.length > 24) fSize = 44;
+    if (entryText.length > 36) fSize = 36;
+    if (entryText.length > 55) fSize = 30;
 
-    ctx.font = `${fSize}px ${handFont}`;
-    ctx.fillStyle = 'rgba(30,26,22,0.88)';
+    ctx.font = `200 ${fSize}px ${peaceFont}`;
+    ctx.fillStyle = 'rgba(25,22,18,0.82)';
     ctx.textAlign = 'center';
 
-    // Very slight natural baseline wobble for handwriting feel
+    // Clean lines, no decoration, no wobble — peaceful
     const lines = wrapText(ctx, entryText, maxTextW);
     lines.forEach((ln, i) => {
-      // Random tiny Y offset per line for organic feel
-      const wobble = (i % 2 === 0 ? 1 : -1) * (Math.random() * 1.5);
-      ctx.fillText(ln, capCenterX, textStartY + i * Math.round(fSize * 1.7) + wobble);
+      ctx.fillText(ln, capCenterX, textStartY + i * Math.round(fSize * 1.75));
     });
 
     const dataUrl = canvas.toDataURL('image/png');
