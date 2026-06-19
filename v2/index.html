@@ -1000,34 +1000,16 @@ const I18N = {
 
 let LANG = localStorage.getItem('lang') || 'zh';
 
-// ─── Card Background Images (Unsplash, no API key needed) ──────────────
-// 20+ curated REAL Unsplash photo UUIDs — natural light, mist, water, plants
-// Fallback: dark gradient if image fails to load
-const CARD_BG_IDS = [
-  '1506748688652-98e3b70857ab', // misty forest path
-  '1470071459603-5b07b7d3f8c', // foggy mountain lake
-  '1469474968028-56623f02e42e', // calm lake mist
-  '1518837672888-32041b7e64f7', // sunlight through trees
-  '1472214103451-937bd71c778e', // green forest light
-  '1507003211169-0a1dd7228ca3', // morning rays
-  '1495617023785-22154d8275c7', // ocean waves soft
-  '1519125140130-f0be87de81fc', // cherry blossoms pink
-  '1484445318011-89c77f8e8f11', // golden hour grass
-  '1433086966359-0811ddd11a0e', // lotus flower water
-  '1523712859549-0c824c8f509d', // bamboo forest path
-  '1542273917368-9515abcf8904', // sunrise over hills
-  '1501854267756-2ad544eb2786', // raindrops on window
-  '1419243405654-9ae82bc7c387', // candle in dark
-  '1491009783654-ff36a8591ee3', // snowy branch
-  '1464822759023-fed84aad3ada', // wheat field gold
-  '1475924151173-418c26dce449', // soft cloud sky
-  '1445109914205-6fb9e00e7cdc', // aerial beach minimal
-  '1502136218633-979faa3c4b32', // frost on leaves
-  '1513001775580-cd032f9cc5d0', // quiet library window
-  '1500463078463-69c1e16b15d3', // stones in stream
+// ─── Card Background Images ──────────────────────────────────────────────
+// Using picsum.photos (reliable, CORS-enabled, works globally)
+// Plus beautiful procedural gradient fallbacks
+const CARD_BG_SEEDS = [
+  1068, 1080, 1337, 1376, 1418, 1455, 1472, 1501, 1524, 1537,
+  1551, 1573, 1586, 1604, 1613, 1629, 1642, 1659, 1674, 1688,
+  1695, 1705, 1715, 1723, // nature, water, mist, light themes
 ];
-function pickCardBg() {
-  return CARD_BG_IDS[Math.floor(Math.random() * CARD_BG_IDS.length)];
+function pickCardBgSeed() {
+  return CARD_BG_SEEDS[Math.floor(Math.random() * CARD_BG_SEEDS.length)];
 }
 
 function t(key, vars) {
@@ -1986,110 +1968,135 @@ function generateCard(memory) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // ─── Background: Unsplash image or gradient fallback ───
-  const imgId = pickCardBg();
-  const bgUrl = `https://images.unsplash.com/photo-${imgId}?w=${W * 2}&h=${H * 2}&fit=crop&q=85&auto=format`;
+  // ─── Pick ONE random non-empty entry ───
+  const nonEmpty = memory.entries.filter(t => t.trim());
+  if (!nonEmpty.length) return;
+  const pickOne = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  const entryText = pickOne.trim();
+
+  // ─── Background image (picsum — reliable, CORS-enabled) ───
+  const seed = pickCardBgSeed();
+  const bgUrl = `https://picsum.photos/seed/${seed}/${W * 2}/${H * 2}`;
 
   const drawCard = (bgLoaded) => {
     if (bgLoaded) {
-      // Gentle dark overlay — light enough to see background image
-      ctx.fillStyle = 'rgba(12,10,8,0.50)';
+      // Warm dark overlay — let photo texture show through
+      ctx.fillStyle = 'rgba(18,15,12,0.55)';
       ctx.fillRect(0, 0, W, H);
-      // Subtle warm vignette at edges
-      const vg = ctx.createRadialGradient(W/2, H*0.4, H*0.15, W/2, H*0.45, H*0.75);
+      // Gentle vignette
+      const vg = ctx.createRadialGradient(W/2, H*0.38, H*0.1, W/2, H*0.45, H*0.7);
       vg.addColorStop(0, 'rgba(0,0,0,0)');
-      vg.addColorStop(1, 'rgba(0,0,0,0.35)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.40)');
       ctx.fillStyle = vg;
       ctx.fillRect(0, 0, W, H);
     } else {
-      // Rich dark gradient fallback
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#1c1917');
-      g.addColorStop(0.5, '#181716');
-      g.addColorStop(1, '#0f0e0d');
+      // Beautiful procedural gradient fallback
+      // Deep warm base
+      const g = ctx.createLinearGradient(0, 0, W * 0.3, H);
+      g.addColorStop(0, '#1a1614');
+      g.addColorStop(0.35, '#1e1a17');
+      g.addColorStop(0.65, '#181614');
+      g.addColorStop(1, '#12110f');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
+
+      // Subtle warm glow center-top (like soft light)
+      const glow = ctx.createRadialGradient(W * 0.5, H * 0.22, 0, W * 0.5, H * 0.22, H * 0.4);
+      glow.addColorStop(0, 'rgba(212,180,140,0.07)');
+      glow.addColorStop(0.5, 'rgba(180,150,120,0.03)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      // Very subtle noise-like texture via tiny random dots (optional, skip for performance)
     }
 
-    // ─── Serif typography setup ───
+    // ─── Typography setup ───
     const bodyFont = LANG === 'zh'
-      ? '"Noto Serif SC", "STSong", "Songti SC", Georgia, serif'
-      : 'Georgia, "Noto Serif", serif';
+      ? '"Noto Serif SC", "STSong", "Songti SC", "SimSun", Georgia, serif'
+      : 'Georgia, "Times New Roman", "Noto Serif", serif';
 
-    // ─── Date: elegant, in true lower-third area ───
+    // ─── Date: small, elegant, upper area ───
     const d = new Date(memory.date + 'T00:00:00');
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const dateStr = `${year}.${month}.${day}`;
 
-    // Start content area at ~55% from top (true lower visual weight)
-    let y = H * 0.52;
+    // Content positioned at visual lower-third but with good balance
+    let y = H * 0.42;
 
-    // Thin decorative line above everything
-    ctx.strokeStyle = 'rgba(200,175,140,0.20)';
-    ctx.lineWidth = 0.5;
+    // ── Decorative top element: thin line + sparkle ──
+    ctx.strokeStyle = 'rgba(210,185,150,0.25)';
+    ctx.lineWidth = 0.6;
     ctx.beginPath();
-    ctx.moveTo(W * 0.3, y - 30);
-    ctx.lineTo(W * 0.7, y - 30);
+    ctx.moveTo(W * 0.28, y - 24);
+    ctx.lineTo(W * 0.72, y - 24);
     ctx.stroke();
 
-    // ✦ small symbol
-    ctx.font = '14px serif';
+    // ✦ sparkle
+    ctx.font = '13px serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(200,175,140,0.35)';
-    ctx.fillText('✦', W / 2, y - 8);
+    ctx.fillStyle = 'rgba(210,185,150,0.40)';
+    ctx.fillText('✦', W / 2, y - 3);
 
-    // Date — subtle, warm
-    ctx.font = '300 13px ' + bodyFont;
-    ctx.fillStyle = 'rgba(200,175,140,0.5)';
+    // Date
+    ctx.font = '300 12px ' + bodyFont;
+    ctx.fillStyle = 'rgba(210,185,150,0.50)';
     ctx.textAlign = 'center';
-    ctx.fillText(dateStr, W / 2, y + 18);
+    ctx.fillText(dateStr, W / 2, y + 16);
 
-    // Small gap after date
-    y += 50;
+    // Spacing before main text
+    y += 56;
 
-    // ─── Entries: pick ONE random non-empty entry ───
-    const nonEmpty = memory.entries.filter(t => t.trim());
-    const pick = nonEmpty.length > 0
-      ? nonEmpty[Math.floor(Math.random() * nonEmpty.length)]
-      : '';
-    if (!pick) return; // nothing to show
+    // ─── Main entry text: large, warm, the star of the card ───
+    const maxW = W - 100; // generous margins
 
-    const maxW = W - 120;
-    const lineH = 38;
+    // Determine optimal font size based on text length
+    let fontSize = 26;
+    if (entryText.length > 20) fontSize = 24;
+    if (entryText.length > 35) fontSize = 22;
+    if (entryText.length > 55) fontSize = 20;
 
-    // Entry text — warm off-white, serif, generous size
-    ctx.font = `20px ${bodyFont}`;
-    ctx.fillStyle = 'rgba(245,240,230,0.92)';
+    ctx.font = `${fontSize}px ${bodyFont}`;
+    ctx.fillStyle = 'rgba(250,245,235,0.93)';
     ctx.textAlign = 'center';
 
-    const lines = wrapText(ctx, pick.trim(), maxW);
+    const lines = wrapText(ctx, entryText, maxW);
     lines.forEach(ln => {
+      // Subtle letter-spacing effect via shadow
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 2;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1;
       ctx.fillText(ln, W / 2, y);
-      y += lineH;
+      y += fontSize * 1.85;
     });
+    // Reset shadow
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
 
-    // ─── Bottom area: tagline + app name (very subtle) ───
-    const bottomY = H - 70;
-    // Thin line
-    ctx.strokeStyle = 'rgba(200,175,140,0.12)';
+    // ─── Bottom area: tagline ───
+    const bottomY = H - 80;
+
+    // Thin divider line
+    ctx.strokeStyle = 'rgba(210,185,150,0.14)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    ctx.moveTo(W * 0.28, bottomY - 22);
-    ctx.lineTo(W * 0.72, bottomY - 22);
+    ctx.moveTo(W * 0.30, bottomY - 20);
+    ctx.lineTo(W * 0.70, bottomY - 20);
     ctx.stroke();
 
-    // Tagline
+    // Tagline text
     ctx.font = '300 11px ' + bodyFont;
-    ctx.fillStyle = 'rgba(200,175,140,0.30)';
+    ctx.fillStyle = 'rgba(210,185,150,0.32)';
     ctx.textAlign = 'center';
-    ctx.fillText(t('card_tagline'), W / 2, bottomY);
+    ctx.fillText(t('card_tagline'), W / 2, bottomY + 4);
 
-    // App name
-    ctx.font = '300 10px ' + bodyFont;
-    ctx.fillStyle = 'rgba(200,175,140,0.18)';
-    ctx.fillText('🌿 ' + t('card_app_name'), W / 2, bottomY + 22);
+    // App name (very subtle)
+    ctx.font = '300 9px ' + bodyFont;
+    ctx.fillStyle = 'rgba(210,185,150,0.18)';
+    ctx.fillText('✦  gratitude journal', W / 2, bottomY + 24);
 
     const dataUrl = canvas.toDataURL('image/png');
     showCardPreview(dataUrl);
@@ -2099,12 +2106,15 @@ function generateCard(memory) {
   const bgImg = new Image();
   bgImg.crossOrigin = 'anonymous';
   bgImg.onload = () => {
-    ctx.drawImage(bgImg, 0, 0, W, H);
-    drawCard(true);
+    try {
+      ctx.drawImage(bgImg, 0, 0, W, H);
+      drawCard(true);
+    } catch(e) {
+      // CORS or other draw error — fall back gracefully
+      drawCard(false);
+    }
   };
-  bgImg.onerror = () => {
-    drawCard(false);
-  };
+  bgImg.onerror = () => { drawCard(false); };
   bgImg.src = bgUrl;
 }
 
