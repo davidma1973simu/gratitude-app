@@ -945,6 +945,10 @@ const SB = {
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
+    // Rate limited — fail immediately, no retry
+    if (res.status === 429 || res.status === 503) {
+      throw new Error('RATE_LIMITED');
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Login failed');
     if (data.access_token) {
@@ -979,12 +983,12 @@ const SB = {
         return null;
       }
       try {
-        await this._refreshToken(tokens.refresh_token);
-        return this._tokens;
+        const refreshed = await this._refreshToken(tokens.refresh_token);
+        if (refreshed) return this._tokens;
+        // Refresh was rate-limited — keep existing session
+        return tokens;
       } catch (e) {
         const msg = e.message || '';
-        // Only clear session for real auth errors (bad refresh token)
-        // Don't clear for network errors — user may be offline
         if (msg.includes('Invalid Refresh Token') || msg.includes('Token has expired') || msg.includes('invalid_grant')) {
           localStorage.removeItem('sb_auth');
           this._tokens = null;
@@ -1015,6 +1019,10 @@ const SB = {
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
+    if (res.status === 429 || res.status === 503) {
+      console.warn('Refresh rate-limited, keeping existing session');
+      return null;
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.msg || 'Refresh failed');
     this._saveTokens(data);
@@ -1142,8 +1150,12 @@ function showApp() {
 
 async function initAuth() {
   try {
-    const session = await SB.getSession();
-    if (session?.user) {
+    // 3-second timeout: if getSession hangs (e.g. rate-limited refresh), just show login
+    const session = await Promise.race([
+      SB.getSession(),
+      new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 3000))
+    ]);
+    if (session && session !== 'TIMEOUT' && session?.user) {
       currentUser = session.user;
       showApp();
       await startApp();
@@ -1230,7 +1242,12 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     }
   } catch (e) {
     console.error('Login error:', e);
-    showBanner(e.message || t('err_login'));
+    const msg = e.message || '';
+    if (msg === 'RATE_LIMITED') {
+      showBanner('请稍后再试（服务器限流中）');
+    } else {
+      showBanner(msg || t('err_login'));
+    }
     btn.disabled = false;
     btn.textContent = t('login_btn');
   }

@@ -1302,6 +1302,10 @@ const SB = {
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
+    // Rate limited — fail immediately, no retry
+    if (res.status === 429 || res.status === 503) {
+      throw new Error('RATE_LIMITED');
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Login failed');
     if (data.access_token) {
@@ -1336,8 +1340,10 @@ const SB = {
         return null;
       }
       try {
-        await this._refreshToken(tokens.refresh_token);
-        return this._tokens;
+        const refreshed = await this._refreshToken(tokens.refresh_token);
+        if (refreshed) return this._tokens;
+        // Refresh was rate-limited — keep existing session
+        return tokens;
       } catch (e) {
         const msg = e.message || '';
         // Only clear session for real auth errors (bad refresh token)
@@ -1372,6 +1378,11 @@ const SB = {
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
+    if (res.status === 429 || res.status === 503) {
+      // Rate limited — don't throw, return null; caller will use cached tokens
+      console.warn('Refresh rate-limited, keeping existing session');
+      return null;
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.msg || 'Refresh failed');
     this._saveTokens(data);
@@ -1502,8 +1513,12 @@ function showApp() {
 
 async function initAuth() {
   try {
-    const session = await SB.getSession();
-    if (session?.user) {
+    // 3-second timeout: if getSession hangs (e.g. rate-limited refresh), just show login
+    const session = await Promise.race([
+      SB.getSession(),
+      new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 3000))
+    ]);
+    if (session && session !== 'TIMEOUT' && session?.user) {
       currentUser = session.user;
       showApp();
       await startApp();
@@ -1544,61 +1559,65 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = t('login_btn_loading');
 
-  // Helper: login with auto-retry for transient errors (rate limits, network)
-  // Total cap: ~5 seconds max waiting time
-  async function doLoginWithRetry() {
-    const maxRetries = 1; // only retry once (total 2 attempts)
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const session = await SB.signInWithPassword(email, password);
-        currentUser = session.user;
-        showApp();
-        await startApp();
+  // Helper: login — NO retry on rate limits (fail fast)
+  async function doLogin() {
+    try {
+      const session = await SB.signInWithPassword(email, password);
+      currentUser = session.user;
+      showApp();
+      await startApp();
+      return;
+    } catch (signInErr) {
+      const errMsg = signInErr.message || '';
+
+      // Rate limited — fail immediately with friendly message
+      if (errMsg === 'RATE_LIMITED') {
+        showBanner(LANG === 'zh' ? '请稍后再试（服务器限流中）' : 'Please try again shortly (rate limited)');
         return;
-      } catch (signInErr) {
-        const errMsg = signInErr.message || '';
+      }
 
-        // Rate-limit error → short wait, retry once
-        if ((errMsg.includes('429') || errMsg.includes('Too Many Requests') || errMsg.includes('rate_limit') || errMsg.includes('limit') || errMsg.includes('overloaded')) && attempt < maxRetries) {
-          const waitMs = 2500; // fixed 2.5s, no exponential backoff needed for 1 retry
-          console.warn(`Login busy, retrying in ${waitMs}ms... (${attempt + 1}/${maxRetries})`);
-          await new Promise(r => setTimeout(r, waitMs));
-          continue;
-        }
-
-        // Non-retryable errors → handle normally
-        if (errMsg.includes('Invalid login credentials')) {
-          // Signup path — do NOT wrap in retry, avoid cascading 429s
+      // Invalid credentials → try signup
+      if (errMsg.includes('Invalid login credentials')) {
+        try {
+          const signUpResult = await SB.signUp(email, password);
+          if (signUpResult.access_token) {
+            let user = null;
+            try { const payload = JSON.parse(atob(signUpResult.access_token.split('.')[1])); user = { id: payload.sub, email: payload.email, aud: payload.aud }; } catch {}
+            const session = { access_token: signUpResult.access_token, refresh_token: signUpResult.refresh_token || '', expires_at: signUpResult.expires_at || (Date.now() / 1000 + 3600), user: user || signUpResult.user };
+            SB._saveTokens(session); currentUser = session.user; showApp(); await startApp();
+            return;
+          }
+          // Signup succeeded but no token → try signing in once
           try {
-            const signUpResult = await SB.signUp(email, password);
-            if (signUpResult.access_token) {
-              let user = null;
-              try { const payload = JSON.parse(atob(signUpResult.access_token.split('.')[1])); user = { id: payload.sub, email: payload.email, aud: payload.aud }; } catch {}
-              const session = { access_token: signUpResult.access_token, refresh_token: signUpResult.refresh_token || '', expires_at: signUpResult.expires_at || (Date.now() / 1000 + 3600), user: user || signUpResult.user };
-              SB._saveTokens(session); currentUser = session.user; showApp(); await startApp();
-              return;
-            }
-            // If signup succeeded but no token, try signing in once (no retry)
             const session2 = await SB.signInWithPassword(email, password);
             currentUser = session2.user; showApp(); await startApp(); return;
-          } catch (_) {
+          } catch (e2) {
+            if (e2.message === 'RATE_LIMITED') {
+              showBanner(LANG === 'zh' ? '注册成功，请稍后再试登录' : 'Signed up, please try logging in shortly');
+              return;
+            }
             throw new Error(t('err_confirm_email'));
           }
+        } catch (signUpErr) {
+          if ((signUpErr.message || '') === 'RATE_LIMITED') {
+            showBanner(LANG === 'zh' ? '请稍后再试（服务器限流中）' : 'Please try again shortly (rate limited)');
+            return;
+          }
+          throw new Error(t('err_confirm_email'));
         }
-        if (errMsg.includes('Email not confirmed')) throw new Error(t('err_email_not_confirmed'));
-        throw signInErr;
       }
+      if (errMsg.includes('Email not confirmed')) throw new Error(t('err_email_not_confirmed'));
+      throw signInErr;
     }
   }
 
   try {
-    await doLoginWithRetry();
+    await doLogin();
   } catch (e) {
     console.error('Login error:', e);
     const msg = e.message || '';
-    // Friendly message for rate limit
-    if (msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('rate_limit') || msg.includes('limit') || msg.includes('overloaded')) {
-      showBanner(LANG === 'zh' ? '服务器繁忙，请稍后再试' : 'Server busy, please try again shortly');
+    if (msg === 'RATE_LIMITED') {
+      showBanner(LANG === 'zh' ? '请稍后再试（服务器限流中）' : 'Please try again shortly (rate limited)');
     } else {
       showBanner(msg || t('err_login'));
     }
