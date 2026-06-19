@@ -322,6 +322,7 @@
       border: none; border-radius: var(--radius);
       font-size: 15px; font-weight: 600; cursor: pointer;
       transition: all 0.18s ease; font-family: inherit;
+      pointer-events: auto;
     }
     .login-btn:hover { opacity: 0.88; }
     .login-btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -333,6 +334,7 @@
       position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
       background: none; border: none; cursor: pointer; color: var(--text-tertiary);
       padding: 4px; display: flex; align-items: center;
+      pointer-events: auto;
     }
     .login-password-toggle:hover { color: var(--text-secondary); }
 
@@ -656,7 +658,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </div>
-    <button class="login-btn" id="loginBtn" data-i18n="login_btn">登 录</button>
+    <button class="login-btn" id="loginBtn" data-i18n="login_btn" onclick="this.blur(); document.getElementById('loginBtn').dispatchEvent(new Event('click'));">登 录</button>
     <div class="login-hint" data-i18n="login_hint">首次使用将自动注册账号，密码至少 6 位</div>
   </div>
 </div>
@@ -2046,35 +2048,25 @@ function generateCard(memory) {
     // Small gap after date
     y += 50;
 
-    // ─── Entries: serif, warm off-white ───
+    // ─── Entries: pick ONE random non-empty entry ───
+    const nonEmpty = memory.entries.filter(t => t.trim());
+    const pick = nonEmpty.length > 0
+      ? nonEmpty[Math.floor(Math.random() * nonEmpty.length)]
+      : '';
+    if (!pick) return; // nothing to show
+
     const maxW = W - 120;
-    const lineH = 34;
+    const lineH = 38;
 
-    memory.entries.forEach((text, i) => {
-      if (!text.trim()) return;
+    // Entry text — warm off-white, serif, generous size
+    ctx.font = `20px ${bodyFont}`;
+    ctx.fillStyle = 'rgba(245,240,230,0.92)';
+    ctx.textAlign = 'center';
 
-      // ✦ separator before each entry (except first)
-      if (i > 0) {
-        ctx.font = '11px serif';
-        ctx.fillStyle = 'rgba(200,175,140,0.25)';
-        ctx.textAlign = 'center';
-        ctx.fillText('✦', W / 2, y);
-        y += 24;
-      }
-
-      // Entry text
-      const fontSize = i === 0 ? 21 : 18;
-      const alpha = i === 0 ? 0.95 : 0.72;
-      ctx.font = `${fontSize}px ${bodyFont}`;
-      ctx.fillStyle = `rgba(245,240,230,${alpha})`;
-      ctx.textAlign = 'center';
-
-      const lines = wrapText(ctx, text.trim(), maxW);
-      lines.forEach(ln => {
-        ctx.fillText(ln, W / 2, y);
-        y += lineH;
-      });
-      y += 16; // space between entries
+    const lines = wrapText(ctx, pick.trim(), maxW);
+    lines.forEach(ln => {
+      ctx.fillText(ln, W / 2, y);
+      y += lineH;
     });
 
     // ─── Bottom area: tagline + app name (very subtle) ───
