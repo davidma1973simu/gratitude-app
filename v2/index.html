@@ -908,7 +908,6 @@ const I18N = {
     reunion_saved: '✅ 图片已保存',
     card_app_name: '感恩日记 · Gratitude',
     card_tagline: '留住这束光',
-    card_date_dot: '{year}.{month}.{day}',
   },
   en: {
     login_title: 'Gratitude',
@@ -994,43 +993,35 @@ const I18N = {
     reunion_saved: '✅ Image saved',
     card_app_name: 'Gratitude Journal',
     card_tagline: 'Keep this light',
-    card_date_dot: '{year}.{month}.{day}',
   }
-};
 
 let LANG = localStorage.getItem('lang') || 'zh';
 
 // ─── Card Background Images (Unsplash, no API key needed) ──────────────
-// 20+ curated image IDs — natural light, mist, water, plants, minimal
+// 20+ curated REAL Unsplash photo UUIDs — natural light, mist, water, plants
 // Fallback: dark gradient if image fails to load
 const CARD_BG_IDS = [
-  'MGd5eYbz4w', // misty forest path
-  '6sAl6aQ4OWI', // soft dawn light
-  'c3LbNUVcY_U', // calm lake reflection
-  '1K9Tdq7qCfU', // green leaves close-up
-  'wD1KQ7_ZnJw', // mountain lake sunrise
-  'yC_YFREoffk', // ocean waves soft
-  'LNRyGwHiOhQ', // pink flowers minimal
-  'pL9 phfVG2s', // foggy bridge
-  'JjGxmUpGfA', // sunlight through trees
-  'gF0NhiR_CnM', // lotus flower water
-  'b0we8fQy_c', // stones in stream
-  'FT2WbN9Hc6Q', // golden hour grass
-  'wMntpxxsQ9k', // cherry blossoms
-  'jFaq1xZTd_E', // morning dew leaves
-  '4_jhV8K-Xk', // minimal architecture
-  '7_sF2ZP066U', // aerial beach soft
-  'j5M5a_Sy_s', // bamboo forest
-  'S55PSo6rFb', // sunset over water
-  'sFeS-P13knQ', // frost on leaves
-  'aZjvRj6nXc', // soft cloud sky
-  'lkAzenKPag', // wheat field golden
-  'Jyk_ysxxO8', // quiet library light
-  'q9gvRNOn-Vc', // raindrops on glass
-  'eOZUwF1Wo8', // candlelight dark
-  'rzBMPH1RKB', // snowy branch minimal
-  'cG-e03uNMI', // sunrise over hills
-  'pLeBOeK_22', // lotus pond mist
+  '1506748688652-98e3b70857ab', // misty forest path
+  '1470071459603-5b07b7d3f8c', // foggy mountain lake
+  '1469474968028-56623f02e42e', // calm lake mist
+  '1518837672888-32041b7e64f7', // sunlight through trees
+  '1472214103451-937bd71c778e', // green forest light
+  '1507003211169-0a1dd7228ca3', // morning rays
+  '1495617023785-22154d8275c7', // ocean waves soft
+  '1519125140130-f0be87de81fc', // cherry blossoms pink
+  '1484445318011-89c77f8e8f11', // golden hour grass
+  '1433086966359-0811ddd11a0e', // lotus flower water
+  '1523712859549-0c824c8f509d', // bamboo forest path
+  '1542273917368-9515abcf8904', // sunrise over hills
+  '1501854267756-2ad544eb2786', // raindrops on window
+  '1419243405654-9ae82bc7c387', // candle in dark
+  '1491009783654-ff36a8591ee3', // snowy branch
+  '1464822759023-fed84aad3ada', // wheat field gold
+  '1475924151173-418c26dce449', // soft cloud sky
+  '1445109914205-6fb9e00e7cdc', // aerial beach minimal
+  '1502136218633-979faa3c4b32', // frost on leaves
+  '1513001775580-cd032f9cc5d0', // quiet library window
+  '1500463078463-69c1e16b15d3', // stones in stream
 ];
 function pickCardBg() {
   return CARD_BG_IDS[Math.floor(Math.random() * CARD_BG_IDS.length)];
@@ -1994,89 +1985,88 @@ function generateCard(memory) {
 
   // ─── Background: Unsplash image or gradient fallback ───
   const imgId = pickCardBg();
-  const bgUrl = `https://images.unsplash.com/photo-${imgId}?w=${W}&h=${H}&fit=crop&q=80&auto=format`;
+  const bgUrl = `https://images.unsplash.com/photo-${imgId}?w=${W * 2}&h=${H * 2}&fit=crop&q=85&auto=format`;
 
   const drawCard = (bgLoaded) => {
     if (bgLoaded) {
-      // Dark overlay so text is readable
-      ctx.fillStyle = 'rgba(18,18,18,0.62)';
+      // Gentle dark overlay — light enough to see background image
+      ctx.fillStyle = 'rgba(12,10,8,0.50)';
       ctx.fillRect(0, 0, W, H);
-      // Subtle warm tint on overlay
-      ctx.fillStyle = 'rgba(120,90,60,0.08)';
+      // Subtle warm vignette at edges
+      const vg = ctx.createRadialGradient(W/2, H*0.4, H*0.15, W/2, H*0.45, H*0.75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.35)');
+      ctx.fillStyle = vg;
       ctx.fillRect(0, 0, W, H);
     } else {
-      // Elegant gradient fallback
+      // Rich dark gradient fallback
       const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#1a1918');
-      g.addColorStop(0.5, '#1e1c1a');
-      g.addColorStop(1, '#121110');
+      g.addColorStop(0, '#1c1917');
+      g.addColorStop(0.5, '#181716');
+      g.addColorStop(1, '#0f0e0d');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
     }
 
-    // ─── Decorative top line (very thin, warm) ───
-    ctx.strokeStyle = 'rgba(210,180,140,0.25)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(W * 0.2, 180);
-    ctx.lineTo(W * 0.8, 180);
-    ctx.stroke();
-
-    // ─── ✦ symbol at top center ───
-    ctx.font = '18px serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(210,180,140,0.45)';
-    ctx.fillText('✦', W / 2, 210);
-
-    // ─── Date (elegant, small, in lower third area) ───
-    const d = new Date(memory.date + 'T00:00:00');
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const dateStr = t('card_date_dot')
-      .replace('{year}', year).replace('{month}', month).replace('{day}', day);
-
-    ctx.font = '300 13px Georgia, "Noto Serif SC", "STSong", serif';
-    ctx.fillStyle = 'rgba(210,180,140,0.55)';
-    ctx.textAlign = 'center';
-    ctx.fillText(dateStr, W / 2, 245);
-
-    // ─── Thin divider after date ───
-    ctx.strokeStyle = 'rgba(210,180,140,0.18)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(W / 2 - 40, 268);
-    ctx.lineTo(W / 2 + 40, 268);
-    ctx.stroke();
-
-    // ─── Entries: serif, warm off-white, in lower third ───
-    // Start Y position: lower third (~H * 0.38)
-    let y = H * 0.38;
-    const maxW = W - 140;
-    const lineH = 34;
-
-    // Use serif typography
+    // ─── Serif typography setup ───
     const bodyFont = LANG === 'zh'
       ? '"Noto Serif SC", "STSong", "Songti SC", Georgia, serif'
       : 'Georgia, "Noto Serif", serif';
 
+    // ─── Date: elegant, in true lower-third area ───
+    const d = new Date(memory.date + 'T00:00:00');
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${year}.${month}.${day}`;
+
+    // Start content area at ~55% from top (true lower visual weight)
+    let y = H * 0.52;
+
+    // Thin decorative line above everything
+    ctx.strokeStyle = 'rgba(200,175,140,0.20)';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.3, y - 30);
+    ctx.lineTo(W * 0.7, y - 30);
+    ctx.stroke();
+
+    // ✦ small symbol
+    ctx.font = '14px serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(200,175,140,0.35)';
+    ctx.fillText('✦', W / 2, y - 8);
+
+    // Date — subtle, warm
+    ctx.font = '300 13px ' + bodyFont;
+    ctx.fillStyle = 'rgba(200,175,140,0.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText(dateStr, W / 2, y + 18);
+
+    // Small gap after date
+    y += 50;
+
+    // ─── Entries: serif, warm off-white ───
+    const maxW = W - 120;
+    const lineH = 34;
+
     memory.entries.forEach((text, i) => {
       if (!text.trim()) return;
 
-      // ✦ before each entry (except first)
+      // ✦ separator before each entry (except first)
       if (i > 0) {
-        ctx.font = '10px serif';
-        ctx.fillStyle = 'rgba(210,180,140,0.3)';
+        ctx.font = '11px serif';
+        ctx.fillStyle = 'rgba(200,175,140,0.25)';
         ctx.textAlign = 'center';
         ctx.fillText('✦', W / 2, y);
         y += 24;
       }
 
-      // Entry text — larger, warmer for first entry
-      const fontSize = i === 0 ? 20 : 17;
-      const alpha = i === 0 ? 0.92 : 0.72;
+      // Entry text
+      const fontSize = i === 0 ? 21 : 18;
+      const alpha = i === 0 ? 0.95 : 0.72;
       ctx.font = `${fontSize}px ${bodyFont}`;
-      ctx.fillStyle = `rgba(230,220,208,${alpha})`;
+      ctx.fillStyle = `rgba(245,240,230,${alpha})`;
       ctx.textAlign = 'center';
 
       const lines = wrapText(ctx, text.trim(), maxW);
@@ -2084,27 +2074,29 @@ function generateCard(memory) {
         ctx.fillText(ln, W / 2, y);
         y += lineH;
       });
-      y += 18; // space between entries
+      y += 16; // space between entries
     });
 
-    // ─── Bottom hint: "一束光" tagline ───
-    ctx.font = '300 11px Georgia, "Noto Serif SC", serif';
-    ctx.fillStyle = 'rgba(210,180,140,0.32)';
-    ctx.textAlign = 'center';
-    ctx.fillText(t('card_tagline'), W / 2, H - 80);
-
-    // ─── App name (very subtle) ───
-    ctx.font = '300 10px Georgia, "Noto Serif SC", serif';
-    ctx.fillStyle = 'rgba(210,180,140,0.22)';
-    ctx.fillText('🌿 ' + t('card_app_name'), W / 2, H - 56);
-
-    // ─── Thin bottom line ───
-    ctx.strokeStyle = 'rgba(210,180,140,0.15)';
+    // ─── Bottom area: tagline + app name (very subtle) ───
+    const bottomY = H - 70;
+    // Thin line
+    ctx.strokeStyle = 'rgba(200,175,140,0.12)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    ctx.moveTo(W * 0.25, H - 110);
-    ctx.lineTo(W * 0.75, H - 110);
+    ctx.moveTo(W * 0.28, bottomY - 22);
+    ctx.lineTo(W * 0.72, bottomY - 22);
     ctx.stroke();
+
+    // Tagline
+    ctx.font = '300 11px ' + bodyFont;
+    ctx.fillStyle = 'rgba(200,175,140,0.30)';
+    ctx.textAlign = 'center';
+    ctx.fillText(t('card_tagline'), W / 2, bottomY);
+
+    // App name
+    ctx.font = '300 10px ' + bodyFont;
+    ctx.fillStyle = 'rgba(200,175,140,0.18)';
+    ctx.fillText('🌿 ' + t('card_app_name'), W / 2, bottomY + 22);
 
     const dataUrl = canvas.toDataURL('image/png');
     showCardPreview(dataUrl);
@@ -2114,7 +2106,6 @@ function generateCard(memory) {
   const bgImg = new Image();
   bgImg.crossOrigin = 'anonymous';
   bgImg.onload = () => {
-    // Draw image with subtle warm tone
     ctx.drawImage(bgImg, 0, 0, W, H);
     drawCard(true);
   };
