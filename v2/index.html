@@ -1968,8 +1968,8 @@ document.getElementById('reunionKeepBtn').addEventListener('click', () => {
 
 function generateCard(memory) {
   const canvas = document.createElement('canvas');
-  // Polaroid proportions — wider bottom for caption
-  const W = 720, H = 1020;
+  // Polaroid proportions — photo ~76%, bottom caption ~24%
+  const W = 720, H = 980;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
@@ -1980,23 +1980,25 @@ function generateCard(memory) {
   const entryText = pickOne.trim();
 
   // ─── Polaroid dimensions ───
-  const BORDER = 22;           // white border thickness (top/left/right)
-  const BOTTOM_BORDER = 180;   // thick white bottom for caption
+  const BORDER = 18;           // white border thickness
+  const BOTTOM_BORDER = 210;   // thick bottom for handwritten caption
   const photoX = BORDER;
   const photoY = BORDER;
   const photoW = W - BORDER * 2;
   const photoH = H - BORDER - BOTTOM_BORDER;
 
-  // Background: fill entire canvas with white (Polaroid base)
-  ctx.fillStyle = '#f8f6f3';
+  // ════════════════════════════════════════
+  // Warm cream base (like real Polaroid paper)
+  // ══════════════════════════════════════
+  ctx.fillStyle = '#faf8f5';
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle shadow around the whole Polaroid
-  ctx.shadowColor = 'rgba(0,0,0,0.12)';
-  ctx.shadowBlur = 25;
+  // Soft shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.10)';
+  ctx.shadowBlur = 30;
   ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 4;
-  ctx.fillStyle = '#f8f6f3';
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = '#faf8f5';
   ctx.fillRect(0, 0, W, H);
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
@@ -2008,135 +2010,130 @@ function generateCard(memory) {
   const drawPolaroid = (imgLoaded) => {
     if (imgLoaded) {
       try {
-        // Clip to photo area (rounded corners effect via clip)
+        // Draw photo clipped to rounded rect
         ctx.save();
-        roundRect(ctx, photoX, photoY, photoW, photoH, 4);
+        roundRect(ctx, photoX, photoY, photoW, photoH, 3);
         ctx.clip();
         ctx.drawImage(bgImg, photoX, photoY, photoW, photoH);
-        ctx.restore();
 
-        // Warm vintage overlay on photo
-        ctx.save();
-        roundRect(ctx, photoX, photoY, photoW, photoH, 4);
-        ctx.clip();
-        // Slight desaturate + warm tint
-        ctx.fillStyle = 'rgba(240,225,195,0.12)';
+        // ── Polaroid-style warm/pink vintage overlay ──
+        // Step 1: Slight fade (reduce contrast like old film)
+        ctx.fillStyle = 'rgba(255,250,245,0.08)';
         ctx.fillRect(photoX, photoY, photoW, photoH);
-        // Gentle vignette on photo only
+        // Step 2: Warm peach-pink tint (the signature Polaroid look)
+        ctx.fillStyle = 'rgba(255,220,195,0.13)';
+        ctx.fillRect(photoX, photoY, photoW, photoH);
+        // Step 3: Subtle purple-pink shift in shadows (Polaroid characteristic)
+        const tintGrad = ctx.createLinearGradient(photoX, photoY, photoX, photoY + photoH);
+        tintGrad.addColorStop(0, 'rgba(255,235,225,0.04)');
+        tintGrad.addColorStop(0.5, 'rgba(230,200,210,0.07)');
+        tintGrad.addColorStop(1, 'rgba(200,180,190,0.09)');
+        ctx.fillStyle = tintGrad;
+        ctx.fillRect(photoX, photoY, photoW, photoH);
+        // Step 4: Vignette (dark edges, lighter center)
         const vg = ctx.createRadialGradient(
-          photoX + photoW/2, photoY + photoH*0.35, photoH*0.15,
-          photoX + photoW/2, photoY + photoH*0.45, photoH*0.55
+          photoX + photoW*0.48, photoY + photoH*0.38, photoH*0.12,
+          photoX + photoW*0.50, photoY + photoH*0.42, photoH*0.58
         );
         vg.addColorStop(0, 'rgba(0,0,0,0)');
-        vg.addColorStop(1, 'rgba(40,30,20,0.30)');
+        vg.addColorStop(0.6, 'rgba(40,25,15,0.12)');
+        vg.addColorStop(1, 'rgba(35,20,12,0.32)');
         ctx.fillStyle = vg;
         ctx.fillRect(photoX, photoY, photoW, photoH);
 
-        // Photo edge (thin dark border like real Polaroid)
-        ctx.strokeStyle = 'rgba(30,25,20,0.08)';
+        // Thin inner edge
+        ctx.strokeStyle = 'rgba(60,45,30,0.06)';
         ctx.lineWidth = 1;
-        roundRect(ctx, photoX, photoY, photoW, photoH, 4);
+        roundRect(ctx, photoX+0.5, photoY+0.5, photoW-1, photoH-1, 3);
         ctx.stroke();
         ctx.restore();
-      } catch(e) {
-        drawPhotoFallback();
-      }
-    } else {
-      drawPhotoFallback();
-    }
+      } catch(e) { drawPhotoFallback(); }
+    } else { drawPhotoFallback(); }
 
     function drawPhotoFallback() {
-      // Beautiful warm gradient fallback for photo area
       ctx.save();
-      roundRect(ctx, photoX, photoY, photoW, photoH, 4);
+      roundRect(ctx, photoX, photoY, photoW, photoH, 3);
       ctx.clip();
-      const g = ctx.createLinearGradient(photoX, photoY, photoX + photoW, photoY + photoH);
-      g.addColorStop(0, '#d4c5a9');
-      g.addColorStop(0.3, '#c9b896');
-      g.addColorStop(0.6, '#bfad88');
-      g.addColorStop(1, '#b5a07a');
-      ctx.fillStyle = g;
+      // Warm sepia-toned gradient
+      const g = ctx.createLinearGradient(photoX, photoY, photoX+photoW, photoY+photoH);
+      g.addColorStop(0, '#e8d9c5');   g.addColorStop(0.3, '#ddd0b8');
+      g.addColorStop(0.65, '#d4c4a8'); g.addColorStop(1, '#c9b89a');
+      ctx.fillStyle = g; ctx.fillRect(photoX, photoY, photoW, photoH);
+      // Pink-warm tint layer
+      ctx.fillStyle = 'rgba(255,218,195,0.18)';
       ctx.fillRect(photoX, photoY, photoW, photoH);
-      // Soft texture dots
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      for (let i = 0; i < 300; i++) {
-        const rx = photoX + Math.random() * photoW;
-        const ry = photoY + Math.random() * photoH;
-        ctx.beginPath(); ctx.arc(rx, ry, Math.random()*1.5+0.3, 0, Math.PI*2); ctx.fill();
+      // Soft grain texture
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let i=0;i<400;i++){
+        ctx.beginPath();
+        ctx.arc(photoX+Math.random()*photoW, photoY+Math.random()*photoH,
+                Math.random()*1.2+0.2, 0, Math.PI*2); ctx.fill();
       }
       // Vignette
       const vgf = ctx.createRadialGradient(
-        photoX + photoW/2, photoY + photoH*0.35, photoH*0.1,
-        photoX + photoW/2, photoY + photoH*0.45, photoH*0.55
+        photoX+photoW*0.48, photoY+photoH*0.38, photoH*0.1,
+        photoX+photoW*0.50, photoY+photoH*0.42, photoH*0.58
       );
-      vgf.addColorStop(0, 'rgba(0,0,0,0)');
-      vgf.addColorStop(1, 'rgba(50,35,20,0.25)');
-      ctx.fillStyle = vgf;
-      ctx.fillRect(photoX, photoY, photoW, photoH);
+      vgf.addColorStop(0,'rgba(0,0,0,0)');
+      vgf.addColorStop(1,'rgba(50,35,20,0.28)');
+      ctx.fillStyle = vgf; ctx.fillRect(photoX, photoY, photoW, photoH);
       ctx.restore();
-
-      // Edge
-      ctx.strokeStyle = 'rgba(30,25,20,0.08)';
-      ctx.lineWidth = 1;
-      roundRect(ctx, photoX, photoY, photoW, photoH, 4);
+      ctx.strokeStyle='rgba(60,45,30,0.06)';
+      ctx.lineWidth=1;
+      roundRect(ctx, photoX+0.5, photoY+0.5, photoW-1, photoH-1, 3);
       ctx.stroke();
     }
 
-    // ══════════════════════════════════════════════════
-    // ─── WHITE CAPTION AREA (bottom of Polaroid) ───
-    // ══════════════════════════════════════════════════
-    const capTop = photoY + photoH + 16;
+    // ════════════════════════════════════════════════════════
+    // ─── CAPTION AREA: Handwritten style (like the ref) ───
+    // ════════════════════════════════════════════════════════
+    const capTop = photoY + photoH + 14;
     const capCenterX = W / 2;
 
-    // Handwritten / Kaishu font for Chinese
+    // Handwritten font — casual, personal, like writing on a Polaroid
     const handFont = LANG === 'zh'
-      ? '"Ma Shan Zheng", "Zhi Mang Xing", "Long Cang", "KaiTi", "STKaiti", "楷体", "Kaiti SC", cursive'
+      ? '"Ma Shan Zheng", "Zhi Mang Xing", "Long Cang", cursive'
       : '"Caveat", "Dancing Script", "Patrick Hand", cursive';
 
-    // Date — small, subtle gray
+    // Date — tiny, top-left of caption, very subtle
     const d = new Date(memory.date + 'T00:00:00');
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const dateStr = `${year}.${month}.${day}`;
 
-    ctx.font = '13px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-    ctx.fillStyle = 'rgba(120,110,95,0.50)';
-    ctx.textAlign = 'center';
-    ctx.fillText(dateStr, capCenterX, capTop + 24);
+    ctx.font = '11px -apple-system, "SF Pro Text", sans-serif';
+    ctx.fillStyle = 'rgba(160,150,135,0.40)';
+    ctx.textAlign = 'left';
+    ctx.fillText(dateStr, BORDER + 16, capTop + 20);
 
-    // Decorative arrow: 留住这束光 →
-    const labelY = capTop + 62;
-    ctx.font = '600 14px -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif';
-    ctx.fillStyle = 'rgba(140,125,105,0.65)';
-    ctx.textAlign = 'center';
-    ctx.fillText('\u7559\u4F4F\u8FD9\u675F\u5149 \u2192', capCenterX, labelY);
+    // Main entry text — BIG, handwritten, dark ink
+    const textStartY = capTop + 56;
+    const maxTextW = W - 64;
 
-    // Main entry text — LARGE, handwritten style, dark ink color
-    const textStartY = labelY + 46;
-    const maxTextW = W - 70; // generous margins
-
-    // Font sizing: start large, shrink if needed
-    let fSize = 38;
-    if (entryText.length > 10) fSize = 35;
-    if (entryText.length > 18) fSize = 31;
-    if (entryText.length > 28) fSize = 27;
-    if (entryText.length > 40) fSize = 23;
+    let fSize = 40;
+    if (entryText.length > 8) fSize = 37;
+    if (entryText.length > 15) fSize = 33;
+    if (entryText.length > 24) fSize = 29;
+    if (entryText.length > 36) fSize = 25;
+    if (entryText.length > 50) fSize = 21;
 
     ctx.font = `${fSize}px ${handFont}`;
-    ctx.fillStyle = 'rgba(35,30,25,0.85)';
+    ctx.fillStyle = 'rgba(30,26,22,0.88)';
     ctx.textAlign = 'center';
 
+    // Very slight natural baseline wobble for handwriting feel
     const lines = wrapText(ctx, entryText, maxTextW);
     lines.forEach((ln, i) => {
-      ctx.fillText(ln, capCenterX, textStartY + i * (fSize * 1.6));
+      // Random tiny Y offset per line for organic feel
+      const wobble = (i % 2 === 0 ? 1 : -1) * (Math.random() * 1.5);
+      ctx.fillText(ln, capCenterX, textStartY + i * Math.round(fSize * 1.7) + wobble);
     });
 
     const dataUrl = canvas.toDataURL('image/png');
     showCardPreview(dataUrl);
   };
 
-  // ─── Load background image ───
   const bgImg = new Image();
   bgImg.crossOrigin = 'anonymous';
   bgImg.onload = () => { drawPolaroid(true); };
