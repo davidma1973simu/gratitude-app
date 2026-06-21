@@ -1413,6 +1413,26 @@ const SB = {
 };
 
 // ─── Storage ───────────────────────────────────────────────────────────────
+async function logEvent(event, properties = {}) {
+  if (!SB._tokens?.user?.id) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/events`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB._tokens.access_token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        user_id: SB._tokens.user.id,
+        event: event,
+        properties: properties,
+      }),
+    });
+  } catch {}
+}
+
 const STORAGE_KEY = 'gratitude_entries_v1';
 function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
 function saveLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
@@ -1522,6 +1542,7 @@ async function initAuth() {
       currentUser = session.user;
       showApp();
       await startApp();
+      logEvent('session_start');
       return;
     }
   } catch (e) { console.error('initAuth error:', e); }
@@ -1539,6 +1560,7 @@ SB.onAuthStateChange(async (event, session) => {
     currentUser = session.user;
     showApp();
     await startApp();
+    logEvent('session_start');
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     allEntries = {};
@@ -2075,6 +2097,8 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   renderToday();
   renderHistory();
 
+  logEvent('entry_submitted', { count: trimmed.filter(e => e.length >= 5).length });
+
   // Check milestones on submit
   const ms = checkMilestone('submit');
   showThanksModal(ms);
@@ -2294,6 +2318,7 @@ document.getElementById('pastLight').addEventListener('click', () => {
 
 // ─── v2: Reunion Full-screen ───────────────────────────────────────────────
 function openReunion(memory) {
+  logEvent('reunion_opened');
   const overlay = document.getElementById('reunionOverlay');
   const dateEl = document.getElementById('reunionDate');
   const dateSubEl = document.getElementById('reunionDateSub');
@@ -2613,6 +2638,7 @@ function wrapText(ctx, text, maxWidth) {
 }
 
 function showCardPreview(dataUrl) {
+  logEvent('card_generated');
   const previewOverlay = document.getElementById('cardPreviewOverlay');
   const img = document.getElementById('cardPreviewImg');
   img.src = dataUrl;
@@ -2620,6 +2646,7 @@ function showCardPreview(dataUrl) {
 
   // Save button
   document.getElementById('cardSaveBtn').onclick = () => {
+    logEvent('card_saved');
     // Create download link
     const a = document.createElement('a');
     a.href = dataUrl;
@@ -2728,7 +2755,7 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
     document.querySelectorAll('[data-view]').forEach(v => v.classList.remove('active'));
     btn.classList.add('active');
     document.querySelector(`[data-view="${tab}"]`).classList.add('active');
-    if (tab === 'history') renderHistory(document.getElementById('searchInput').value.trim());
+    if (tab === 'history') { renderHistory(document.getElementById('searchInput').value.trim()); logEvent('history_opened'); }
   });
 });
 
@@ -2803,6 +2830,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   showInstallBanner();
+  logEvent('pwa_install_prompt');
 });
 
 function showInstallBanner() {
