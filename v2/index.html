@@ -1284,26 +1284,36 @@ const SB = {
       headers['Authorization'] = `Bearer ${this._tokens.access_token}`;
     }
     const res = await fetch(`${SB_URL}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+    if (res.status === 429 || res.status === 503) throw new Error('RATE_LIMITED');
     const data = await res.json();
     if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'API error');
     return data;
   },
 
-  async signUp(email, password) {
-    return this._api('/auth/v1/signup', {
+  async signUp(email, password, _retry = 0) {
+    const res = await fetch(`${SB_URL}/auth/v1/signup`, {
       method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
+    if (res.status === 429 || res.status === 503) {
+      if (_retry < 2) { await new Promise(r => setTimeout(r, 10000)); return this.signUp(email, password, _retry + 1); }
+      throw new Error('RATE_LIMITED');
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Signup failed');
+    return data;
   },
 
-  async signInWithPassword(email, password) {
+  async signInWithPassword(email, password, _retry = 0) {
     const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    // Rate limited — fail immediately, no retry
+    // Rate limited → auto-retry (3 × 10s ≈ 30s, covers Supabase rate limit window)
     if (res.status === 429 || res.status === 503) {
+      if (_retry < 3) { await new Promise(r => setTimeout(r, 10000)); return this.signInWithPassword(email, password, _retry + 1); }
       throw new Error('RATE_LIMITED');
     }
     const data = await res.json();
@@ -1581,7 +1591,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = t('login_btn_loading');
 
-  // Helper: login — NO retry on rate limits (fail fast)
+  // Helper: login — auto-retries on rate limits (10s × 3)
   async function doLogin() {
     try {
       const session = await SB.signInWithPassword(email, password);
@@ -1592,9 +1602,9 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     } catch (signInErr) {
       const errMsg = signInErr.message || '';
 
-      // Rate limited — fail immediately with friendly message
+      // Rate limited — all retries exhausted, show gentle message
       if (errMsg === 'RATE_LIMITED') {
-        showBanner(LANG === 'zh' ? '请稍后再试（服务器限流中）' : 'Please try again shortly (rate limited)');
+        showBanner(LANG === 'zh' ? '网络暂时繁忙，请稍后重试' : 'Network busy, please try again shortly');
         return;
       }
 
@@ -1614,15 +1624,15 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
             const session2 = await SB.signInWithPassword(email, password);
             currentUser = session2.user; showApp(); await startApp(); return;
           } catch (e2) {
-            if (e2.message === 'RATE_LIMITED') {
-              showBanner(LANG === 'zh' ? '注册成功，请稍后再试登录' : 'Signed up, please try logging in shortly');
-              return;
-            }
+          if (e2.message === 'RATE_LIMITED') {
+            showBanner(LANG === 'zh' ? '注册成功，网络暂时繁忙，请稍后重试' : 'Signed up, network busy, please retry shortly');
+            return;
+          }
             throw new Error(t('err_confirm_email'));
           }
         } catch (signUpErr) {
           if ((signUpErr.message || '') === 'RATE_LIMITED') {
-            showBanner(LANG === 'zh' ? '请稍后再试（服务器限流中）' : 'Please try again shortly (rate limited)');
+            showBanner(LANG === 'zh' ? '网络暂时繁忙，请稍后重试' : 'Network busy, please try again shortly');
             return;
           }
           throw new Error(t('err_confirm_email'));
@@ -1639,7 +1649,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     console.error('Login error:', e);
     const msg = e.message || '';
     if (msg === 'RATE_LIMITED') {
-      showBanner(LANG === 'zh' ? '请稍后再试（服务器限流中）' : 'Please try again shortly (rate limited)');
+      showBanner(LANG === 'zh' ? '网络暂时繁忙，请稍后重试' : 'Network busy, please try again shortly');
     } else {
       showBanner(msg || t('err_login'));
     }
