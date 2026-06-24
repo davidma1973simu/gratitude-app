@@ -89,6 +89,54 @@
     .today-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; line-height: 1.2; }
     .today-header p { font-size: 15px; color: var(--text-secondary); margin-top: 6px; font-weight: 400; }
 
+    /* ─── Nickname — warm, subtle, editable ─── */
+    .nickname-row {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    .nickname-row.visible { opacity: 1; }
+    .nickname-label {
+      font-size: 14px;
+      color: rgba(100,90,75,0.65);
+      font-weight: 400;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+      border-bottom: 1px dotted transparent;
+      transition: border-color 0.3s;
+    }
+    .nickname-label:hover { border-bottom-color: rgba(100,90,75,0.35); }
+    .nickname-input {
+      display: none;
+      font-size: 14px;
+      padding: 4px 10px;
+      border: 1px solid rgba(180,170,155,0.35);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text-primary);
+      outline: none;
+      width: 140px;
+      font-family: inherit;
+      transition: border-color 0.25s;
+    }
+    .nickname-input.show {
+      display: inline-block;
+    }
+    .nickname-input:focus {
+      border-color: rgba(134,168,130,0.5);
+    }
+    .nickname-edit-btn {
+      display: none;
+      font-size: 13px;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 0.25s;
+    }
+    .nickname-edit-btn:hover { opacity: 0.7; }
+
     /* ─── Encouragement / Milestone Area — whisper-quiet, no visual noise ─── */
     .encouragement-area {
       margin-top: 12px;
@@ -855,6 +903,13 @@
     <div class="today-header fade-in-up">
       <h1 id="greetingTitle">今天，<br>你感恩什么？</h1>
       <p id="greetingSubtitle">写下今天让你心怀感激的三件事</p>
+      <!-- v2: Nickname — clickable to edit -->
+      <div class="nickname-row" id="nicknameRow" style="display:none;">
+        <span class="nickname-label" id="nicknameLabel"></span>
+        <input class="nickname-input" id="nicknameInput" type="text"
+               maxlength="16" placeholder="Your name" autocomplete="off" />
+        <span class="nickname-edit-btn" id="nicknameEditBtn">✏️</span>
+      </div>
       <!-- v2: Encouragement / milestone area — always visible -->
       <div class="encouragement-area" id="encouragementArea" style="display:none;">
         <span class="encouragement-text" id="encouragementText"></span>
@@ -1720,11 +1775,75 @@ async function startApp() {
   }
   setNavDate();
   setGreeting();
+  initNickname();
   renderToday();
   renderHistory();
   scheduleReminder();
   // v2: Show watermark light on homepage (only if today is not yet submitted)
   if (!todayDone) showWatermark();
+}
+
+// ─── Nickname — load, display, edit ────────────────────────────────────────
+const NICK_KEY = 'gratitude_nickname';
+function initNickname() {
+  const row = document.getElementById('nicknameRow');
+  const label = document.getElementById('nicknameLabel');
+  const input = document.getElementById('nicknameInput');
+  const btn = document.getElementById('nicknameEditBtn');
+
+  if (!row) return;
+  let name = localStorage.getItem(NICK_KEY) || '';
+
+  function showName(n) {
+    if (n && n.trim()) {
+      label.textContent = '— ' + n.trim();
+      input.value = n.trim();
+      row.style.display = 'flex';
+      // Delay for fade-in
+      requestAnimationFrame(() => requestAnimationFrame(() => row.classList.add('visible')));
+      btn.style.display = 'inline';
+    } else {
+      row.style.display = 'none';
+      row.classList.remove('visible');
+      btn.style.display = 'none';
+    }
+  }
+
+  // Click label → switch to edit mode
+  label.addEventListener('click', (e) => {
+    e.stopPropagation();
+    label.style.display = 'none';
+    btn.style.display = 'none';
+    input.classList.add('show');
+    input.focus();
+    input.select();
+  });
+
+  // Click pencil → same as clicking label
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    label.click();
+  });
+
+  // Save on Enter or blur
+  function saveNickname() {
+    const val = input.value.trim();
+    if (val.length > 0 && val.length <= 16) {
+      localStorage.setItem(NICK_KEY, val);
+      name = val;
+    } else {
+      localStorage.removeItem(NICK_KEY);
+      name = '';
+    }
+    input.classList.remove('show');
+    showName(name);
+  }
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveNickname(); input.blur(); } });
+  input.addEventListener('blur', () => setTimeout(saveNickname, 100));
+  input.addEventListener('click', (e) => e.stopPropagation());
+
+  // Initial display
+  showName(name);
 }
 
 // ─── Nav & Greeting ────────────────────────────────────────────────────────
@@ -2599,6 +2718,41 @@ function generateCard(memory) {
     lines.forEach((ln, i) => {
       ctx.fillText(ln, W - 32, textStartY + i * Math.round(fSize * 1.75));
     });
+
+    // ════════════════════════════════════════
+    // ─── SIGNATURE WORD — bold hand-drawn feel ───
+    // ════════════════════════════════════════
+    const sigWords = [
+      'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
+      'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
+      'radiance', 'calm', 'cherish', 'mindful', 'intimacy', 'kiss',
+      'sunrise', 'breathe', 'present', 'alive', 'kindness', 'shine',
+      'whisper', 'embrace', 'wander', 'free', 'soft', 'golden'
+    ];
+    const sigWord = sigWords[Math.floor(Math.random() * sigWords.length)];
+
+    // Load Caveat Bold — thick marker-pen handwriting style
+    const sigFont = new FontFace('CaveatBold',
+      "url('https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx7jf8JNwNu4jDfLW7gThA.ttf') format('truetype')",
+      { weight: '700' }
+    );
+    await sigFont.load();
+    document.fonts.add(sigFont);
+
+    // Draw signature — large, dark ink, slight tilt, overlaps photo bottom edge
+    ctx.save();
+    const sigSize = Math.round(Math.min(80, W * 0.13));
+    ctx.font = `700 ${sigSize}px CaveatBold, 'Caveat', cursive`;
+    ctx.fillStyle = 'rgba(18,14,10,0.78)';
+    // Position: lower-left of caption area, slightly up into photo overlap
+    const sigX = BORDER + 24;
+    const sigY = H - BORDER - 36;  // near bottom, with room for descenders
+    ctx.translate(sigX, sigY);
+    ctx.rotate(-0.07);  // slight leftward tilt like real handwriting
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(sigWord, 0, 0);
+    ctx.restore();
 
     const dataUrl = canvas.toDataURL('image/png');
     showCardPreview(dataUrl);
