@@ -1,11 +1,12 @@
-const CACHE_NAME = 'gratitude-v2-v23';
+const CACHE_NAME = 'gratitude-v2-v24';
 // Use relative paths that work on GitHub Pages subdirectory
 const BASE = self.location.pathname.replace('/sw.js', '');
 const ASSETS = [
   BASE + '/index.html',
   BASE + '/manifest.json',
   BASE + '/icon-192.png',
-  BASE + '/icon-512.png'
+  BASE + '/icon-512.png',
+  BASE + '/fonts/satisfy.woff2'
 ];
 
 // Install: clear ALL old caches first, then cache core assets
