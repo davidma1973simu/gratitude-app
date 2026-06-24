@@ -502,9 +502,12 @@
       align-items: center; justify-content: center;
       transition: opacity 0.5s ease;
       opacity: 1; pointer-events: auto;
+      /* CSS-level fallback: auto-hide after 3.5s even if JS fails entirely */
+      animation: splashAutoHide 4s ease-in-out forwards;
     }
     .splash-overlay.hidden {
-      opacity: 0; pointer-events: none;
+      opacity: 0 !important; pointer-events: none;
+      animation: none !important;
     }
     .splash-motif {
       position: relative;
@@ -588,6 +591,13 @@
     @keyframes splashRayFade {
       0%,100% { opacity: 0; }
       50%     { opacity: 0.35; }
+    }
+
+    /* Fallback: auto-hide splash after ~3.5s (87.5% of 4s) even if JS never runs */
+    @keyframes splashAutoHide {
+      0%, 85%   { opacity: 1; pointer-events: auto; }
+      95%       { opacity: 0; pointer-events: none; }
+      100%      { opacity: 0; pointer-events: none; visibility: hidden; }
     }
 
     /* ─── Animations ─── */
