@@ -2546,7 +2546,7 @@ document.getElementById('reunionKeepBtn').addEventListener('click', () => {
   generateCard(memory);
 });
 
-async function generateCard(memory) {
+function generateCard(memory) {
   const canvas = document.createElement('canvas');
   // Polaroid proportions — photo ~68%, bottom caption ~32% (larger text)
   const W = 720, H = 1080;
@@ -2741,31 +2741,35 @@ async function generateCard(memory) {
     ];
     const sigWord = sigWords[Math.floor(Math.random() * sigWords.length)];
 
-    // Load Caveat Bold — thick marker-pen handwriting style
+    // Load Caveat Bold — thick marker-pen handwriting style (no await: works in any context)
     const sigFont = new FontFace('CaveatBold',
       "url('https://fonts.gstatic.com/s/caveat/v18/WnznHAc5bAfYB2QRah7pcpNvOx7jf8JNwNu4jDfLW7gThA.ttf') format('truetype')",
       { weight: '700' }
     );
-    await sigFont.load();
-    document.fonts.add(sigFont);
+    sigFont.load().then(function() {
+      document.fonts.add(sigFont);
 
-    // Draw signature — large, dark ink, slight tilt, overlaps photo bottom edge
-    ctx.save();
-    const sigSize = Math.round(Math.min(80, W * 0.13));
-    ctx.font = `700 ${sigSize}px CaveatBold, 'Caveat', cursive`;
-    ctx.fillStyle = 'rgba(18,14,10,0.78)';
-    // Position: lower-left of caption area, slightly up into photo overlap
-    const sigX = BORDER + 24;
-    const sigY = H - BORDER - 36;  // near bottom, with room for descenders
-    ctx.translate(sigX, sigY);
-    ctx.rotate(-0.07);  // slight leftward tilt like real handwriting
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(sigWord, 0, 0);
-    ctx.restore();
+      // Draw signature — large, dark ink, slight tilt, overlaps photo bottom edge
+      ctx.save();
+      var _sigSize = Math.round(Math.min(80, W * 0.13));
+      ctx.font = '700 ' + _sigSize + 'px CaveatBold, \'Caveat\', cursive';
+      ctx.fillStyle = 'rgba(18,14,10,0.78)';
+      var _sigX = BORDER + 24;
+      var _sigY = H - BORDER - 36;  // near bottom, with room for descenders
+      ctx.translate(_sigX, _sigY);
+      ctx.rotate(-0.07);  // slight leftward tilt like real handwriting
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(sigWord, 0, 0);
+      ctx.restore();
 
-    const dataUrl = canvas.toDataURL('image/png');
-    showCardPreview(dataUrl);
+      var dataUrl = canvas.toDataURL('image/png');
+      showCardPreview(dataUrl);
+    }).catch(function() {
+      // Font load failed — skip signature, still generate card
+      var dataUrl = canvas.toDataURL('image/png');
+      showCardPreview(dataUrl);
+    });
   };
 
   const bgImg = new Image();
