@@ -2536,7 +2536,7 @@ document.getElementById('reunionKeepBtn').addEventListener('click', () => {
   generateCard(memory);
 });
 
-function generateCard(memory) {
+async function generateCard(memory) {
   const canvas = document.createElement('canvas');
   // Polaroid proportions — photo ~68%, bottom caption ~32% (larger text)
   const W = 720, H = 1080;
