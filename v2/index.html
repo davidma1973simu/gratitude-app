@@ -13,7 +13,7 @@
   <!-- Handwritten fonts for Polaroid card caption -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Caveat:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Caveat:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1786,6 +1786,8 @@ async function startApp() {
   setNavDate();
   setGreeting();
   initNickname();
+  // Pre-render signature words (sharpie style) for instant card stamping
+  preRenderSigWords();
   renderToday();
   renderHistory();
   scheduleReminder();
@@ -2546,6 +2548,59 @@ document.getElementById('reunionKeepBtn').addEventListener('click', () => {
   generateCard(memory);
 });
 
+// ════════════════════════════════════════
+// ─── PRE-RENDERED SIGNATURE WORD CACHE ───
+// ════════════════════════════════════════
+// Renders all signature words at app init using "Permanent Marker" font (sharpie style).
+// Stores as Image objects so generateCard() can stamp them instantly — no font loading at card-gen time.
+var _sigCache = {};
+var _sigWordsAll = [
+  'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
+  'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
+  'radiance', 'calm', 'cherish', 'mindful', 'intimacy', 'kiss',
+  'sunrise', 'breathe', 'present', 'alive', 'kindness', 'shine',
+  'whisper', 'embrace', 'wander', 'free', 'soft', 'golden'
+];
+
+function preRenderSigWords() {
+  var FONT_SIZE = 160;       // render large, scale down when stamping (crisper)
+  var FONT = FONT_SIZE + 'px "Permanent Marker", "Playlist Script", "Caveat", cursive';
+  var COLOR = 'rgba(18,14,10,0.82)';
+
+  _sigWordsAll.forEach(function(word) {
+    try {
+      // Measure word first
+      var mc = document.createElement('canvas');
+      var mctx = mc.getContext('2d');
+      mctx.font = FONT;
+      var metrics = mctx.measureText(word);
+      var padX = Math.round(FONT_SIZE * 0.6);
+      var padY = Math.round(FONT_SIZE * 0.4);
+      var cw = Math.ceil(metrics.width) + padX * 2;
+      var ch = FONT_SIZE + padY * 2;
+
+      // Render to offscreen canvas
+      var c = document.createElement('canvas');
+      c.width = cw;
+      c.height = ch;
+      var cx = c.getContext('2d');
+      cx.font = FONT;
+      cx.fillStyle = COLOR;
+      cx.textAlign = 'left';
+      cx.textBaseline = 'alphabetic';
+      cx.fillText(word, padX, FONT_SIZE + padY - padY * 0.3);
+
+      // Store as Image for fast drawImage stamping
+      var img = new Image();
+      img.src = c.toDataURL('image/png');
+      _sigCache[word] = img;
+    } catch(e) {
+      console.warn('preRenderSigWords failed for:', word, e);
+      _sigCache[word] = null;
+    }
+  });
+}
+
 function generateCard(memory) {
   const canvas = document.createElement('canvas');
   // Polaroid proportions — photo ~68%, bottom caption ~32% (larger text)
@@ -2729,8 +2784,8 @@ function generateCard(memory) {
       ctx.fillText(ln, W - 32, textStartY + i * Math.round(fSize * 1.75));
     });
 
-    // ─── SIGNATURE WORD — bold hand-drawn feel ───
-    // Uses Caveat 700 loaded via <link> in <head> (no dynamic FontFace)
+    // ─── SIGNATURE WORD — sharpie/marker handwriting feel ───
+    // Pre-rendered at app init; just stamp it onto the card
     var sigWords = [
       'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
       'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
@@ -2739,20 +2794,27 @@ function generateCard(memory) {
       'whisper', 'embrace', 'wander', 'free', 'soft', 'golden'
     ];
     var sigWord = sigWords[Math.floor(Math.random() * sigWords.length)];
+    var sigImg = _sigCache[sigWord];  // pre-rendered Image or null
 
-    // Draw signature — large, dark ink, slight tilt, overlaps photo bottom edge
-    ctx.save();
-    var _sigSize = Math.round(Math.min(80, W * 0.13));
-    ctx.font = '700 ' + _sigSize + 'px Caveat, cursive';
-    ctx.fillStyle = 'rgba(18,14,10,0.78)';
-    var _sigX = BORDER + 24;
-    var _sigY = H - BORDER - 36;
-    ctx.translate(_sigX, _sigY);
-    ctx.rotate(-0.07);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(sigWord, 0, 0);
-    ctx.restore();
+    if (sigImg) {
+      // Stamp pre-rendered sharpie signature onto the white caption area
+      // Position: lower-left of caption, large, slight random tilt
+      ctx.save();
+      var _stampW = sigImg.width;
+      var _stampH = sigImg.height;
+      var _scale = Math.min((W * 0.52) / _stampW, 1.2);  // fill ~52% width, don't upscale much
+      var _drawW = Math.round(_stampW * _scale);
+      var _drawH = Math.round(_stampH * _scale);
+      // Place in lower portion of white caption area
+      var _placeX = BORDER + 16;
+      var _placeY = H - BOTTOM_BORDER + BOTTOM_BORDER * 0.52;  // ~52% down into caption area
+      // Random slight rotation like real handwriting (-8° to +6°)
+      var _tilt = (Math.random() * 14 - 8) * Math.PI / 180;
+      ctx.translate(_placeX + _drawW / 2, _placeY + _drawH / 2);
+      ctx.rotate(_tilt);
+      ctx.drawImage(sigImg, -_drawW / 2, -_drawH / 2, _drawW, _drawH);
+      ctx.restore();
+    }
 
     var dataUrl = canvas.toDataURL('image/png');
     showCardPreview(dataUrl);
