@@ -13,7 +13,7 @@
   <!-- Handwritten fonts for Polaroid card caption -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Caveat:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Caveat:wght@400;700&family=Satisfy&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2563,9 +2563,11 @@ var _sigWordsAll = [
 ];
 
 function preRenderSigWords() {
-  var FONT_SIZE = 160;       // render large, scale down when stamping (crisper)
-  var FONT = FONT_SIZE + 'px "Permanent Marker", "Playlist Script", "Caveat", cursive';
-  var COLOR = 'rgba(18,14,10,0.82)';
+  // Satisfy: expressive script font (SIL license, Google Fonts)
+  // Fallback: cursive system font if Google Fonts blocked in China
+  var FONT_SIZE = 240;       // larger render = crisper when scaled down, captures script flourishes
+  var FONT = FONT_SIZE + 'px "Satisfy", "Playlist Script", "Caveat", cursive';
+  var COLOR = 'rgba(18,14,10,0.86)';  // slightly darker for more contrast
 
   _sigWordsAll.forEach(function(word) {
     try {
