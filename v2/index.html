@@ -2797,19 +2797,18 @@ function generateCard(memory) {
     var sigImg = _sigCache[sigWord];  // pre-rendered Image or null
 
     if (sigImg) {
-      // Stamp pre-rendered sharpie signature onto the white caption area
-      // Position: lower-left of caption, large, slight random tilt
+      // Stamp pre-rendered sharpie signature — straddles photo bottom & white border (like real Polaroid)
       ctx.save();
       var _stampW = sigImg.width;
       var _stampH = sigImg.height;
-      var _scale = Math.min((W * 0.52) / _stampW, 1.2);  // fill ~52% width, don't upscale much
+      var _scale = Math.min((W * 0.68) / _stampW, 1.5);  // ~68% card width (30% bigger than before)
       var _drawW = Math.round(_stampW * _scale);
       var _drawH = Math.round(_stampH * _scale);
-      // Place in lower portion of white caption area
-      var _placeX = BORDER + 16;
-      var _placeY = H - BOTTOM_BORDER + BOTTOM_BORDER * 0.52;  // ~52% down into caption area
-      // Random slight rotation like real handwriting (-8° to +6°)
-      var _tilt = (Math.random() * 14 - 8) * Math.PI / 180;
+      // Position: lower-left, overlapping photo bottom edge by ~20-30%
+      var _placeX = BORDER + 12;
+      var _placeY = photoY + photoH - _drawH * 0.38;  // top ~38% on photo, rest on white
+      // Random slight rotation like real handwriting (-10° to +7°)
+      var _tilt = (Math.random() * 17 - 10) * Math.PI / 180;
       ctx.translate(_placeX + _drawW / 2, _placeY + _drawH / 2);
       ctx.rotate(_tilt);
       ctx.drawImage(sigImg, -_drawW / 2, -_drawH / 2, _drawW, _drawH);
