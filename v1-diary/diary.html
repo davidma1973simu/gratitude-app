@@ -82,7 +82,15 @@
       border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px;
       box-shadow: var(--shadow-sm);
     }
-    .input-label { font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px; font-weight: 500; letter-spacing: 0.3px; }
+    .input-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .input-label { font-size: 13px; color: var(--text-tertiary); font-weight: 500; letter-spacing: 0.3px; }
+    .import-btn {
+      font-size: 12px; color: var(--accent); background: none; border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px 10px; cursor: pointer;
+      transition: all 0.15s ease; font-family: inherit;
+    }
+    .import-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+    .import-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .input-textarea {
       width:100%; border:none; outline:none; resize:none;
@@ -164,7 +172,6 @@
     }
     .output-section.active { display: block; }
 
-    /* Decorative elements */
     .output-deco-circle {
       position: absolute; top: -50px; right: -40px;
       width: 160px; height: 160px; border-radius: 50%;
@@ -333,15 +340,21 @@
     }
 
     /* ─── Actions ─── */
-    .output-actions { display: flex; gap: 10px; padding-top: 2px; }
+    .output-actions { display: flex; gap: 10px; padding-top: 2px; flex-wrap: wrap; }
     .output-action-btn {
       flex: 1; padding: 11px; border-radius: 12px;
       border: 1px solid var(--border-light); background: var(--surface);
       color: var(--text-secondary); font-size: 13px; cursor: pointer;
       transition: all 0.15s ease; font-family: inherit;
       text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px;
+      min-width: 0;
     }
     .output-action-btn:hover { background: var(--accent-soft); border-color: var(--border); }
+    .output-action-btn.primary {
+      background: linear-gradient(135deg, #d4a574, #e8b88a); color: white;
+      border-color: transparent; font-weight: 600;
+    }
+    .output-action-btn.primary:hover { box-shadow: 0 4px 16px rgba(212,165,116,0.3); }
 
     /* ─── Animations ─── */
     @keyframes fadeInUp {
@@ -349,6 +362,43 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .fade-in-up { animation: fadeInUp 0.55s cubic-bezier(0.16,1,0.3,1) both; }
+
+    /* ══════════════════════════════════════
+       HISTORY SECTION
+       ══════════════════════════════════════ */
+    .history-section { margin-top: 32px; }
+    .history-header {
+      font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-tertiary);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+    }
+    .history-empty {
+      text-align: center; padding: 40px 20px; color: var(--text-tertiary);
+      font-size: 13.5px; line-height: 1.8;
+    }
+    .history-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: 0.5; }
+    .history-item {
+      background: var(--surface); border: 1px solid var(--border-light);
+      border-radius: var(--radius); padding: 16px 18px; margin-bottom: 10px;
+      cursor: pointer; transition: all 0.15s ease;
+      box-shadow: var(--shadow-sm);
+    }
+    .history-item:hover { border-color: var(--border); box-shadow: var(--shadow-md); }
+    .history-item-date {
+      font-size: 12px; color: var(--text-tertiary); margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .history-item-preview {
+      font-size: 14px; line-height: 1.7; color: var(--text-secondary);
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .history-item-tag {
+      display: inline-block; margin-top: 8px;
+      font-size: 10.5px; letter-spacing: 0.5px;
+      padding: 2px 8px; border-radius: 8px;
+      background: var(--accent-soft); color: var(--accent); font-weight: 600;
+    }
 
     @media (max-width: 480px) {
       main { padding: 16px 14px 100px; }
@@ -370,6 +420,7 @@
 </nav>
 
 <main>
+
   <div class="page-header fade-in-up">
     <h1>✦ 光之日记</h1>
     <p>写下感恩，让光变成文字</p>
@@ -377,7 +428,10 @@
 
   <!-- Input Section -->
   <div class="input-section fade-in-up delay-1">
-    <div class="input-label">今天，你感恩什么？</div>
+    <div class="input-header">
+      <div class="input-label">今天，你感恩什么？</div>
+      <button class="import-btn" id="importBtn" onclick="importToday()">📥 导入今日感恩</button>
+    </div>
     <textarea class="input-textarea" id="diaryInput"
       placeholder="写下值得记录的感恩片段...&#10;&#10;比如：&#10;· 今天阳光很好，坐在窗边喝咖啡的时候觉得很平静&#10;· 和妈妈通电话，她提到小时候的事，突然很感动&#10;· 下班路上看到一只小猫在晒太阳，停下来看了很久"
       rows="5"></textarea>
@@ -452,7 +506,8 @@
           <div class="output-actions">
             <button class="output-action-btn" onclick="saveDiary()">💾 保存</button>
             <button class="output-action-btn" onclick="shareDiary()">📤 分享</button>
-            <button class="output-action-btn" onclick="regenerateImage()">🖼 换图</button>
+            <button class="output-action-btn" onclick="regenerateImage()">🖼️ 换图</button>
+            <button class="output-action-btn primary" onclick="resetForNew()">✦ 再写一篇</button>
           </div>
         </div>
 
@@ -466,12 +521,21 @@
 
     </div>
   </div>
+
+  <!-- History Section -->
+  <div class="history-section" id="historySection">
+    <div class="history-header">
+      <span>📖</span> 历史日记
+    </div>
+    <div id="historyList"></div>
+  </div>
+
 </main>
 
 <script>
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // State
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 var attachedImages = [];
 var attachedAudio = null;
 var mediaRecorder = null;
@@ -494,23 +558,76 @@ var EMOTION_KEYWORDS = {
 };
 
 var currentEmotion = null;
+var currentDiaryKey = null; // track which saved diary is showing
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // Init
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('outputSection').classList.remove('active');
   document.getElementById('loadingSection').classList.remove('active');
   restoreDraft();
+  updateImportButton();
+  renderHistory();
   setTimeout(function() {
     document.querySelectorAll('.delay-1,.delay-2').forEach(function(el,i){ el.style.animationDelay=(i*0.08)+'s'; });
   }, 50);
 });
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
+// Import Today's Gratitude
+// ══════════════════════════════════════
+function updateImportButton() {
+  var btn = document.getElementById('importBtn');
+  var todayKey = getTodayKey();
+  var entries = loadV1Entries();
+  if (entries[todayKey] && entries[todayKey].some(function(e){ return e && e.trim(); })) {
+    btn.disabled = false;
+    btn.title = '导入今天的感恩记录';
+  } else {
+    btn.disabled = true;
+    btn.title = '今天还没有感恩记录';
+  }
+}
+
+function loadV1Entries() {
+  try {
+    return JSON.parse(localStorage.getItem('gratitude_entries_v1')) || {};
+  } catch(e) { return {}; }
+}
+
+function getTodayKey() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function importToday() {
+  var entries = loadV1Entries();
+  var key = getTodayKey();
+  var todayEntries = entries[key];
+  if (!todayEntries || !todayEntries.some(function(e){ return e && e.trim(); })) {
+    showNotification('今天还没有感恩记录');
+    return;
+  }
+
+  var text = document.getElementById('diaryInput').value.trim();
+  var importText = todayEntries.filter(function(e){ return e && e.trim(); }).join('\n');
+  
+  if (text.length > 0) {
+    text = text + '\n' + importText;
+  } else {
+    text = importText;
+  }
+  
+  document.getElementById('diaryInput').value = text;
+  saveDraft();
+  showNotification('已导入今日的感恩 ✦');
+  logEvent('diary_imported_today', { count: todayEntries.filter(function(e){return e&&e.trim()}).length });
+}
+
+// ══════════════════════════════════════
 // Image Upload / Voice Recording / Preview / Draft
-// (unchanged from previous version)
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function handleImages(event) {
   var files = event.target.files;
   if (!files || !files.length) return;
@@ -560,9 +677,9 @@ function saveDraft(){try{localStorage.setItem('diary_draft',JSON.stringify({text
 function restoreDraft(){try{var d=JSON.parse(localStorage.getItem('diary_draft')||'null');if(d&&d.text)document.getElementById('diaryInput').value=d.text;}catch(e){}}
 function clearDraft(){localStorage.removeItem('diary_draft');}
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // Core: Generate
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function generateDiary(){
   var inp=document.getElementById('diaryInput').value.trim();
   if(!inp&&!attachedImages.length&&!attachedAudio){showNotification('请先写下感恩片段，或添加照片/语音');return;}
@@ -579,6 +696,7 @@ function generateDiary(){
     var tome=genTome(inp,emotions);
 
     renderOutput(diaryParts,imageUrl,emotions,analysis,tome);
+    currentDiaryKey = 'diary_' + formatDate(new Date());
 
     document.getElementById('loadingSection').classList.remove('active');
     var os=document.getElementById('outputSection');os.classList.add('active');os.classList.add('fade-in-up');
@@ -589,9 +707,30 @@ function generateDiary(){
   },1500+Math.random()*1000);
 }
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
+// Reset for New Diary
+// ══════════════════════════════════════
+function resetForNew(){
+  // Clear input + attachments
+  document.getElementById('diaryInput').value = '';
+  attachedImages = [];
+  if(attachedAudio&&attachedAudio.url)URL.revokeObjectURL(attachedAudio.url);
+  attachedAudio = null;
+  renderPreviews();
+  clearDraft();
+  
+  // Hide output, show input
+  document.getElementById('outputSection').classList.remove('active');
+  document.getElementById('diaryInput').focus();
+  
+  // Scroll to top
+  window.scrollTo({behavior:'smooth',top:0});
+  logEvent('diary_new_started');
+}
+
+// ══════════════════════════════════════
 // Emotion Analysis
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function analyzeEmotions(text){
   var lower=text.toLowerCase(),scores={};
   for(var emo in EMOTION_KEYWORDS){
@@ -605,16 +744,16 @@ function analyzeEmotions(text){
 }
 function getDominantEmotion(s){var best='warm',bs=0;for(var e in s){if(s[e]>bs){bs=s[e];best=e;}}return best;}
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // Diary Parts — split user input vs AI text
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function genDiaryParts(input,emotions){
   var lines=input.split('\n').filter(function(l){return l.trim().length>0;});
   var subjects = extractSubjects(input);
 
   // User input — keep raw, lightly formatted
   var userText = lines.map(function(l){
-    return l.trim().replace(/^[\·\-\*\d\.\、\）\)]\s*/, '');
+    return l.trim().replace(/^[\·\-\*\d\.\、\）\)\】\］]\s*/, '');
   }).join('\n');
 
   // AI opening — warm, varied
@@ -634,15 +773,14 @@ function genDiaryParts(input,emotions){
 
   return { userText: userText, aiText: aiLines.join('\n') };
 }
-
 function pickImage(emo){var p=IMAGE_DB[emo]||IMAGE_DB.warm;return p[Math.floor(Math.random()*p.length)];}
 function regenerateImage(){if(!currentEmotion)return;var el=document.getElementById('outputImage');el.style.opacity='0.3';
   setTimeout(function(){el.src=pickImage(currentEmotion);el.onload=function(){el.style.opacity='1';};el.style.transition='opacity 0.4s ease';},200);
 }
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // Insight — INPUT-AWARE
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function genInsight(input, emotions){
   var subjects = extractSubjects(input);
   var dominant = getDominantEmotion(emotions);
@@ -699,7 +837,6 @@ function extractSubjects(text) {
     var m=text.match(patterns[i]);if(m){for(var j=1;j<m.length;j++){if(m[j]&&results.indexOf(m[j])===-1)results.push(m[j]);}}}
   return results.slice(0,2);
 }
-
 function genTome(input,emotions){
   var subjects=extractSubjects(input);
   var pool=[];
@@ -711,9 +848,9 @@ function genTome(input,emotions){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // Render Output
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function renderOutput(parts, imageUrl, emotions, analysis, tome){
   var now=new Date();
   document.getElementById('outputDateNum').textContent=now.getDate();
@@ -743,9 +880,9 @@ function renderOutputAttachments(){
   c.innerHTML=h;
 }
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // Emotion DOT GRID
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function renderEmotionDots(scores){
   var container=document.getElementById('emotionBars');
   var labels={warm:'温暖',calm:'平静',hopeful:'希望',gentle:'温柔'};
@@ -771,16 +908,19 @@ function renderEmotionDots(scores){
   },150);
 }
 
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 // Save / Share
-// ═══════════════════════════════════════
+// ══════════════════════════════════════
 function saveDiary(){
   var t=document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
   var k='diary_'+formatDate(new Date());
   try{
     var saved=JSON.parse(localStorage.getItem('saved_diaries')||'{}');
     saved[k]={text:t,image:document.getElementById('outputImage').src,emotion:currentEmotion,savedAt:new Date().toISOString()};
-    localStorage.setItem('saved_diaries',JSON.stringify(saved));showNotification('已保存 ✦');logEvent('diary_saved',{emotion:currentEmotion});
+    localStorage.setItem('saved_diaries',JSON.stringify(saved));
+    showNotification('已保存 ✦');
+    logEvent('diary_saved',{emotion:currentEmotion});
+    renderHistory();
   }catch(e){showNotification('保存失败');}
 }
 function shareDiary(){
@@ -791,12 +931,83 @@ function shareDiary(){
 }
 function goBack(){
   if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.stop();
-  // 动态计算：始终返回到当前页面所在目录的 index.html
   var basePath = window.location.pathname.replace(/[^/]*$/, '');
   location.href = basePath + 'index.html';
 }
 
 function formatDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+// ══════════════════════════════════════
+// History Rendering
+// ══════════════════════════════════════
+function renderHistory(){
+  var container = document.getElementById('historyList');
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem('saved_diaries')||'{}'); } catch(e){}
+  
+  var keys = Object.keys(saved).sort().reverse();
+  
+  if(keys.length===0){
+    container.innerHTML = '<div class="history-empty"><div class="history-empty-icon">📝</div>保存的日记会在这里出现<br>写下第一篇吧</div>';
+    return;
+  }
+  
+  var html = '';
+  var emotionLabels = { warm:'温暖', calm:'平静', hopeful:'希望', gentle:'温柔' };
+  keys.forEach(function(key){
+    var entry = saved[key];
+    if(!entry) return;
+    var preview = (entry.text||'').replace(/\n/g,' ').substring(0,80);
+    var dateStr = key.replace('diary_','');
+    var parts = dateStr.split('-');
+    var formatted = parts[0]+'年'+parseInt(parts[1])+'月'+parseInt(parts[2])+'日';
+    html += '<div class="history-item" onclick="viewDiary(\''+key.replace(/'/g,'\\\'')+'\')">'
+          + '<div class="history-item-date">📅 '+formatted+'</div>'
+          + '<div class="history-item-preview">'+preview+'</div>'
+          + (entry.emotion?'<span class="history-item-tag">'+emotionLabels[entry.emotion]+'</span>':'')
+          + '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function viewDiary(key){
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem('saved_diaries')||'{}'); } catch(e){ return; }
+  var entry = saved[key];
+  if(!entry) return;
+  
+  // Parse text back into parts (user text + AI text)
+  var text = entry.text || '';
+  var lines = text.split('\n');
+  
+  // Show output section
+  document.getElementById('outputDateNum').textContent = key.replace('diary_','').split('-')[2] || '—';
+  var dateParts = key.replace('diary_','').split('-');
+  var months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('outputDateStr').textContent = (months[parseInt(dateParts[1])||''])+' · '+dateParts[0];
+  
+  if(entry.image) document.getElementById('outputImage').src = entry.image;
+  
+  // Split text: first non-empty lines = user input, rest = AI
+  var nonEmpty = lines.filter(function(l){ return l.trim().length>0; });
+  var userPart = nonEmpty.slice(0,3).join('\n');
+  var aiPart = nonEmpty.slice(3).join('\n');
+  
+  document.getElementById('outputUserInput').textContent = userPart;
+  document.getElementById('outputAiText').textContent = aiPart;
+  
+  // Hide emotion/insight/tome for saved diaries (or regenerate)
+  document.getElementById('outputSection').classList.add('active');
+  document.getElementById('outputSection').classList.add('fade-in-up');
+  document.getElementById('outputSection').scrollIntoView({behavior:'smooth',block:'start'});
+  
+  currentDiaryKey = key;
+  logEvent('diary_viewed',{key:key});
+}
+
+// ══════════════════════════════════════
+// Notifications + Logging
+// ══════════════════════════════════════
 function showNotification(msg){
   var n=document.createElement('div');n.textContent=msg;
   n.style.cssText='position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-16px);background:#3d2b1f;color:#fff;padding:10px 22px;border-radius:12px;font-size:13.5px;z-index:200;opacity:0;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);box-shadow:0 4px 20px rgba(0,0,0,0.12);white-space:nowrap;';
@@ -806,18 +1017,11 @@ function showNotification(msg){
 }
 function logEvent(ev,props){try{var es=JSON.parse(localStorage.getItem('diary_events')||'[]');es.push({event:ev,properties:props||{},ts:new Date().toISOString()});if(es.length>200)es=es.slice(-200);localStorage.setItem('diary_events',JSON.stringify(es));}catch(e){}}
 
-document.addEventListener('DOMContentLoaded',function(){
-  document.getElementById('diaryInput').addEventListener('input',saveDraft);
-});
-
 // ─── 浏览器返回按钮保护 ───
-// 记录正确的返回路径，防止浏览器后退跑到根目录或其他页面
 (function(){
   var basePath = window.location.pathname.replace(/[^/]*$/, '');
   var correctBack = basePath + 'index.html';
-  // pushState 确保历史记录中有正确条目
   history.pushState({diary:true}, '', window.location.href);
-  // 拦截浏览器后退
   window.addEventListener('popstate', function(e){
     if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.stop();
     location.href = correctBack;
