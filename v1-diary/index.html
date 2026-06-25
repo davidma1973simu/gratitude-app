@@ -77,21 +77,35 @@
     }
     .user-avatar:hover { border-color: var(--text-tertiary); }
 
-    /* ─── 光之日记 Entrance (subtle text link) ─── */
+    /* ─── 光之日记 Entrance (inline with nav tabs) ─── */
     .diary-entrance {
       display: none;
-      text-align: center;
-      padding: 6px 0 0;
-      font-size: 12px;
+      align-items: center;
+      gap: 4px;
+      font-size: 12.5px;
       color: #c9a87c;
-      cursor: pointer;
-      transition: color 0.2s ease;
       text-decoration: none;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      transition: all 0.15s ease;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    .diary-entrance.active { display: block; }
-    .diary-entrance:hover { color: #b08a60; }
-    .diary-entrance .diary-icon { margin-right: 3px; font-size: 11px; }
+    .diary-entrance.active { display: inline-flex; }
+    .diary-entrance:hover {
+      color: #b08a60;
+      background: rgba(212,165,116,0.08);
+    }
+    .diary-entrance .diary-icon-svg {
+      width: 15px; height: 15px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
 
     /* ─── V2 Prompt Banner (subtle, one line) ─── */
     .v2-prompt-banner {
@@ -643,6 +657,11 @@
       <button class="nav-tab active" data-tab="today" data-i18n="tab_today">今天</button>
       <button class="nav-tab" data-tab="history" data-i18n="tab_history">历史</button>
     </div>
+    <!-- 光之日记 (inline, right of tabs) -->
+    <a class="diary-entrance" id="diaryEntrance" href="diary.html">
+      <svg class="diary-icon-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      光之日记
+    </a>
     <div class="user-avatar" id="userAvatar"></div>
   </div>
   <!-- User Menu -->
@@ -654,11 +673,6 @@
     </button>
   </div>
 </nav>
-
-<!-- 光之日记 (subtle text link, below nav) -->
-<a class="diary-entrance" id="diaryEntrance" href="diary.html">
-  <span class="diary-icon">✦</span>光之日记
-</a>
 
 <main>
 
