@@ -77,50 +77,21 @@
     }
     .user-avatar:hover { border-color: var(--text-tertiary); }
 
-    /* ─── 光之日记 Entrance Card ─── */
+    /* ─── 光之日记 Entrance (subtle text link) ─── */
     .diary-entrance {
       display: none;
-      margin: 0 24px 0;
-      padding: 14px 18px;
-      background: linear-gradient(135deg, #fdf8f4 0%, #fef5ee 100%);
-      border: 1px solid #f0d9c8;
-      border-radius: var(--radius);
-      text-decoration: none;
+      text-align: center;
+      padding: 6px 0 0;
+      font-size: 12px;
+      color: #c9a87c;
       cursor: pointer;
-      transition: all 0.2s ease;
-      animation: fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+      transition: color 0.2s ease;
+      text-decoration: none;
+      letter-spacing: 0.5px;
     }
-    .diary-entrance.active { display: flex; align-items: center; gap: 12px; }
-    .diary-entrance:hover {
-      border-color: #e8c4a8;
-      box-shadow: 0 2px 12px rgba(212,165,116,0.12);
-      transform: translateY(-1px);
-    }
-    .diary-icon-wrap {
-      width: 36px; height: 36px; flex-shrink: 0;
-      background: linear-gradient(135deg, #d4a574, #e8b88a);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 17px;
-    }
-    .diary-text {
-      flex: 1;
-      text-align: left;
-    }
-    .diary-text-title {
-      font-size: 14px; font-weight: 600;
-      color: #5a3e2b; letter-spacing: 0.2px;
-      margin-bottom: 2px;
-    }
-    .diary-text-sub {
-      font-size: 12px; color: #b8967a;
-      letter-spacing: 0.2px;
-    }
-    .diary-arrow {
-      color: #c9a87c; font-size: 16px;
-      transition: transform 0.15s ease;
-    }
-    .diary-entrance:hover .diary-arrow { transform: translateX(2px); }
+    .diary-entrance.active { display: block; }
+    .diary-entrance:hover { color: #b08a60; }
+    .diary-entrance .diary-icon { margin-right: 3px; font-size: 11px; }
 
     /* ─── V2 Prompt Banner (subtle, one line) ─── */
     .v2-prompt-banner {
@@ -655,16 +626,6 @@
   🌿 新版本：你过去的光会回来照亮你<span class="prompt-arrow"> → 试试</span>
 </a>
 
-<!-- 光之日记 Entrance (subtle, feminine) -->
-<a class="diary-entrance" id="diaryEntrance" href="diary.html">
-  <div class="diary-icon-wrap">✦</div>
-  <div class="diary-text">
-    <div class="diary-text-title">光之日记</div>
-    <div class="diary-text-sub">开启你的感恩日记</div>
-  </div>
-  <div class="diary-arrow">›</div>
-</a>
-
 <!-- Navigation -->
 <nav class="nav">
   <div class="nav-left">
@@ -693,6 +654,11 @@
     </button>
   </div>
 </nav>
+
+<!-- 光之日记 (subtle text link, below nav) -->
+<a class="diary-entrance" id="diaryEntrance" href="diary.html">
+  <span class="diary-icon">✦</span>光之日记
+</a>
 
 <main>
 
