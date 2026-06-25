@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#faf0e4">
+  <title>光之日记 · Gratitude</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-title" content="光之日记">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+    :root {
+      --bg: #fefcf9;
+      --surface: #ffffff;
+      --surface-hover: #fdf6f0;
+      --border: #f0d9d0;
+      --border-light: #fceeed;
+      --text-primary: #3d2b1f;
+      --text-secondary: #7a5c4a;
+      --text-tertiary: #b8967a;
+      --accent: #d4a574;
+      --accent-soft: #fdf2ec;
+      --danger: #d46868;
+      --radius: 16px;
+      --radius-lg: 24px;
+      --shadow-sm: 0 2px 8px rgba(180,120,80,0.07);
+      --shadow-md: 0 8px 32px rgba(180,120,80,0.13);
+      --shadow-lg: 0 12px 48px rgba(180,120,80,0.18);
+      --emotion-warm: #e8a87c;
+      --emotion-calm: #7fb3a8;
+      --emotion-hopeful: #d4b87a;
+      --emotion-gentle: #c99bb5;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+
+    /* ─── Nav ─── */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(254,252,249,0.88);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0 20px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-back {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 14px; color: var(--text-secondary);
+      cursor: pointer; background: none; border: none;
+      padding: 6px 10px; border-radius: 10px;
+      transition: background 0.15s ease; font-family: inherit;
+    }
+    .nav-back:hover { background: var(--accent-soft); }
+    .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px; }
+    .nav-right { width: 60px; }
+
+    /* ─── Main ─── */
+    main { flex:1; padding: 24px 20px 120px; max-width: 600px; margin:0 auto; width:100%; }
+
+    .page-header { margin-bottom: 22px; text-align: center; }
+    .page-header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.4px; color: var(--text-primary); margin-bottom: 5px; }
+    .page-header p { font-size: 13.5px; color: var(--text-tertiary); letter-spacing: 0.3px; }
+
+    /* ─── Input Area ─── */
+    .input-section {
+      background: var(--surface); border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .input-label { font-size: 13px; color: var(--text-tertiary); margin-bottom: 12px; font-weight: 500; letter-spacing: 0.3px; }
+
+    .input-textarea {
+      width:100%; border:none; outline:none; resize:none;
+      font-size: 15.5px; line-height: 1.75; color: var(--text-primary);
+      background: transparent; font-family: inherit; min-height: 100px; max-height: 300px; padding:0;
+    }
+    .input-textarea::placeholder { color: var(--text-tertiary); opacity: 0.6; }
+
+    .input-divider { height: 1px; background: var(--border-light); margin: 14px 0; }
+
+    .attachment-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .attach-btn {
+      display: flex; align-items: center; gap: 5px; padding: 7px 12px;
+      border-radius: 10px; border: 1px dashed var(--border); background: transparent;
+      color: var(--text-tertiary); font-size: 12.5px; cursor: pointer;
+      transition: all 0.15s ease; font-family: inherit;
+    }
+    .attach-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+    .attach-btn svg { flex-shrink: 0; }
+    .attach-btn.recording {
+      border-color: var(--danger); color: var(--danger);
+      background: rgba(212,104,104,0.06);
+      animation: recordPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes recordPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(212,104,104,0.15); }
+      50% { box-shadow: 0 0 0 6px rgba(212,104,104,0); }
+    }
+
+    .preview-area { display: none; margin-top: 14px; gap: 10px; flex-wrap: wrap; }
+    .preview-area.has-content { display: flex; }
+    .preview-item {
+      position:relative; width:72px; height:72px; border-radius: 12px;
+      overflow:hidden; border: 1px solid var(--border-light); flex-shrink: 0;
+    }
+    .preview-item img { width:100%; height:100%; object-fit: cover; }
+    .preview-item.audio-preview {
+      width:auto; padding:8px 14px; background: var(--accent-soft);
+      display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary);
+    }
+    .preview-remove {
+      position:absolute; top:3px; right:3px; width:20px; height:20px;
+      border-radius:50%; background:rgba(61,43,31,0.65); color:white;
+      border:none; cursor:pointer; font-size:11px; line-height:20px;
+      text-align:center; display:flex; align-items:center; justify-content:center;
+    }
+    .preview-remove:hover { background: var(--danger); }
+
+    /* ─── Generate Button ─── */
+    .generate-btn {
+      width:100%; padding:14px; border-radius: var(--radius); border:none;
+      background: linear-gradient(135deg, #d4a574, #e8b88a); color:white;
+      font-size:15px; font-weight:700; cursor:pointer; transition: all 0.22s ease;
+      box-shadow: 0 3px 16px rgba(212,165,116,0.28); letter-spacing: 0.5px; margin-bottom: 20px;
+    }
+    .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(212,165,116,0.38); }
+    .generate-btn:active { transform: translateY(0); }
+    .generate-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+    /* ─── Loading ─── */
+    .loading { display:none; text-align:center; padding:48px 20px; color:var(--text-tertiary); font-size:14px; }
+    .loading.active { display:block; }
+    .loading-dots { display:inline-flex; gap:5px; margin-top:14px; }
+    .loading-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); animation: loadinDot 1.2s ease-in-out infinite; }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes loadinDot { 0%,80%,100%{opacity:0.3;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.1)} }
+
+    /* ══════════════════════════════════════
+       OUTPUT SECTION — Instagram Card Style
+       ══════════════════════════════════════ */
+    .output-section {
+      display: none;
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+    .output-section.active { display: block; }
+
+    /* Decorative elements */
+    .output-deco-circle {
+      position: absolute; top: -50px; right: -40px;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(212,165,116,0.06), transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .output-inner {
+      padding: 26px 22px 26px;
+      position: relative; z-index: 1;
+    }
+
+    /* Date + Tag row */
+    .output-header-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .output-date-block { flex-shrink: 0; }
+    .output-date-big {
+      font-size: 42px; font-weight: 800; line-height: 1;
+      color: var(--text-primary); letter-spacing: -2px;
+    }
+    .output-date-sub {
+      font-size: 12.5px; color: var(--text-tertiary);
+      margin-top: 3px; letter-spacing: 0.4px;
+    }
+    .output-tag {
+      display: inline-block; padding: 5px 14px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(232,168,124,0.13), rgba(212,184,138,0.10));
+      color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
+    }
+
+    /* ─── Body: text left, image right ─── */
+    .output-body-layout {
+      display: flex; gap: 16px;
+      margin-bottom: 18px; align-items: flex-start;
+    }
+    .output-text-block { flex: 1; min-width: 0; }
+
+    /* Image right block */
+    .output-image-block {
+      width: 40%; max-width: 220px; flex-shrink: 0; align-self: flex-start;
+    }
+    .output-image-wrap {
+      border-radius: 18px; overflow: hidden;
+      position: relative; aspect-ratio: 3/4;
+      box-shadow: 0 4px 20px rgba(180,120,80,0.13);
+    }
+    .output-image {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    /* Small screen: stack */
+    @media (max-width: 440px) {
+      .output-body-layout { flex-direction: column; }
+      .output-image-block { width: 100%; max-width: none; aspect-ratio: 16/10; }
+    }
+
+    /* ─── User input: handwriting + large + bold ─── */
+    .diary-user-input {
+      font-size: 21px; line-height: 1.95;
+      color: var(--text-primary);
+      font-family: 'STKaiti', 'KaiTi', '楷体', serif;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .diary-user-input[contenteditable="true"] {
+      outline: none; border-radius: 10px;
+      padding: 12px; margin: -12px -12px 2px;
+      transition: background 0.15s;
+    }
+    .diary-user-input[contenteditable="true"]:focus { background: var(--accent-soft); }
+
+    /* ─── AI wrapper text: system font, smaller ─── */
+    .diary-ai-text {
+      font-size: 14px; line-height: 1.8;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      white-space: pre-wrap; word-break: break-word;
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      opacity: 0.82;
+    }
+
+    .diary-edit-hint {
+      display: inline-block; font-size: 10.5px; color: var(--text-tertiary);
+      opacity: 0.4; margin-left: 6px;
+    }
+
+    /* User attachments row */
+    .output-attachments {
+      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .output-attachment-img {
+      width: 52px; height: 52px; border-radius: 12px;
+      object-fit: cover; border: 1px solid var(--border-light);
+    }
+    .output-attachment-audio {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 13px; background: var(--accent-soft);
+      border-radius: 10px; font-size: 12px; color: var(--text-secondary);
+    }
+
+    /* ─── Emotion Dot Grid ─── */
+    .emotion-dots { margin-bottom: 18px; }
+    .emotion-dots-label {
+      font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-tertiary);
+      margin-bottom: 10px;
+    }
+    .emotion-dots-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 5px;
+    }
+    .emotion-dots-name {
+      font-size: 12.5px; font-weight: 600;
+      color: var(--text-secondary); min-width: 44px; flex-shrink: 0;
+    }
+    .emotion-dots-track { display: flex; gap: 5px; }
+    .emotion-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .emotion-dot.empty { background: var(--border-light); opacity: 0.3; transform: scale(0.82); }
+    .emotion-dot.warm { background: var(--emotion-warm); }
+    .emotion-dot.calm { background: var(--emotion-calm); }
+    .emotion-dot.hopeful { background: var(--emotion-hopeful); }
+    .emotion-dot.gentle { background: var(--emotion-gentle); }
+
+    /* ─── Insight Block ─── */
+    .output-insight {
+      font-size: 13.5px; line-height: 1.8;
+      color: var(--text-secondary);
+      padding: 16px 18px;
+      background: linear-gradient(135deg, rgba(232,168,124,0.05), rgba(201,155,181,0.04));
+      border-radius: 14px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .output-insight::before {
+      content: ''; position: absolute;
+      left: -1px; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 55%;
+      border-radius: 3px;
+      background: linear-gradient(to bottom, var(--emotion-warm), var(--emotion-gentle));
+    }
+    .output-insight-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 5px;
+    }
+
+    /* ─── Tome ─── */
+    .output-tome {
+      font-size: 14px; line-height: 1.7;
+      color: var(--text-primary);
+      padding: 12px 0 4px;
+      margin-bottom: 16px;
+      border-top: 1px solid var(--border-light);
+      font-style: italic; opacity: 0.88;
+    }
+    .output-tome-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-tertiary);
+      margin-bottom: 4px; font-style: normal;
+    }
+
+    /* ─── Actions ─── */
+    .output-actions { display: flex; gap: 10px; padding-top: 2px; }
+    .output-action-btn {
+      flex: 1; padding: 11px; border-radius: 12px;
+      border: 1px solid var(--border-light); background: var(--surface);
+      color: var(--text-secondary); font-size: 13px; cursor: pointer;
+      transition: all 0.15s ease; font-family: inherit;
+      text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .output-action-btn:hover { background: var(--accent-soft); border-color: var(--border); }
+
+    /* ─── Animations ─── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up { animation: fadeInUp 0.55s cubic-bezier(0.16,1,0.3,1) both; }
+
+    @media (max-width: 480px) {
+      main { padding: 16px 14px 100px; }
+      .input-section { padding: 16px; }
+      .output-inner { padding: 20px 16px 22px; }
+      .output-date-big { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-back" onclick="goBack()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
+    返回
+  </button>
+  <div class="nav-title">光之日记</div>
+  <div class="nav-right"></div>
+</nav>
+
+<main>
+  <div class="page-header fade-in-up">
+    <h1>✦ 光之日记</h1>
+    <p>写下感恩，让光变成文字</p>
+  </div>
+
+  <!-- Input Section -->
+  <div class="input-section fade-in-up delay-1">
+    <div class="input-label">今天，你感恩什么？</div>
+    <textarea class="input-textarea" id="diaryInput"
+      placeholder="写下值得记录的感恩片段...&#10;&#10;比如：&#10;· 今天阳光很好，坐在窗边喝咖啡的时候觉得很平静&#10;· 和妈妈通电话，她提到小时候的事，突然很感动&#10;· 下班路上看到一只小猫在晒太阳，停下来看了很久"
+      rows="5"></textarea>
+
+    <div class="input-divider"></div>
+    <div class="attachment-bar">
+      <label class="attach-btn" for="imageInput">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+        照片
+      </label>
+      <input type="file" id="imageInput" accept="image/*" multiple hidden onchange="handleImages(event)">
+      <button class="attach-btn" id="voiceBtn" onclick="toggleRecording()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <span id="voiceBtnText">语音</span>
+      </button>
+    </div>
+    <div class="preview-area" id="previewArea"></div>
+  </div>
+
+  <button class="generate-btn fade-in-up delay-2" id="generateBtn" onclick="generateDiary()">
+    ✦ 整理成日记
+  </button>
+
+  <div class="loading" id="loadingSection">
+    <div>正在为你整理...</div>
+    <div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>
+  </div>
+
+  <!-- Output Section -->
+  <div class="output-section" id="outputSection">
+    <div class="output-deco-circle"></div>
+    <div class="output-inner">
+
+      <!-- Date + Tag -->
+      <div class="output-header-row">
+        <div class="output-date-block">
+          <div class="output-date-big" id="outputDateNum">—</div>
+          <div class="output-date-sub" id="outputDateStr">—</div>
+        </div>
+        <span class="output-tag">✦ 光之日记</span>
+      </div>
+
+      <!-- Body: text left, image right -->
+      <div class="output-body-layout">
+        <div class="output-text-block">
+          <!-- User input (handwriting) -->
+          <div class="diary-user-input" id="outputUserInput" contenteditable="true"></div>
+          <span class="diary-edit-hint">可编辑</span>
+
+          <!-- AI wrapper text -->
+          <div class="diary-ai-text" id="outputAiText"></div>
+
+          <!-- Attachments -->
+          <div class="output-attachments" id="outputAttachments"></div>
+
+          <!-- Emotion Dots -->
+          <div class="emotion-dots" id="emotionBars"></div>
+
+          <!-- Insight -->
+          <div class="output-insight" id="outputAnalysis">
+            <div class="output-insight-label">情绪洞察</div>
+            <div id="analysisText"></div>
+          </div>
+
+          <!-- Tome -->
+          <div class="output-tome" id="outputTome">
+            <div class="output-tome-label">致此刻的你</div>
+            <div id="tomeText"></div>
+          </div>
+
+          <!-- Actions -->
+          <div class="output-actions">
+            <button class="output-action-btn" onclick="saveDiary()">💾 保存</button>
+            <button class="output-action-btn" onclick="shareDiary()">📤 分享</button>
+            <button class="output-action-btn" onclick="regenerateImage()">🖼 换图</button>
+          </div>
+        </div>
+
+        <!-- Image right -->
+        <div class="output-image-block">
+          <div class="output-image-wrap">
+            <img class="output-image" id="outputImage" src="" alt="">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+// ═══════════════════════════════════════
+// State
+// ═══════════════════════════════════════
+var attachedImages = [];
+var attachedAudio = null;
+var mediaRecorder = null;
+var recordingStream = null;
+var recordingTimer = null;
+var recordingSeconds = 0;
+
+var IMAGE_DB = {
+  warm: ['images/warm/warm-01.jpg','images/warm/warm-02.jpg','images/warm/warm-03.jpg','images/warm/warm-04.jpg','images/warm/warm-05.jpg','images/warm/warm-06.jpg'],
+  calm: ['images/calm/calm-01.jpg','images/calm/calm-02.jpg','images/calm/calm-03.jpg','images/calm/calm-04.jpg','images/calm/calm-05.jpg','images/calm/calm-06.jpg'],
+  hopeful: ['images/hopeful/hopeful-01.jpg','images/hopeful/hopeful-02.jpg','images/hopeful/hopeful-03.jpg','images/hopeful/hopeful-04.jpg','images/hopeful/hopeful-05.jpg','images/hopeful/hopeful-06.jpg'],
+  gentle: ['images/gentle/gentle-01.jpg','images/gentle/gentle-02.jpg','images/gentle/gentle-03.jpg','images/gentle/gentle-04.jpg','images/gentle/gentle-05.jpg','images/gentle/gentle-06.jpg']
+};
+
+var EMOTION_KEYWORDS = {
+  warm: ['爱','温暖','家人','朋友','陪伴','拥抱','谢谢','感激','关心','照顾','在一起','想念','幸福','甜蜜','牵手','微笑','开心','快乐','喜欢','妈妈','爸爸'],
+  calm: ['平静','安静','安宁','放松','呼吸','冥想','独处','散步','发呆','慢下来','宁静','舒适','悠闲'],
+  hopeful: ['希望','期待','明天','未来','梦想','目标','进步','成长','新的','开始','机会','阳光','日出','花开'],
+  gentle: ['温柔','细腻','柔软','花瓣','叶子','雨','风','天空','云','水','自然','美好','感动','眼泪','心疼','珍惜']
+};
+
+var currentEmotion = null;
+
+// ═══════════════════════════════════════
+// Init
+// ═══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('outputSection').classList.remove('active');
+  document.getElementById('loadingSection').classList.remove('active');
+  restoreDraft();
+  setTimeout(function() {
+    document.querySelectorAll('.delay-1,.delay-2').forEach(function(el,i){ el.style.animationDelay=(i*0.08)+'s'; });
+  }, 50);
+});
+
+// ═══════════════════════════════════════
+// Image Upload / Voice Recording / Preview / Draft
+// (unchanged from previous version)
+// ═══════════════════════════════════════
+function handleImages(event) {
+  var files = event.target.files;
+  if (!files || !files.length) return;
+  for (var i=0;i<files.length;i++) (function(file){
+    if(!file.type.startsWith('image/'))return;
+    var r=new FileReader();r.onload=function(e){
+      attachedImages.push({file:file,dataUrl:e.target.result});renderPreviews();saveDraft();
+    };r.readAsDataURL(file);
+  })(files[i]);
+  event.target.value='';
+}
+function toggleRecording(){ if(mediaRecorder&&mediaRecorder.state==='recording')stopRecording(); else startRecording(); }
+function startRecording(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){showNotification('你的浏览器不支持录音');return;}
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    recordingStream=stream;var mt='audio/webm';if(!MediaRecorder.isTypeSupported(mt))mt='audio/mp4';
+    mediaRecorder=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);
+    var chunks=[];mediaRecorder.ondataavailable=function(e){if(e.data&&e.data.size>0)chunks.push(e.data);};
+    mediaRecorder.onstop=function(){
+      var b=new Blob(chunks,{type:(chunks[0]&&chunks[0].type)||'audio/webm'});
+      if(attachedAudio&&attachedAudio.url)URL.revokeObjectURL(attachedAudio.url);
+      attachedAudio={blob:b,url:URL.createObjectURL(b),duration:recordingSeconds};
+      renderPreviews();saveDraft();
+      if(recordingStream){recordingStream.getTracks().forEach(function(t){t.stop();});recordingStream=null;}
+    };
+    mediaRecorder.start();recordingSeconds=0;
+    var btn=document.getElementById('voiceBtn');btn.classList.add('recording');
+    document.getElementById('voiceBtnText').textContent='录音中 0:00';
+    recordingTimer=setInterval(function(){recordingSeconds++;
+      var m=Math.floor(recordingSeconds/60),s=recordingSeconds%60;
+      document.getElementById('voiceBtnText').textContent='录音中 '+m+':'+String(s).padStart(2,'0');
+    },1000);
+  }).catch(function(){showNotification('需要麦克风权限才能录音');});
+}
+function stopRecording(){ if(mediaRecorder&&mediaRecorder.state==='recording')mediaRecorder.stop();clearInterval(recordingTimer);document.getElementById('voiceBtn').classList.remove('recording');document.getElementById('voiceBtnText').textContent='语音'; }
+function renderPreviews(){
+  var a=document.getElementById('previewArea');
+  if(!attachedImages.length&&!attachedAudio){a.classList.remove('has-content');a.innerHTML='';return;}
+  a.classList.add('has-content');var h='';
+  attachedImages.forEach(function(item,idx){h+='<div class="preview-item"><img src="'+item.dataUrl+'" alt=""><button class="preview-remove" onclick="removeImage('+idx+')">✕</button></div>';});
+  if(attachedAudio){var dur=attachedAudio.duration||0;h+='<div class="preview-item audio-preview" style="position:relative;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg> '+Math.floor(dur/60)+':'+String(dur%60).padStart(2,'0')+'<button class="preview-remove" style="position:static;background:none;color:inherit;margin-left:4px;" onclick="removeAudio()">✕</button></div>';}
+  a.innerHTML=h;
+}
+function removeImage(idx){attachedImages.splice(idx,1);renderPreviews();saveDraft();}
+function removeAudio(){if(attachedAudio&&attachedAudio.url)URL.revokeObjectURL(attachedAudio.url);attachedAudio=null;renderPreviews();saveDraft();}
+function saveDraft(){try{localStorage.setItem('diary_draft',JSON.stringify({text:document.getElementById('diaryInput').value,savedAt:new Date().toISOString()}));}catch(e){}}
+function restoreDraft(){try{var d=JSON.parse(localStorage.getItem('diary_draft')||'null');if(d&&d.text)document.getElementById('diaryInput').value=d.text;}catch(e){}}
+function clearDraft(){localStorage.removeItem('diary_draft');}
+
+// ═══════════════════════════════════════
+// Core: Generate
+// ═══════════════════════════════════════
+function generateDiary(){
+  var inp=document.getElementById('diaryInput').value.trim();
+  if(!inp&&!attachedImages.length&&!attachedAudio){showNotification('请先写下感恩片段，或添加照片/语音');return;}
+
+  document.getElementById('loadingSection').classList.add('active');
+  document.getElementById('outputSection').classList.remove('active');
+
+  setTimeout(function(){
+    var emotions=analyzeEmotions(inp);
+    currentEmotion=getDominantEmotion(emotions);
+    var diaryParts=genDiaryParts(inp,emotions);
+    var imageUrl=pickImage(currentEmotion);
+    var analysis=genInsight(inp,emotions);
+    var tome=genTome(inp,emotions);
+
+    renderOutput(diaryParts,imageUrl,emotions,analysis,tome);
+
+    document.getElementById('loadingSection').classList.remove('active');
+    var os=document.getElementById('outputSection');os.classList.add('active');os.classList.add('fade-in-up');
+    setTimeout(function(){os.scrollIntoView({behavior:'smooth',block:'start'});},100);
+
+    clearDraft();
+    logEvent('diary_generated',{emotion:currentEmotion,hasImages:attachedImages.length,hasAudio:!!attachedAudio});
+  },1500+Math.random()*1000);
+}
+
+// ═══════════════════════════════════════
+// Emotion Analysis
+// ═══════════════════════════════════════
+function analyzeEmotions(text){
+  var lower=text.toLowerCase(),scores={};
+  for(var emo in EMOTION_KEYWORDS){
+    var kw=EMOTION_KEYWORDS[emo],hits=0;
+    for(var i=0;i<kw.length;i++)if(lower.indexOf(kw[i].toLowerCase())!==-1)hits++;
+    scores[emo]=Math.min(Math.round((15+Math.random()*15)+(hits*12)),95);
+  }
+  var total=scores.warm+scores.calm+scores.hopeful+scores.gentle;
+  if(total>0){var s=Math.min(220/total,1.3);for(var e in scores)scores[e]=Math.min(Math.round(scores[e]*s),95);}
+  return scores;
+}
+function getDominantEmotion(s){var best='warm',bs=0;for(var e in s){if(s[e]>bs){bs=s[e];best=e;}}return best;}
+
+// ═══════════════════════════════════════
+// Diary Parts — split user input vs AI text
+// ═══════════════════════════════════════
+function genDiaryParts(input,emotions){
+  var lines=input.split('\n').filter(function(l){return l.trim().length>0;});
+  var subjects = extractSubjects(input);
+
+  // User input — keep raw, lightly formatted
+  var userText = lines.map(function(l){
+    return l.trim().replace(/^[\·\-\*\d\.\、\）\)]\s*/, '');
+  }).join('\n');
+
+  // AI opening — warm, varied
+  var openers=['今天有一些温柔的时刻想要记下来。','想把今天的这些光收藏进文字里。','有些小事，但它们让今天变得不一样。','记录下来，怕以后忘了这种感觉。'];
+  var opener=openers[Math.floor(Math.random()*openers.length)];
+
+  // AI closer
+  var closers=['原来幸福就藏在这些不起眼的瞬间里。','每一天都值得被这样认真地记住。','光一直都在，只是有时候我们忙着赶路没注意到。'];
+  var closer=closers[Math.floor(Math.random()*closers.length)];
+
+  // AI wrapper (goes below user input)
+  var aiLines = [];
+  aiLines.push(opener);
+  if(attachedImages.length>0) aiLines.push('（附上了 '+attachedImages.length+' 张照片，想把这一刻的样子留下来）');
+  if(attachedAudio) aiLines.push('（还录了一段声音，那个瞬间的声音也很重要）');
+  aiLines.push(closer);
+
+  return { userText: userText, aiText: aiLines.join('\n') };
+}
+
+function pickImage(emo){var p=IMAGE_DB[emo]||IMAGE_DB.warm;return p[Math.floor(Math.random()*p.length)];}
+function regenerateImage(){if(!currentEmotion)return;var el=document.getElementById('outputImage');el.style.opacity='0.3';
+  setTimeout(function(){el.src=pickImage(currentEmotion);el.onload=function(){el.style.opacity='1';};el.style.transition='opacity 0.4s ease';},200);
+}
+
+// ═══════════════════════════════════════
+// Insight — INPUT-AWARE
+// ═══════════════════════════════════════
+function genInsight(input, emotions){
+  var subjects = extractSubjects(input);
+  var dominant = getDominantEmotion(emotions);
+  var score = emotions[dominant];
+
+  var templates = {
+    warm_high: function(s) {
+      if(s&&s.length>0) return '你在今天里捕捉到了关于「'+s[0]+'」的温暖。这些瞬间之所以珍贵，不是因为它有多宏大，而是因为你愿意停下来感受它。你的心是打开着的，而光总是会找到这样的缝隙照进来。';
+      return '今天的文字里有温度。那些被你注意到的瞬间，其实都是生活在向你发出的信号——它一直在等你看见。';
+    },
+    calm_high: function(s) {
+      if(s&&s.length>0) return '你提到了「'+s[0]+'」，这种安静的力量往往比喧嚣更有重量。你正在学会和自己相处，这比任何外在的成就都更难得。';
+      return '今天的文字有一种安静的重量。平静不是没有波澜，而是允许一切发生之后，依然能稳稳地接住自己。';
+    },
+    hopeful_high: function(s) {
+      if(s&&s.length>0) return '从「'+s[0]+'」里读出了光的形状。你不是在等未来变好，你是在用每一个微小的感知去建造那个更好的未来。';
+      return '你能从日常里读出希望的味道。这不是天生的乐观，是你一次次选择看见光的练习结果。';
+    },
+    gentle_high: function(s) {
+      if(s&&s.length>0) return '你对「'+s[0]+'」的感知这么细腻，说明你的心没有因为忙碌而变得粗糙。敏感不是弱点，它是你和世界之间最温柔的通道。';
+      return '你的感知力很细腻。在这个匆忙的世界里，还能被小事打动的人，内心都藏着一片很干净的光。';
+    },
+    mixed_warm_calm: function(s) {
+      return '温暖和平静同时出现在你的文字里。这说明你有能力向外连接，也有空间向内安顿——这是一种很好的平衡，也是一个人真正开始爱自己时的样子。';
+    },
+    mixed_hopeful_gentle: function(s) {
+      return '希望和温柔并存。你既在向往远方，也在珍视手边的小事。这种状态很美，像一束光——既照亮前方，也温暖脚下。';
+    },
+    default: function(s) {
+      if(s&&s.length>0) return '你写下的这些关于「'+s[0]+'」的文字，在未来某一天翻回来的时候，会是自己送给自己的礼物。每一次认真记录，都是在给未来的自己写信。';
+      return '每一次记录都是一次自我对话。你愿意把注意力放在美好的事物上，这件事本身就很了不起。';
+    }
+  };
+
+  var key = dominant+'_'+(score>=50?'high':'');
+  if(templates[key]) return templates[key](subjects);
+  var sorted=Object.keys(emotions).sort(function(a,b){return emotions[b]-emotions[a]});
+  var mixKey='mixed_'+sorted[0]+'_'+sorted[1];
+  if(templates[mixKey]) return templates[mixKey](subjects);
+  return templates.default(subjects);
+}
+
+function extractSubjects(text) {
+  var results=[];
+  var patterns=[
+    /和(.{1,6}?)通电话|跟(.{1,6}?)(聊天|说话|通话)/,
+    /看到(.{1,8})|遇见(.{1,8})/,
+    /(妈妈|爸爸|朋友|家人|孩子|伴侣|同事|老师|闺蜜)/,
+    /(阳光|咖啡|音乐|书|花|猫|狗|海|山|天空|日落|日出|雨|雪)/,
+    /坐在(.{1,6})|走在(.{1,6})/,
+    /(工作|学习|运动|旅行|散步|做饭|喝茶)/
+  ];
+  for(var i=0;i<patterns.length;i++){
+    var m=text.match(patterns[i]);if(m){for(var j=1;j<m.length;j++){if(m[j]&&results.indexOf(m[j])===-1)results.push(m[j]);}}}
+  return results.slice(0,2);
+}
+
+function genTome(input,emotions){
+  var subjects=extractSubjects(input);
+  var pool=[];
+  if(subjects.length>0){
+    var s=subjects[0];
+    pool.push('今天有「'+s+'」陪你，真好。','记住这个有「'+s+'」在的一天。','和「'+s+'」有关的这些时刻，值得被记住。');
+  }
+  pool.push('你今天选择记录而不是忽略，这就是一种力量。','允许自己被小事感动的人，活得最真实。','光不挑地方，它照进每一个愿意看见的心里。','今天你收集了一些光。它们不会消失。','好好生活，就是把这些碎片一天天捡起来。');
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+// ═══════════════════════════════════════
+// Render Output
+// ═══════════════════════════════════════
+function renderOutput(parts, imageUrl, emotions, analysis, tome){
+  var now=new Date();
+  document.getElementById('outputDateNum').textContent=now.getDate();
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('outputDateStr').textContent=months[now.getMonth()]+' · '+now.getFullYear();
+
+  document.getElementById('outputImage').src=imageUrl;
+
+  // User input — handwriting, large, bold
+  document.getElementById('outputUserInput').textContent=parts.userText;
+
+  // AI text — system font, smaller
+  document.getElementById('outputAiText').textContent=parts.aiText;
+
+  renderOutputAttachments();
+  renderEmotionDots(emotions);
+  document.getElementById('analysisText').textContent=analysis;
+  document.getElementById('tomeText').textContent=tome;
+}
+
+function renderOutputAttachments(){
+  var c=document.getElementById('outputAttachments');
+  if(!attachedImages.length&&!attachedAudio){c.innerHTML='';return;}
+  var h='';
+  attachedImages.forEach(function(item){h+='<img class="output-attachment-img" src="'+item.dataUrl+'" alt="">';});
+  if(attachedAudio)h+='<div class="output-attachment-audio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg> 语音</div>';
+  c.innerHTML=h;
+}
+
+// ═══════════════════════════════════════
+// Emotion DOT GRID
+// ═══════════════════════════════════════
+function renderEmotionDots(scores){
+  var container=document.getElementById('emotionBars');
+  var labels={warm:'温暖',calm:'平静',hopeful:'希望',gentle:'温柔'};
+  var order=['warm','calm','hopeful','gentle'];
+  var TOTAL_DOTS=7;
+  var html='<div class="emotion-dots-label">情绪光谱</div>';
+  for(var i=0;i<order.length;i++){
+    var emo=order[i],pct=scores[emo],filled=Math.round(pct/100*TOTAL_DOTS);
+    if(filled===0&&pct>5)filled=1;if(filled>TOTAL_DOTS)filled=TOTAL_DOTS;
+    html+='<div class="emotion-dots-row"><span class="emotion-dots-name">'+labels[emo]+'</span><div class="emotion-dots-track">';
+    for(var d=0;d<TOTAL_DOTS;d++){
+      html+='<span class="emotion-dot '+(d<filled?emo:'empty')+'" data-delay="'+(d*60)+'"></span>';
+    }
+    html+='</div></div>';
+  }
+  container.innerHTML=html;
+  setTimeout(function(){
+    var dots=container.querySelectorAll('.emotion-dot:not(.empty)');
+    dots.forEach(function(dot){var delay=parseInt(dot.getAttribute('data-delay'))||0;
+      dot.style.transform='scale(0)';dot.style.opacity='0';
+      setTimeout(function(){dot.style.transition='all 0.35s cubic-bezier(0.34,1.56,0.64,1)';dot.style.transform='scale(1)';dot.style.opacity='1';},delay);
+    });
+  },150);
+}
+
+// ═══════════════════════════════════════
+// Save / Share
+// ═══════════════════════════════════════
+function saveDiary(){
+  var t=document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
+  var k='diary_'+formatDate(new Date());
+  try{
+    var saved=JSON.parse(localStorage.getItem('saved_diaries')||'{}');
+    saved[k]={text:t,image:document.getElementById('outputImage').src,emotion:currentEmotion,savedAt:new Date().toISOString()};
+    localStorage.setItem('saved_diaries',JSON.stringify(saved));showNotification('已保存 ✦');logEvent('diary_saved',{emotion:currentEmotion});
+  }catch(e){showNotification('保存失败');}
+}
+function shareDiary(){
+  var t=document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
+  var d={title:'光之日记 · '+formatDate(new Date()),text:t+'\n\n— 来自光之日记 Gratitude'};
+  if(navigator.share)navigator.share(d).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(d.text).then(function(){showNotification('已复制 📋');});
+  logEvent('diary_share_attempted');
+}
+function goBack(){
+  if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.stop();
+  // 动态计算：始终返回到当前页面所在目录的 index.html
+  var basePath = window.location.pathname.replace(/[^/]*$/, '');
+  location.href = basePath + 'index.html';
+}
+
+function formatDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function showNotification(msg){
+  var n=document.createElement('div');n.textContent=msg;
+  n.style.cssText='position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-16px);background:#3d2b1f;color:#fff;padding:10px 22px;border-radius:12px;font-size:13.5px;z-index:200;opacity:0;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);box-shadow:0 4px 20px rgba(0,0,0,0.12);white-space:nowrap;';
+  document.body.appendChild(n);
+  requestAnimationFrame(function(){requestAnimationFrame(function(){n.style.opacity='1';n.style.transform='translateX(-50%) translateY(0)';});});
+  setTimeout(function(){n.style.opacity='0';n.style.transform='translateX(-50%) translateY(-16px)';setTimeout(function(){n.remove();},300);},2200);
+}
+function logEvent(ev,props){try{var es=JSON.parse(localStorage.getItem('diary_events')||'[]');es.push({event:ev,properties:props||{},ts:new Date().toISOString()});if(es.length>200)es=es.slice(-200);localStorage.setItem('diary_events',JSON.stringify(es));}catch(e){}}
+
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('diaryInput').addEventListener('input',saveDraft);
+});
+
+// ─── 浏览器返回按钮保护 ───
+// 记录正确的返回路径，防止浏览器后退跑到根目录或其他页面
+(function(){
+  var basePath = window.location.pathname.replace(/[^/]*$/, '');
+  var correctBack = basePath + 'index.html';
+  // pushState 确保历史记录中有正确条目
+  history.pushState({diary:true}, '', window.location.href);
+  // 拦截浏览器后退
+  window.addEventListener('popstate', function(e){
+    if(mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.stop();
+    location.href = correctBack;
+  });
+})();
+</script>
+
+</body>
+</html>

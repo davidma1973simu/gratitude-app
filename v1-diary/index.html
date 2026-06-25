@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#fafaf9" />
+  <title>感恩日记 · Gratitude</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-title" content="感恩日记" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --surface-hover: #f5f5f4;
+      --border: #e7e5e4;
+      --border-light: #f5f5f4;
+      --text-primary: #1c1917;
+      --text-secondary: #78716c;
+      --text-tertiary: #a8a29e;
+      --accent: #1c1917;
+      --accent-soft: #f5f5f4;
+      --success: #16a34a;
+      --radius: 14px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+
+    /* ─── Nav ─── */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(250,250,249,0.85);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0 24px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-left { display: flex; align-items: center; gap: 12px; }
+    .nav-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .nav-date { font-size: 13px; color: var(--text-tertiary); font-weight: 400; }
+    .nav-tabs {
+      display: flex; gap: 2px; background: var(--border-light); border-radius: 10px; padding: 3px;
+    }
+    .nav-tab {
+      padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      border: none; cursor: pointer; background: transparent; color: var(--text-secondary);
+      transition: all 0.18s ease;
+    }
+    .nav-tab.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+
+    /* ─── User Avatar ─── */
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent-soft); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      transition: all 0.18s ease; overflow: hidden;
+    }
+    .user-avatar:hover { border-color: var(--text-tertiary); }
+
+    /* ─── 光之日记 Entrance Card ─── */
+    .diary-entrance {
+      display: none;
+      margin: 0 24px 0;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #fdf8f4 0%, #fef5ee 100%);
+      border: 1px solid #f0d9c8;
+      border-radius: var(--radius);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      animation: fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    .diary-entrance.active { display: flex; align-items: center; gap: 12px; }
+    .diary-entrance:hover {
+      border-color: #e8c4a8;
+      box-shadow: 0 2px 12px rgba(212,165,116,0.12);
+      transform: translateY(-1px);
+    }
+    .diary-icon-wrap {
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: linear-gradient(135deg, #d4a574, #e8b88a);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+    }
+    .diary-text {
+      flex: 1;
+      text-align: left;
+    }
+    .diary-text-title {
+      font-size: 14px; font-weight: 600;
+      color: #5a3e2b; letter-spacing: 0.2px;
+      margin-bottom: 2px;
+    }
+    .diary-text-sub {
+      font-size: 12px; color: #b8967a;
+      letter-spacing: 0.2px;
+    }
+    .diary-arrow {
+      color: #c9a87c; font-size: 16px;
+      transition: transform 0.15s ease;
+    }
+    .diary-entrance:hover .diary-arrow { transform: translateX(2px); }
+
+    /* ─── V2 Prompt Banner (subtle, one line) ─── */
+    .v2-prompt-banner {
+      display: none;
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--text-tertiary);
+      background: transparent;
+      border-bottom: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+      text-decoration: none;
+      letter-spacing: 0.1px;
+    }
+    .v2-prompt-banner:hover {
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+    }
+    .v2-prompt-banner .prompt-arrow { opacity: 0.5; margin-left: 4px; transition: opacity 0.15s; }
+    .v2-prompt-banner:hover .prompt-arrow { opacity: 1; }
+
+    /* ─── Main ─── */
+    main { flex: 1; padding: 24px 24px 100px; max-width: 560px; margin: 0 auto; width: 100%; }
+
+    /* ─── Today View ─── */
+    .today-header { margin-bottom: 28px; }
+    .today-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; line-height: 1.2; }
+    .today-header p { font-size: 15px; color: var(--text-secondary); margin-top: 6px; font-weight: 400; }
+
+    .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .progress-dots { display: flex; gap: 6px; }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .dot.filled { background: var(--text-primary); transform: scale(1.1); }
+    .progress-label { font-size: 13px; color: var(--text-tertiary); }
+
+    /* ─── Entry Cards ─── */
+    .entries-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+
+    .entry-card {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: box-shadow 0.2s ease;
+    }
+    .entry-card:focus-within { box-shadow: var(--shadow-md); border-color: var(--border); }
+
+    .entry-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px;
+    }
+    .entry-number {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+      color: var(--text-tertiary); text-transform: uppercase;
+    }
+    .entry-tag {
+      font-size: 11px; color: var(--text-tertiary);
+      background: var(--accent-soft); border-radius: 6px; padding: 2px 8px;
+    }
+    .entry-tag.done { color: var(--success); background: #f0fdf4; }
+
+    .entry-textarea {
+      width: 100%; border: none; outline: none; resize: none;
+      font-size: 15px; font-weight: 400; line-height: 1.6;
+      color: var(--text-primary); background: transparent;
+      padding: 0 16px 14px; min-height: 60px; max-height: 120px;
+      font-family: inherit;
+    }
+    .entry-textarea::placeholder { color: var(--text-tertiary); }
+    .entry-textarea:disabled {
+      color: var(--text-primary); cursor: default; opacity: 1;
+    }
+
+    /* ─── Submit Button ─── */
+    .submit-btn {
+      width: 100%; padding: 15px;
+      background: var(--text-primary); color: #fafaf9;
+      border: none; border-radius: var(--radius);
+      font-size: 15px; font-weight: 600; letter-spacing: -0.2px;
+      cursor: pointer; transition: all 0.18s ease;
+    }
+    .submit-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .submit-btn:active:not(:disabled) { transform: scale(0.98); }
+    .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* ─── Empty / Completed state ─── */
+    .completed-state {
+      text-align: center; padding: 48px 24px;
+      display: none;
+    }
+    .completed-icon {
+      width: 64px; height: 64px; margin: 0 auto 16px;
+      background: #f0fdf4; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .completed-icon svg { color: var(--success); }
+    .completed-state h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
+    .completed-state p { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+    .edit-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 24px;
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: all 0.18s ease; font-family: inherit;
+    }
+    .edit-btn:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--text-tertiary); }
+
+    /* ─── History View ─── */
+    .history-header { margin-bottom: 24px; }
+    .history-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .history-header p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* Search */
+    .search-wrap { position: relative; margin-bottom: 20px; }
+    .search-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; color: var(--text-tertiary); pointer-events: none;
+    }
+    .search-input {
+      width: 100%; padding: 11px 14px 11px 40px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 15px; background: var(--surface); color: var(--text-primary);
+      outline: none; transition: border-color 0.18s, box-shadow 0.18s; font-family: inherit;
+    }
+    .search-input:focus { border-color: #a8a29e; box-shadow: var(--shadow-sm); }
+    .search-input::placeholder { color: var(--text-tertiary); }
+
+    /* History groups */
+    .history-group { margin-bottom: 24px; }
+    .history-group-date {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+      color: var(--text-tertiary); text-transform: uppercase;
+      margin-bottom: 8px; padding: 0 2px;
+    }
+    .history-card {
+      background: var(--surface); border: 1px solid var(--border-light);
+      border-radius: var(--radius); padding: 14px 16px;
+    }
+    .history-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0;
+    }
+    .history-item:not(:last-child) { border-bottom: 1px solid var(--border-light); }
+    .history-bullet {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-tertiary); margin-top: 7px; flex-shrink: 0;
+    }
+    .history-text { font-size: 15px; line-height: 1.6; flex: 1; }
+    .highlight { background: #fef9c3; border-radius: 3px; padding: 0 2px; }
+
+    .empty-history {
+      text-align: center; padding: 60px 24px;
+      color: var(--text-tertiary);
+    }
+    .empty-history svg { margin-bottom: 12px; opacity: 0.4; }
+    .empty-history p { font-size: 15px; }
+
+    /* ─── Toast Modal ─── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.2);
+      backdrop-filter: blur(4px); z-index: 100;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: 32px 28px calc(32px + env(safe-area-inset-bottom));
+      width: 100%; max-width: 560px;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+      text-align: center;
+    }
+    .overlay.show .modal { transform: translateY(0); }
+    .modal-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+    .modal-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .modal-desc { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; }
+    .modal-btn {
+      width: 100%; padding: 15px;
+      background: var(--text-primary); color: #fafaf9;
+      border: none; border-radius: var(--radius);
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: opacity 0.18s; font-family: inherit;
+    }
+    .modal-btn:hover { opacity: 0.88; }
+
+    /* ─── Notification Banner ─── */
+    .notif-banner {
+      position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: var(--text-primary); color: #fafaf9;
+      border-radius: 12px; padding: 12px 20px;
+      font-size: 14px; font-weight: 500;
+      box-shadow: var(--shadow-lg); z-index: 200;
+      opacity: 0; pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+      white-space: nowrap;
+    }
+    .notif-banner.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ─── Login View ─── */
+    .login-view {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100dvh; padding: 40px 24px; text-align: center;
+      position: relative;
+    }
+    .login-logo {
+      width: 72px; height: 72px; margin-bottom: 24px;
+      background: #f0fdf4; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    .login-title { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; margin-bottom: 8px; }
+    .login-subtitle { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 36px; }
+    .login-form { width: 100%; max-width: 360px; }
+    .login-input {
+      width: 100%; padding: 14px 16px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 15px; background: var(--surface); color: var(--text-primary);
+      outline: none; transition: border-color 0.18s, box-shadow 0.18s; font-family: inherit;
+      text-align: center; margin-bottom: 12px;
+    }
+    .login-input:focus { border-color: #a8a29e; box-shadow: var(--shadow-sm); }
+    .login-input::placeholder { color: var(--text-tertiary); }
+    .login-btn {
+      width: 100%; padding: 15px;
+      background: var(--text-primary); color: #fafaf9;
+      border: none; border-radius: var(--radius);
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: all 0.18s ease; font-family: inherit;
+      pointer-events: auto;
+    }
+    .login-btn:hover { opacity: 0.88; }
+    .login-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .login-hint {
+      font-size: 13px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6;
+    }
+    .login-password-wrap { position: relative; }
+    .login-password-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: var(--text-tertiary);
+      padding: 4px; display: flex; align-items: center;
+      pointer-events: auto;
+    }
+    .login-password-toggle:hover { color: var(--text-secondary); }
+
+    /* ─── Language Toggle ─── */
+    .lang-toggle {
+      position: absolute; top: 20px; right: 20px;
+      display: flex; border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; background: var(--surface);
+    }
+    .lang-btn {
+      padding: 6px 14px; border: none; background: transparent;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      color: var(--text-tertiary); transition: all 0.18s;
+      font-family: inherit;
+    }
+    .lang-btn.active {
+      background: var(--text-primary); color: #fafaf9;
+    }
+
+    /* ─── Install Banner ─── */
+    .install-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 16px 20px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+      transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+    }
+    .install-banner.show { transform: translateY(0); }
+    .install-banner-icon {
+      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+    }
+    .install-banner-text { flex: 1; }
+    .install-banner-text h4 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .install-banner-text p { font-size: 13px; color: var(--text-secondary); }
+    .install-banner-btn {
+      padding: 10px 20px; border-radius: 10px; border: none;
+      background: var(--text-primary); color: var(--bg);
+      font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      font-family: inherit; transition: opacity 0.18s;
+    }
+    .install-banner-btn:hover { opacity: 0.85; }
+    .install-banner-close {
+      background: none; border: none; cursor: pointer; padding: 4px;
+      color: var(--text-tertiary); display: flex; align-items: center;
+    }
+    .install-banner-close:hover { color: var(--text-secondary); }
+
+    /* ─── User Menu ─── */
+    .user-menu {
+      position: absolute; top: 60px; right: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 8px;
+      box-shadow: var(--shadow-lg); z-index: 60;
+      min-width: 180px; display: none;
+    }
+    .user-menu.show { display: block; }
+    .user-menu-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      font-size: 14px; color: var(--text-primary);
+      cursor: pointer; transition: background 0.15s;
+      border: none; background: transparent; width: 100%; text-align: left; font-family: inherit;
+    }
+    .user-menu-item:hover { background: var(--surface-hover); }
+    .user-menu-item.danger { color: #dc2626; }
+    .user-menu-divider { height: 1px; background: var(--border-light); margin: 4px 0; }
+    .user-menu-email {
+      padding: 8px 12px 4px; font-size: 12px; color: var(--text-tertiary);
+      border-bottom: 1px solid var(--border-light); margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    /* ─── Sync Indicator ─── */
+    .sync-badge {
+      font-size: 11px; color: var(--text-tertiary);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .sync-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+    }
+    .sync-dot.syncing { background: #eab308; animation: pulse 1s infinite; }
+    .sync-dot.offline { background: var(--text-tertiary); }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ─── Animations ─── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+    .delay-1 { animation-delay: 0.05s; }
+    .delay-2 { animation-delay: 0.1s; }
+    .delay-3 { animation-delay: 0.15s; }
+
+    [data-view] { display: none; }
+    [data-view].active { display: block; }
+
+    @media (max-width: 480px) {
+      main { padding: 20px 16px 100px; }
+      .nav { padding: 0 16px; }
+    }
+
+    /* ─── Splash Screen ─── */
+    .splash-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #fafaf9;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.5s ease;
+      opacity: 1; pointer-events: auto;
+    }
+    .splash-overlay.hidden {
+      opacity: 0; pointer-events: none;
+    }
+    .splash-motif {
+      position: relative;
+      width: 180px; height: 180px;
+      margin: 0 auto 40px;
+    }
+    .splash-glow {
+      position: absolute; border-radius: 50%;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .splash-glow-1 { width: 140px; height: 140px; background: rgba(236,253,245,0.8); }
+    .splash-glow-2 { width: 100px; height: 100px; background: rgba(209,250,229,0.6); }
+    .splash-glow-3 { width: 64px;  height: 64px;  background: rgba(167,243,208,0.4); }
+    .splash-ring {
+      position: absolute; border-radius: 50%;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .splash-ring-1 { width: 68px; height: 68px; border: 1.5px solid rgba(52,211,153,0.25); }
+    .splash-ring-2 { width: 52px; height: 52px; border: 1.5px solid rgba(16,185,129,0.3); }
+    .splash-ring-3 { width: 36px; height: 36px; border: 1.5px solid rgba(16,185,129,0.35); }
+    .splash-core {
+      position: absolute; border-radius: 50%;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      animation: splashPulse 2.5s ease-in-out infinite;
+    }
+    .splash-core-1 { width: 32px; height: 32px; background: rgba(209,250,229,0.7); }
+    .splash-core-2 { width: 18px; height: 18px; background: rgba(52,211,153,0.6); }
+    .splash-ray {
+      position: absolute; top: 50%; left: 50%;
+      width: 2px; height: 40px;
+      background: linear-gradient(to top, rgba(16,185,129,0.25), transparent);
+      border-radius: 2px;
+      transform-origin: bottom center;
+      animation: splashRayFade 2.2s ease-in-out infinite;
+    }
+    .splash-leaf-svg {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: splashLeafBreathe 3s ease-in-out infinite;
+    }
+    .splash-name {
+      font-size: 28px; font-weight: 500;
+      color: #1c1917; letter-spacing: 4px;
+      margin-bottom: 10px;
+    }
+    .splash-tagline {
+      font-size: 15px; color: #15803D;
+      letter-spacing: 2px; margin-bottom: 16px;
+    }
+    .splash-divider {
+      width: 120px; height: 1px;
+      background: rgba(167,243,208,0.5);
+      margin: 0 auto 16px;
+    }
+    .splash-hint {
+      font-size: 11px; color: #6B7280; letter-spacing: 1px;
+    }
+    .splash-loading {
+      margin-top: 48px; display: flex; gap: 10px; justify-content: center;
+    }
+    .splash-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #D1D5DB;
+    }
+    .splash-dot.active {
+      background: #10B981;
+      animation: splashDotPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes splashPulse {
+      0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.55; }
+      50%     { transform: translate(-50%,-50%) scale(1.08); opacity: 0.7; }
+    }
+    @keyframes splashLeafBreathe {
+      0%,100% { transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+      50%     { transform: translate(-50%,-50%) scale(1.04) rotate(1deg); }
+    }
+    @keyframes splashDotPulse {
+      0%,100% { opacity: 0.4; transform: scale(0.9); }
+      50%     { opacity: 1; transform: scale(1.25); }
+    }
+    @keyframes splashRayFade {
+      0%,100% { opacity: 0; }
+      50%     { opacity: 0.35; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ Splash Screen ═══ -->
+<div class="splash-overlay" id="splashOverlay">
+  <div class="splash-motif">
+    <div class="splash-glow splash-glow-1"></div>
+    <div class="splash-glow splash-glow-2"></div>
+    <div class="splash-glow splash-glow-3"></div>
+    <div class="splash-ring splash-ring-1"></div>
+    <div class="splash-ring splash-ring-2"></div>
+    <div class="splash-ring splash-ring-3"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(0deg) translateY(-18px); animation-delay:0s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(45deg) translateY(-18px); animation-delay:0.3s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(90deg) translateY(-18px); animation-delay:0.6s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(135deg) translateY(-18px); animation-delay:0.9s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(180deg) translateY(-18px); animation-delay:1.2s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(225deg) translateY(-18px); animation-delay:1.5s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(270deg) translateY(-18px); animation-delay:1.8s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(315deg) translateY(-18px); animation-delay:2.1s"></div>
+    <div class="splash-core splash-core-1"></div>
+    <div class="splash-core splash-core-2"></div>
+    <svg class="splash-leaf-svg" width="64" height="80" viewBox="0 0 64 80"><path d="M32,63 Q30,48 32,33 Q35,18 32,3" stroke="#15803D" stroke-width="2.5" stroke-linecap="round" fill="none"/><ellipse cx="22" cy="21" rx="9" ry="14" transform="rotate(-30 22 21)" fill="#22C55E" opacity="0.9"/><ellipse cx="42" cy="18" rx="8" ry="13" transform="rotate(25 42 18)" fill="#16A34A" opacity="0.85"/><ellipse cx="19" cy="40" rx="7" ry="11" transform="rotate(-40 19 40)" fill="#22C55E" opacity="0.8"/><ellipse cx="45" cy="36" rx="7" ry="11" transform="rotate(35 45 36)" fill="#16A34A" opacity="0.75"/><ellipse cx="27" cy="9" rx="6" ry="10" transform="rotate(-20 27 9)" fill="#4ADE80" opacity="0.9"/><ellipse cx="37" cy="6" rx="5" ry="8" transform="rotate(20 37 6)" fill="#22C55E" opacity="0.85"/></svg>
+  </div>
+  <h1 class="splash-name">感恩日记</h1>
+  <p class="splash-tagline">留住每一束光</p>
+  <div class="splash-divider"></div>
+  <p class="splash-hint">每天记录 · 温柔提醒 · 收藏感动</p>
+  <div class="splash-loading">
+    <div class="splash-dot"></div>
+    <div class="splash-dot active"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+<!-- Force-clear old Service Worker caches from pre-login version -->
+<script>
+(function(){
+  if (!document.currentScript) return;
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(reg) { reg.unregister(); });
+    });
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        names.forEach(function(name) { caches.delete(name); });
+      });
+    }
+  }
+})();
+</script>
+
+<!-- ═══ Login View (default visible) ═══ -->
+<div id="loginView" class="login-view">
+  <div class="lang-toggle" id="langToggle">
+    <button class="lang-btn active" data-lang="zh">中文</button>
+    <button class="lang-btn" data-lang="en">EN</button>
+  </div>
+  <div class="login-logo">🌿</div>
+  <div class="login-title" data-i18n="login_title">感恩日记</div>
+  <div class="login-subtitle" data-i18n="login_subtitle">每天记录三件感恩的事<br>跨设备同步，随时随地回顾</div>
+
+  <!-- Email + Password Login Form -->
+  <div class="login-form" id="loginForm">
+    <input type="email" class="login-input" id="loginEmail" data-i18n-placeholder="login_email_ph" placeholder="输入你的邮箱" autocomplete="email" />
+    <div class="login-password-wrap">
+      <input type="password" class="login-input" id="loginPassword" data-i18n-placeholder="login_password_ph" placeholder="设置密码（首次使用将自动注册）" autocomplete="current-password" style="margin-bottom:4px;" />
+      <button type="button" class="login-password-toggle" id="passwordToggle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <button class="login-btn" id="loginBtn" data-i18n="login_btn" onclick="this.blur(); document.getElementById('loginBtn').dispatchEvent(new Event('click'));">登 录</button>
+    <div class="login-hint" data-i18n="login_hint">首次使用将自动注册账号，密码至少 6 位</div>
+  </div>
+</div>
+
+<!-- ═══ App Shell (hidden until confirmed auth) ═══ -->
+<div id="appShell" style="display:none;">
+
+<!-- V2 Prompt Banner (shown after 3+ days of entries) -->
+<a class="v2-prompt-banner" id="v2PromptBanner" href="https://davidma1973simu.github.io/gratitude-app/v2/" target="_blank" rel="noopener">
+  🌿 新版本：你过去的光会回来照亮你<span class="prompt-arrow"> → 试试</span>
+</a>
+
+<!-- 光之日记 Entrance (subtle, feminine) -->
+<a class="diary-entrance" id="diaryEntrance" href="diary.html">
+  <div class="diary-icon-wrap">✦</div>
+  <div class="diary-text">
+    <div class="diary-text-title">光之日记</div>
+    <div class="diary-text-sub">开启你的感恩日记</div>
+  </div>
+  <div class="diary-arrow">›</div>
+</a>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-left">
+    <div>
+      <div class="nav-title" data-i18n="nav_title">感恩日记</div>
+      <div class="nav-date" id="navDate"></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="sync-badge" id="syncBadge">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText">已同步</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="today" data-i18n="tab_today">今天</button>
+      <button class="nav-tab" data-tab="history" data-i18n="tab_history">历史</button>
+    </div>
+    <div class="user-avatar" id="userAvatar"></div>
+  </div>
+  <!-- User Menu -->
+  <div class="user-menu" id="userMenu">
+    <div class="user-menu-email" id="userMenuEmail"></div>
+    <button class="user-menu-item danger" id="logoutBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span data-i18n="logout">退出登录</span>
+    </button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ═══ Today View ═══ -->
+  <div data-view="today" class="active">
+
+    <div class="today-header fade-in-up">
+      <h1 id="greetingTitle">今天，<br>你感恩什么？</h1>
+      <p id="greetingSubtitle">写下今天让你心怀感激的三件事</p>
+    </div>
+
+    <div class="progress-row fade-in-up delay-1">
+      <div class="progress-dots">
+        <div class="dot" id="dot0"></div>
+        <div class="dot" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+      </div>
+      <span class="progress-label" id="progressLabel">0 / 3</span>
+    </div>
+
+    <div class="entries-list fade-in-up delay-2" id="entriesContainer">
+    </div>
+
+    <button class="submit-btn fade-in-up delay-3" id="submitBtn" disabled data-i18n="submit_btn">记录今天的感恩</button>
+
+    <!-- Completed state -->
+    <div class="completed-state" id="completedState">
+      <div class="completed-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      </div>
+      <h2 data-i18n="completed_title">今天的感恩已完成</h2>
+      <p data-i18n="completed_desc">你已记录了今天的三件感恩之事。<br>明天见 🌱</p>
+      <button class="edit-btn" id="editBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span data-i18n="edit_btn">修改今天的记录</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ═══ History View ═══ -->
+  <div data-view="history">
+
+    <div class="history-header">
+      <h1 data-i18n="history_title">过去的光</h1>
+      <p id="historyStats"></p>
+    </div>
+
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input type="search" class="search-input" id="searchInput" data-i18n-placeholder="search_ph" placeholder="搜索感恩内容…" />
+    </div>
+
+    <div id="historyList">
+    </div>
+
+  </div>
+
+</main>
+
+</div><!-- end appShell -->
+
+<!-- Thank You Modal -->
+<div class="overlay" id="thanksOverlay">
+  <div class="modal">
+    <span class="modal-icon">🌿</span>
+    <div class="modal-title" data-i18n="modal_title">谢谢你今天的感恩</div>
+    <div class="modal-desc" data-i18n="modal_desc">每一次感恩都在悄悄改变你<br>看待世界的方式。明天继续加油。</div>
+    <button class="modal-btn" id="modalCloseBtn" data-i18n="modal_btn">好，我知道了</button>
+  </div>
+</div>
+
+<!-- Notification Banner -->
+<div class="notif-banner" id="notifBanner"></div>
+
+<script>
+// ─── Path fix ──
+(function() {
+  var basePath = '/gratitude-app';
+  if (location.pathname !== basePath && location.pathname !== basePath + '/' &&
+      !location.pathname.startsWith(basePath)) {
+    location.replace(basePath + '/');
+  }
+})();
+
+// ─── i18n ──────────────────────────────────────────────────────────────────
+const I18N = {
+  zh: {
+    login_title: '感恩日记',
+    login_subtitle: '每天记录三件感恩的事<br>跨设备同步，随时随地回顾',
+    login_email_ph: '输入你的邮箱',
+    login_password_ph: '设置密码（首次使用将自动注册）',
+    login_btn: '登 录',
+    login_btn_loading: '登录中…',
+    login_hint: '首次使用将自动注册账号，密码至少 6 位',
+    nav_title: '感恩日记',
+    tab_today: '今天',
+    tab_history: '历史',
+    logout: '退出登录',
+    submit_btn: '记录今天的感恩',
+    completed_title: '今天的感恩已完成',
+    completed_desc: '你已记录了今天的三件感恩之事。<br>明天见 🌱',
+    edit_btn: '修改今天的记录',
+    history_title: '过去的光',
+    history_stats_0: '还没有记录',
+    history_stats_n: '共记录 {n} 天',
+    search_ph: '搜索感恩内容…',
+    empty_history: '还没有记录，从今天开始吧',
+    no_match: '没有找到相关记录',
+    modal_title: '谢谢你今天的感恩',
+    modal_desc: '每一次感恩都在悄悄改变你<br>看待世界的方式。明天继续加油。',
+    modal_btn: '好，我知道了',
+    synced: '已同步',
+    syncing: '同步中',
+    offline: '离线',
+    entry_num: '感恩 {n}',
+    tag_done: '已填写',
+    tag_pending: '待填写',
+    prompt_0: '今天有哪个人让你感激？',
+    prompt_1: '今天有哪件小事让你微笑？',
+    prompt_2: '今天有什么是你习以为常但值得珍惜的？',
+    greeting_night: '深夜的安静，\n也是一种感恩',
+    greeting_night_sub: '睡前，写下今天三件让你感激的事',
+    greeting_morning: '早安，\n今天感恩什么？',
+    greeting_morning_sub: '清晨，是开始感恩练习的好时机',
+    greeting_noon: '午后，\n来记录今天的美好',
+    greeting_noon_sub: '写下今天让你心怀感激的三件事',
+    greeting_afternoon: '下午好，\n今天感谢谁了吗？',
+    greeting_afternoon_sub: '在一天结束前，记录三件感恩的事',
+    greeting_evening: '今天，\n你感恩什么？',
+    greeting_evening_sub: '每天三件，点滴积累成改变',
+    greeting_welcome: '欢迎回来，\n光一直在等你 ✦',
+    greeting_welcome_sub: '今天，写下你想感恩的事',
+    reminder_banner: '🌙 今天快结束了，有没有什么想感恩的？',
+    reminder_notif: '睡前，记录一束光吧 ✦',
+    reminder_notif_title: '感恩日记 🌿',
+    install_title: '添加到主屏幕',
+    install_desc: '像原生 App 一样快速打开',
+    install_btn: '安装',
+    ios_install_desc: '点底部 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> 然后"添加到主屏幕"',
+    err_email: '请输入邮箱地址',
+    err_password: '请输入密码',
+    err_password_short: '密码至少需要 6 位',
+    err_login: '登录失败，请重试',
+    err_confirm_email: '注册成功，但需要确认邮箱才能登录。请在 Supabase 控制台关闭"Confirm email"',
+    err_email_not_confirmed: '邮箱尚未确认。请在 Supabase 控制台关闭"Confirm email"',
+    migrated: '✅ 已将 {n} 天的本地记录同步到云端',
+    progress_done: '3 / 3 ✓',
+    progress_count: '{n} / 3',
+  },
+  en: {
+    login_title: 'Gratitude',
+    login_subtitle: 'Write 3 things you\'re grateful for daily<br>Sync across devices, reflect anytime',
+    login_email_ph: 'Enter your email',
+    login_password_ph: 'Set password (auto-register on first use)',
+    login_btn: 'Sign In',
+    login_btn_loading: 'Signing in…',
+    login_hint: 'First time? You\'ll auto-register. Password: 6+ chars.',
+    nav_title: 'Gratitude',
+    tab_today: 'Today',
+    tab_history: 'History',
+    logout: 'Sign Out',
+    submit_btn: 'Record Today\'s Gratitude',
+    completed_title: 'Today\'s Gratitude Complete',
+    completed_desc: 'You\'ve recorded three things to be grateful for.<br>See you tomorrow 🌱',
+    edit_btn: 'Edit today\'s entry',
+    history_title: 'Past Light',
+    history_stats_0: 'No entries yet',
+    history_stats_n: '{n} days recorded',
+    search_ph: 'Search entries…',
+    empty_history: 'No entries yet. Start today!',
+    no_match: 'No matching entries found',
+    modal_title: 'Thank you for today',
+    modal_desc: 'Each act of gratitude quietly shifts<br>how you see the world. Keep going.',
+    modal_btn: 'Got it',
+    synced: 'Synced',
+    syncing: 'Syncing',
+    offline: 'Offline',
+    entry_num: 'Gratitude {n}',
+    tag_done: 'Done',
+    tag_pending: 'Pending',
+    prompt_0: 'Who are you grateful for today?',
+    prompt_1: 'What small thing made you smile today?',
+    prompt_2: 'What do you take for granted but truly cherish?',
+    greeting_night: 'The quiet of night\nis gratitude too',
+    greeting_night_sub: 'Before sleep, write three things you\'re grateful for',
+    greeting_morning: 'Good morning,\nwhat are you grateful for?',
+    greeting_morning_sub: 'A perfect time to start your gratitude practice',
+    greeting_noon: 'Afternoon—\nrecord something beautiful',
+    greeting_noon_sub: 'Write three things you\'re grateful for today',
+    greeting_afternoon: 'Good afternoon,\nwho are you thankful for?',
+    greeting_afternoon_sub: 'Before the day ends, record three gratitudes',
+    greeting_evening: 'Today,\nwhat are you grateful for?',
+    greeting_evening_sub: 'Three a day, small steps change everything',
+    greeting_welcome: 'Welcome back,\nthe light has been waiting for you ✦',
+    greeting_welcome_sub: 'Today, write what you\'re grateful for',
+    reminder_banner: '🌙 The day is almost over. Anything you\'re grateful for?',
+    reminder_notif: 'Before sleep, capture a beam of light ✦',
+    reminder_notif_title: 'Gratitude 🌿',
+    install_title: 'Add to Home Screen',
+    install_desc: 'Open like a native app',
+    install_btn: 'Install',
+    ios_install_desc: 'Tap <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> then "Add to Home Screen"',
+    err_email: 'Please enter your email',
+    err_password: 'Please enter a password',
+    err_password_short: 'Password must be at least 6 characters',
+    err_login: 'Sign in failed. Please try again.',
+    err_confirm_email: 'Registered! Confirm your email to sign in, or disable "Confirm email" in Supabase.',
+    err_email_not_confirmed: 'Email not confirmed. Disable "Confirm email" in Supabase or check your inbox.',
+    migrated: '✅ Synced {n} local entries to cloud',
+    progress_done: '3 / 3 ✓',
+    progress_count: '{n} / 3',
+  }
+};
+
+let LANG = localStorage.getItem('lang') || 'zh';
+
+function t(key, vars) {
+  let s = I18N[LANG]?.[key] || I18N.zh[key] || key;
+  if (vars) Object.entries(vars).forEach(([k, v]) => { s = s.replace(`{${k}}`, v); });
+  return s;
+}
+
+function setLang(lang) {
+  LANG = lang;
+  localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = lang === 'zh' ? '感恩日记 · Gratitude' : 'Gratitude Journal';
+  applyI18n();
+  // Re-render dynamic content
+  if (document.getElementById('appShell').style.display !== 'none') {
+    setNavDate();
+    setGreeting();
+    renderToday();
+    renderHistory(document.getElementById('searchInput')?.value?.trim() || '');
+  }
+}
+
+function applyI18n() {
+  // data-i18n → textContent
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val.includes('<br>')) {
+      el.innerHTML = val;
+    } else {
+      el.textContent = val;
+    }
+  });
+  // data-i18n-placeholder → placeholder
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  // Lang toggle buttons
+  document.querySelectorAll('#langToggle .lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === LANG);
+  });
+}
+
+// Init lang on load
+applyI18n();
+
+// Lang toggle click handler
+document.querySelectorAll('#langToggle .lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.lang));
+});
+
+// ─── Supabase Config ────────────────────────────────────────────────────────
+const SB_URL = 'https://reaoliuszbameeibzjvl.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlYW9saXVzemJhbWVlaWJ6anZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzNjYsImV4cCI6MjA5NzI3NDM2Nn0.36r_ubgSCFAiQGoCsj_OmqWshPPX1KVHAlcF-8l0F_8';
+
+const SB = {
+  _tokens: null,
+  _listeners: [],
+
+  _loadTokens() {
+    try {
+      const raw = localStorage.getItem('sb_auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Return tokens even if expired — getSession will attempt refresh
+        if (parsed.access_token) {
+          this._tokens = parsed;
+          return parsed;
+        }
+      }
+    } catch { this._tokens = null; }
+    return null;
+  },
+
+  _saveTokens(session) {
+    if (!session) { localStorage.removeItem('sb_auth'); this._tokens = null; return; }
+    const t = {
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at || (Date.now() / 1000 + 3600),
+      user: session.user
+    };
+    localStorage.setItem('sb_auth', JSON.stringify(t));
+    this._tokens = t;
+  },
+
+  async _api(path, opts = {}) {
+    const headers = {
+      'apikey': SB_KEY,
+      'Content-Type': 'application/json',
+    };
+    if (this._tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${this._tokens.access_token}`;
+    }
+    const res = await fetch(`${SB_URL}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+    if (res.status === 429 || res.status === 503) throw new Error('RATE_LIMITED');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'API error');
+    return data;
+  },
+
+  async signUp(email, password, _retry = 0) {
+    const res = await fetch(`${SB_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.status === 429 || res.status === 503) {
+      if (_retry < 1) { await new Promise(r => setTimeout(r, 3000)); return this.signUp(email, password, _retry + 1); }
+      throw new Error('RATE_LIMITED');
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Signup failed');
+    return data;
+  },
+
+  async signInWithPassword(email, password, _retry = 0) {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    // Rate limited → auto-retry (2 × 3s ≈ 6s, fast recovery)
+    if (res.status === 429 || res.status === 503) {
+      if (_retry < 2) { await new Promise(r => setTimeout(r, 3000)); return this.signInWithPassword(email, password, _retry + 1); }
+      throw new Error('RATE_LIMITED');
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Login failed');
+    if (data.access_token) {
+      let user = null;
+      try {
+        const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+        user = { id: payload.sub, email: payload.email, aud: payload.aud };
+      } catch {}
+      const session = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || '',
+        expires_at: data.expires_at || (Date.now() / 1000 + 3600),
+        user: user || data.user,
+      };
+      this._saveTokens(session);
+      this._notify('SIGNED_IN', session);
+      return session;
+    }
+    throw new Error(t('err_login'));
+  },
+
+  async getSession() {
+    const tokens = this._loadTokens();
+    if (!tokens) return null;
+    // If token expires within 5 minutes, try to refresh
+    if (tokens.expires_at && Date.now() / 1000 > tokens.expires_at - 1800) {
+      if (!tokens.refresh_token) {
+        // No refresh token — can't renew, but keep current tokens if still valid
+        if (Date.now() / 1000 < tokens.expires_at) return tokens;
+        localStorage.removeItem('sb_auth');
+        this._tokens = null;
+        return null;
+      }
+      try {
+        const refreshed = await this._refreshToken(tokens.refresh_token);
+        if (refreshed) return this._tokens;
+        // Refresh was rate-limited — keep existing session
+        return tokens;
+      } catch (e) {
+        const msg = e.message || '';
+        if (msg.includes('Invalid Refresh Token') || msg.includes('Token has expired') || msg.includes('invalid_grant')) {
+          localStorage.removeItem('sb_auth');
+          this._tokens = null;
+          return null;
+        }
+        // Network error: return current (expired) tokens — app will show cached data
+        console.warn('Token refresh failed (network?), keeping session:', msg);
+        return tokens;
+      }
+    }
+    return tokens;
+  },
+
+  async getUser() {
+    const session = await this.getSession();
+    if (!session) return null;
+    try {
+      const data = await this._api('/auth/v1/user');
+      this._tokens.user = data;
+      this._saveTokens(this._tokens);
+      return data;
+    } catch { return session.user; }
+  },
+
+  async _refreshToken(refreshToken) {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (res.status === 429 || res.status === 503) {
+      console.warn('Refresh rate-limited, keeping existing session');
+      return null;
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || 'Refresh failed');
+    this._saveTokens(data);
+    this._notify('TOKEN_REFRESHED', data);
+    return data;
+  },
+
+  async signOut() {
+    try { await this._api('/auth/v1/logout', { method: 'POST' }); } catch {}
+    localStorage.removeItem('sb_auth');
+    this._tokens = null;
+    this._notify('SIGNED_OUT', null);
+  },
+
+  onAuthStateChange(callback) { this._listeners.push(callback); },
+  _notify(event, session) { this._listeners.forEach(fn => { try { fn(event, session); } catch {} }); },
+
+  async getEntries(userId) {
+    return this._api(`/rest/v1/entries?user_id=eq.${userId}&order=date.desc&select=*`);
+  },
+  async upsertEntry(userId, date, c1, c2, c3) {
+    await this._api('/rest/v1/entries', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ user_id: userId, date, content1: c1 || '', content2: c2 || '', content3: c3 || '' }),
+    });
+  },
+};
+
+// ─── Storage ───────────────────────────────────────────────────────────────
+async function logEvent(event, properties = {}) {
+  if (!SB._tokens?.user?.id) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/events`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB._tokens.access_token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        user_id: SB._tokens.user.id,
+        event: event,
+        properties: properties,
+      }),
+    });
+  } catch {}
+}
+
+const STORAGE_KEY = 'gratitude_entries_v1';
+function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
+function saveLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+// ─── Cloud Data ────────────────────────────────────────────────────────────
+let allEntries = {};
+
+async function loadCloud() {
+  if (!SB._tokens) return {};
+  try {
+    setSyncStatus('syncing');
+    const user = SB._tokens.user;
+    const rows = await SB.getEntries(user.id);
+    const map = {};
+    (rows || []).forEach(row => { map[row.date] = [row.content1 || '', row.content2 || '', row.content3 || '']; });
+    setSyncStatus('online');
+    return map;
+  } catch (e) { console.error('Cloud load error:', e); setSyncStatus('offline'); return {}; }
+}
+
+async function saveCloud(dateKey, contents) {
+  if (!SB._tokens) return;
+  try {
+    setSyncStatus('syncing');
+    const user = SB._tokens.user;
+    await SB.upsertEntry(user.id, dateKey, contents[0] || '', contents[1] || '', contents[2] || '');
+    setSyncStatus('online');
+  } catch (e) { console.error('Cloud save error:', e); setSyncStatus('offline'); }
+}
+
+async function migrateLocalToCloud() {
+  const localData = loadLocal();
+  const keys = Object.keys(localData);
+  if (!keys.length || !SB._tokens) return;
+  const cloudData = await loadCloud();
+  let migrated = 0;
+  for (const key of keys) {
+    if (cloudData[key]) continue;
+    const contents = localData[key];
+    if (contents && contents.length === 3 && contents.some(c => c.trim())) {
+      await saveCloud(key, contents);
+      migrated++;
+    }
+  }
+  if (migrated > 0) showBanner(t('migrated', { n: migrated }));
+  allEntries = { ...localData, ...cloudData };
+}
+
+function mergeData(localData, cloudData) {
+  const merged = { ...localData };
+  for (const key of Object.keys(cloudData)) merged[key] = cloudData[key];
+  return merged;
+}
+
+// ─── Sync Status ──────────────────────────────────────────────────────────
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (!dot || !text) return;
+  dot.className = 'sync-dot';
+  if (status === 'syncing') { dot.classList.add('syncing'); text.textContent = t('syncing'); }
+  else if (status === 'online') { text.textContent = t('synced'); }
+  else if (status === 'offline') { dot.classList.add('offline'); text.textContent = t('offline'); }
+}
+
+// ─── State ─────────────────────────────────────────────────────────────────
+let entries = ['', '', ''];
+let todayDone = false;
+let currentUser = null;
+
+// ─── Auth UI ───────────────────────────────────────────────────────────────
+function hideSplash() {
+  var splash = document.getElementById('splashOverlay');
+  if (!splash || splash.classList.contains('hidden')) return;
+  splash.classList.add('hidden');
+  setTimeout(function() { splash.style.display = 'none'; }, 500);
+}
+
+// Auto-hide splash after 2 seconds, or tap anywhere to dismiss immediately
+document.getElementById('splashOverlay').addEventListener('click', hideSplash);
+document.getElementById('splashOverlay').addEventListener('touchstart', hideSplash);
+setTimeout(hideSplash, 2000);
+
+function showLogin() {
+  document.getElementById('loginView').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+  hideSplash();
+}
+function showApp() {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  hideSplash();
+}
+
+async function initAuth() {
+  try {
+    // 3-second timeout: if getSession hangs (e.g. rate-limited refresh), just show login
+    const session = await Promise.race([
+      SB.getSession(),
+      new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 3000))
+    ]);
+    if (session && session !== 'TIMEOUT' && session?.user) {
+      currentUser = session.user;
+      showApp();
+      await startApp();
+      logEvent('session_start');
+      return;
+    }
+  } catch (e) { console.error('initAuth error:', e); }
+  showLogin();
+}
+
+setTimeout(function() {
+  var lv = document.getElementById('loginView');
+  var as = document.getElementById('appShell');
+  if (lv && as && lv.style.display === 'none' && as.style.display === 'none') showLogin();
+}, 3000);
+
+SB.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    currentUser = session.user;
+    showApp();
+    await startApp();
+    logEvent('session_start');
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    allEntries = {};
+    showLogin();
+  }
+});
+
+// ── Login ──
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email) { showBanner(t('err_email')); return; }
+  if (!password) { showBanner(t('err_password')); return; }
+  if (password.length < 6) { showBanner(t('err_password_short')); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = t('login_btn_loading');
+
+  try {
+    try {
+      const session = await SB.signInWithPassword(email, password);
+      currentUser = session.user;
+      showApp();
+      await startApp();
+      return;
+    } catch (signInErr) {
+      const errMsg = signInErr.message || '';
+      if (errMsg.includes('Invalid login credentials')) {
+        const signUpResult = await SB.signUp(email, password);
+        if (signUpResult.access_token) {
+          let user = null;
+          try {
+            const payload = JSON.parse(atob(signUpResult.access_token.split('.')[1]));
+            user = { id: payload.sub, email: payload.email, aud: payload.aud };
+          } catch {}
+          const session = {
+            access_token: signUpResult.access_token,
+            refresh_token: signUpResult.refresh_token || '',
+            expires_at: signUpResult.expires_at || (Date.now() / 1000 + 3600),
+            user: user || signUpResult.user,
+          };
+          SB._saveTokens(session);
+          currentUser = session.user;
+          showApp();
+          await startApp();
+          return;
+        }
+        try {
+          const session = await SB.signInWithPassword(email, password);
+          currentUser = session.user;
+          showApp();
+          await startApp();
+          return;
+        } catch (_) {
+          throw new Error(t('err_confirm_email'));
+        }
+      }
+      if (errMsg.includes('Email not confirmed')) {
+        throw new Error(t('err_email_not_confirmed'));
+      }
+      throw signInErr;
+    }
+  } catch (e) {
+    console.error('Login error:', e);
+    const msg = e.message || '';
+    if (msg === 'RATE_LIMITED') {
+      showBanner('网络暂时繁忙，请稍后重试');
+    } else {
+      showBanner(msg || t('err_login'));
+    }
+    btn.disabled = false;
+    btn.textContent = t('login_btn');
+  }
+});
+
+['loginEmail', 'loginPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+});
+
+document.getElementById('passwordToggle').addEventListener('click', () => {
+  const pwInput = document.getElementById('loginPassword');
+  const eyeIcon = document.getElementById('eyeIcon');
+  if (pwInput.type === 'password') {
+    pwInput.type = 'text';
+    eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    pwInput.type = 'password';
+    eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await SB.signOut();
+  document.getElementById('userMenu').classList.remove('show');
+  allEntries = {};
+  currentUser = null;
+  showLogin();
+});
+
+document.getElementById('userAvatar').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('userMenu').classList.toggle('show');
+});
+document.addEventListener('click', () => { document.getElementById('userMenu').classList.remove('show'); });
+
+function updateUserUI() {
+  if (!currentUser) return;
+  const email = currentUser.email || '';
+  document.getElementById('userMenuEmail').textContent = email;
+  const avatar = document.getElementById('userAvatar');
+  avatar.textContent = email.charAt(0).toUpperCase();
+}
+
+// ─── Start App ──────────────────────────────────────────────────────────────
+async function startApp() {
+  updateUserUI();
+  const cloudData = await loadCloud();
+  const localData = loadLocal();
+  allEntries = mergeData(localData, cloudData);
+  await migrateLocalToCloud();
+  const updatedCloud = await loadCloud();
+  allEntries = mergeData(localData, updatedCloud);
+  saveLocal(allEntries);
+
+  // Show V2 prompt banner if user has 3+ days of entries
+  checkShowV2Prompt();
+
+  // Show 光之日记 entrance card
+  document.getElementById('diaryEntrance').classList.add('active');
+
+  const key = todayKey();
+  if (allEntries[key] && allEntries[key].some(c => c.trim())) {
+    entries = allEntries[key];
+    todayDone = isSubmitted(key);
+  }
+  // If not submitted today, check for a draft (overrides partial cloud data)
+  if (!todayDone) {
+    const draft = loadDraft();
+    if (draft) entries = draft;
+  }
+  setNavDate();
+  setGreeting();
+  renderToday();
+  renderHistory();
+  scheduleReminder();
+}
+
+// ─── V2 Prompt Banner ───────────────────────────────────────────────────────
+function checkShowV2Prompt() {
+  // Count days with non-empty entries
+  const daysWithEntries = Object.keys(allEntries).filter(function(k) {
+    return allEntries[k] && allEntries[k].some(function(e) { return e.trim(); });
+  });
+  if (daysWithEntries.length >= 3) {
+    document.getElementById('v2PromptBanner').style.display = 'block';
+  }
+}
+
+// ─── Nav & Greeting ────────────────────────────────────────────────────────
+function setNavDate() {
+  const d = new Date();
+  const locale = LANG === 'zh' ? 'zh-CN' : 'en-US';
+  const fmt = d.toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' });
+  document.getElementById('navDate').textContent = fmt;
+}
+
+function setGreeting() {
+  // Check if user is returning after 2+ days — show welcome-back greeting
+  const lastWritten = localStorage.getItem('gratitude_last_written');
+  if (lastWritten) {
+    const lastDate = new Date(lastWritten + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 2) {
+      document.getElementById('greetingTitle').innerText = t('greeting_welcome').replace(/\\n/g, '\n');
+      document.getElementById('greetingSubtitle').textContent = t('greeting_welcome_sub');
+      return;
+    }
+  }
+  const h = new Date().getHours();
+  let titleKey, subKey;
+  if (h < 6)       { titleKey = 'greeting_night'; subKey = 'greeting_night_sub'; }
+  else if (h < 11) { titleKey = 'greeting_morning'; subKey = 'greeting_morning_sub'; }
+  else if (h < 14) { titleKey = 'greeting_noon'; subKey = 'greeting_noon_sub'; }
+  else if (h < 18) { titleKey = 'greeting_afternoon'; subKey = 'greeting_afternoon_sub'; }
+  else             { titleKey = 'greeting_evening'; subKey = 'greeting_evening_sub'; }
+  document.getElementById('greetingTitle').innerText = t(titleKey).replace(/\\n/g, '\n');
+  document.getElementById('greetingSubtitle').textContent = t(subKey);
+}
+
+// ─── Today Render ──────────────────────────────────────────────────────────
+function renderToday() {
+  const container = document.getElementById('entriesContainer');
+  const submitBtn = document.getElementById('submitBtn');
+  const completedState = document.getElementById('completedState');
+
+  if (todayDone) {
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    submitBtn.style.display = 'none';
+    completedState.style.display = 'block';
+    container.innerHTML = '';
+    entries.forEach((text, i) => { container.appendChild(makeEntryCard(i, text, true)); });
+    updateProgress();
+    return;
+  }
+
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  completedState.style.display = 'none';
+  submitBtn.style.display = 'block';
+  container.innerHTML = '';
+  entries.forEach((text, i) => { container.appendChild(makeEntryCard(i, text, false)); });
+  updateProgress();
+  updateSubmitBtn();
+}
+
+function makeEntryCard(index, value, disabled) {
+  const card = document.createElement('div');
+  card.className = 'entry-card';
+  card.innerHTML = `
+    <div class="entry-card-header">
+      <span class="entry-number">${t('entry_num', { n: index + 1 })}</span>
+      <span class="entry-tag ${value.trim() ? 'done' : ''}" id="tag-${index}">
+        ${value.trim() ? t('tag_done') : t('tag_pending')}
+      </span>
+    </div>
+    <textarea
+      class="entry-textarea"
+      id="entry-${index}"
+      placeholder="${t('prompt_' + index)}"
+      rows="2"
+      maxlength="200"
+      ${disabled ? 'disabled' : ''}
+    >${value}</textarea>
+  `;
+  if (!disabled) {
+    const ta = card.querySelector(`#entry-${index}`);
+    ta.addEventListener('input', () => onEntryInput(index, ta.value));
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && index < 2) {
+        e.preventDefault();
+        const next = document.getElementById(`entry-${index+1}`);
+        if (next) next.focus();
+      }
+    });
+  }
+  return card;
+}
+
+function onEntryInput(index, value) {
+  entries[index] = value;
+  const tag = document.getElementById(`tag-${index}`);
+  if (tag) {
+    tag.textContent = value.trim() ? t('tag_done') : t('tag_pending');
+    tag.className = 'entry-tag ' + (value.trim() ? 'done' : '');
+  }
+  updateProgress();
+  updateSubmitBtn();
+  const ta = document.getElementById(`entry-${index}`);
+  if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  // Auto-save draft immediately — even partial entries
+  saveDraft();
+}
+
+// ─── Draft (unsaved today's entries) ──────────────────────────────────────
+const DRAFT_KEY = 'gratitude_draft_v1';
+const SUBMITTED_KEY = 'gratitude_submitted_v1';
+
+function saveDraft() {
+  // Only save if today's entries are not yet submitted
+  if (todayDone) return;
+  const key = todayKey();
+  if (entries.some(e => e.trim())) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ date: key, entries }));
+  } else {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    // Only valid if draft is for today and today is not yet submitted
+    if (draft.date === todayKey() && !todayDone) return draft.entries;
+    return null;
+  } catch { return null; }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+function isSubmitted(dateKey) {
+  try {
+    const raw = localStorage.getItem(SUBMITTED_KEY);
+    if (!raw) return false;
+    const dates = JSON.parse(raw);
+    return Array.isArray(dates) && dates.includes(dateKey);
+  } catch { return false; }
+}
+
+function markSubmitted(dateKey) {
+  try {
+    const raw = localStorage.getItem(SUBMITTED_KEY);
+    const dates = raw ? JSON.parse(raw) : [];
+    if (!dates.includes(dateKey)) {
+      dates.push(dateKey);
+      if (dates.length > 90) dates.splice(0, dates.length - 90);
+      localStorage.setItem(SUBMITTED_KEY, JSON.stringify(dates));
+    }
+    // Save last written date for welcome-back greeting
+    localStorage.setItem('gratitude_last_written', dateKey);
+  } catch {}
+}
+
+function updateProgress() {
+  const filled = entries.filter(e => e.trim()).length;
+  for (let i = 0; i < 3; i++) {
+    document.getElementById(`dot${i}`).classList.toggle('filled', i < filled || todayDone);
+  }
+  document.getElementById('progressLabel').textContent =
+    todayDone ? t('progress_done') : t('progress_count', { n: filled });
+}
+
+function updateSubmitBtn() {
+  document.getElementById('submitBtn').disabled = !entries.some(e => e.trim().length >= 5);
+}
+
+document.getElementById('editBtn').addEventListener('click', () => {
+  todayDone = false;
+  renderToday();
+});
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  if (!entries.some(e => e.trim())) return;
+  const key = todayKey();
+  const trimmed = entries.map(e => e.trim());
+  allEntries[key] = trimmed;
+  saveLocal(allEntries);
+  if (currentUser) await saveCloud(key, trimmed);
+  markSubmitted(key);
+  clearDraft();
+  todayDone = true;
+  renderToday();
+  renderHistory();
+  showThanksModal();
+  logEvent('entry_submitted', { count: trimmed.filter(e => e.length >= 5).length });
+});
+
+function showThanksModal() { document.getElementById('thanksOverlay').classList.add('show'); }
+document.getElementById('modalCloseBtn').addEventListener('click', () => { document.getElementById('thanksOverlay').classList.remove('show'); });
+document.getElementById('thanksOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+
+// ─── History Render ────────────────────────────────────────────────────────
+function renderHistory(query = '') {
+  const keys = Object.keys(allEntries).sort((a, b) => b.localeCompare(a));
+  const statsEl = document.getElementById('historyStats');
+  statsEl.textContent = keys.length ? t('history_stats_n', { n: keys.length }) : t('history_stats_0');
+
+  const listEl = document.getElementById('historyList');
+  listEl.innerHTML = '';
+
+  if (!keys.length) {
+    listEl.innerHTML = `<div class="empty-history">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+      </svg>
+      <p>${t('empty_history')}</p>
+    </div>`;
+    return;
+  }
+
+  const locale = LANG === 'zh' ? 'zh-CN' : 'en-US';
+  let anyMatch = false;
+  keys.forEach(key => {
+    const dayEntries = allEntries[key];
+    const filtered = query ? dayEntries.filter(e => e.toLowerCase().includes(query.toLowerCase())) : dayEntries;
+    if (!filtered.length) return;
+    anyMatch = true;
+
+    const d = new Date(key + 'T00:00:00');
+    const label = d.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+
+    const group = document.createElement('div');
+    group.className = 'history-group';
+    group.innerHTML = `<div class="history-group-date">${label}</div>`;
+
+    const card = document.createElement('div');
+    card.className = 'history-card';
+
+    dayEntries.forEach(text => {
+      const visible = !query || text.toLowerCase().includes(query.toLowerCase());
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.style.opacity = visible ? '1' : '0.3';
+      item.innerHTML = `<div class="history-bullet"></div><div class="history-text">${query ? highlight(text, query) : escapeHtml(text)}</div>`;
+      card.appendChild(item);
+    });
+
+    group.appendChild(card);
+    listEl.appendChild(group);
+  });
+
+  if (!anyMatch && query) {
+    listEl.innerHTML = `<div class="empty-history">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <p>${t('no_match')}</p>
+    </div>`;
+  }
+}
+
+function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function highlight(text, query) {
+  const escaped = escapeHtml(text);
+  const q = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return escaped.replace(new RegExp(`(${q})`, 'gi'), '<mark class="highlight">$1</mark>');
+}
+
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => renderHistory(e.target.value.trim()), 200);
+});
+
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[data-view]').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`[data-view="${tab}"]`).classList.add('active');
+    if (tab === 'history') { renderHistory(document.getElementById('searchInput').value.trim()); logEvent('history_opened'); }
+  });
+});
+
+// ─── Reminder ──────────────────────────────────────────────────────────────
+function scheduleReminder() {
+  let reminderBannerShown = false;
+  function checkAndNotify() {
+    const key = todayKey();
+    if (allEntries[key] && allEntries[key].some(e => e.trim())) return;
+    const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
+    if (h === 23 && m === 0 && !reminderBannerShown) {
+      reminderBannerShown = true;
+      showBanner(t('reminder_banner'));
+    }
+    if (h === 0) reminderBannerShown = false;
+  }
+  checkAndNotify();
+  setInterval(checkAndNotify, 60 * 1000);
+
+  if ('Notification' in window) {
+    const scheduleWebNotif = () => {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(23, 0, 0, 0);
+      if (now >= target) target.setDate(target.getDate() + 1);
+      const msUntil = target - now;
+      setTimeout(() => {
+        const key = todayKey();
+        if (!allEntries[key] || !allEntries[key].some(e => e.trim())) {
+          if (Notification.permission === 'granted') {
+            new Notification(t('reminder_notif_title'), { body: t('reminder_notif'), tag: 'gratitude-reminder' });
+          }
+        }
+        scheduleWebNotif();
+      }, msUntil);
+    };
+    document.addEventListener('click', function requestPerm() {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(() => scheduleWebNotif());
+      } else if (Notification.permission === 'granted') {
+        scheduleWebNotif();
+      }
+      document.removeEventListener('click', requestPerm);
+    }, { once: false });
+  }
+}
+
+function showBanner(msg) {
+  const el = document.getElementById('notifBanner');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// ─── Boot ──────────────────────────────────────────────────────────────────
+initAuth();
+
+// ─── Service Worker ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const swPath = new URL('sw.js', window.location.href).pathname;
+  navigator.serviceWorker.register(swPath).then(reg => { reg.update(); }).catch(() => {});
+}
+
+// ─── PWA Install Prompt ───────────────────────────────────────────────────
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallBanner();
+  logEvent('pwa_install_prompt');
+});
+
+function showInstallBanner() {
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (localStorage.getItem('install_dismissed')) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'install-banner';
+  banner.id = 'installBanner';
+  banner.innerHTML = `
+    <div class="install-banner-icon">🌿</div>
+    <div class="install-banner-text">
+      <h4>${t('install_title')}</h4>
+      <p>${t('install_desc')}</p>
+    </div>
+    <button class="install-banner-btn" id="installBtn">${t('install_btn')}</button>
+    <button class="install-banner-close" id="installClose">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  `;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => { requestAnimationFrame(() => banner.classList.add('show')); });
+
+  document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    banner.classList.remove('show');
+    setTimeout(() => banner.remove(), 400);
+  });
+
+  document.getElementById('installClose').addEventListener('click', () => {
+    localStorage.setItem('install_dismissed', '1');
+    banner.classList.remove('show');
+    setTimeout(() => banner.remove(), 400);
+  });
+}
+
+// iOS install guide
+(function checkIOSInstall() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+  if (isIOS && isSafari && !isStandalone && !localStorage.getItem('ios_install_dismissed')) {
+    setTimeout(() => {
+      const banner = document.createElement('div');
+      banner.className = 'install-banner';
+      banner.id = 'iosInstallBanner';
+      banner.innerHTML = `
+        <div class="install-banner-icon">🌿</div>
+        <div class="install-banner-text">
+          <h4>${t('install_title')}</h4>
+          <p>${t('ios_install_desc')}</p>
+        </div>
+        <button class="install-banner-close" id="iosInstallClose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      `;
+      document.body.appendChild(banner);
+      requestAnimationFrame(() => { requestAnimationFrame(() => banner.classList.add('show')); });
+      document.getElementById('iosInstallClose').addEventListener('click', () => {
+        localStorage.setItem('ios_install_dismissed', '1');
+        banner.classList.remove('show');
+        setTimeout(() => banner.remove(), 400);
+      });
+    }, 2000);
+  }
+})();
+</script>
+</body>
+</html>
