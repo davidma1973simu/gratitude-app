@@ -1,0 +1,3215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="theme-color" content="#fafaf9" />
+  <title>感恩日记 · Gratitude</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="apple-mobile-web-app-title" content="感恩日记" />
+  <!-- Handwritten fonts for Polaroid card caption -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Zhi+Mang+Xing&family=Caveat:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Local font: Satisfy (expressive script/sharpie style) ── */
+    @font-face {
+      font-family: 'Satisfy';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('./fonts/satisfy.woff2') format('woff2');
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --surface-hover: #f5f5f4;
+      --border: #e7e5e4;
+      --border-light: #f5f5f4;
+      --text-primary: #1c1917;
+      --text-secondary: #78716c;
+      --text-tertiary: #a8a29e;
+      --accent: #1c1917;
+      --accent-soft: #f5f5f4;
+      --success: #16a34a;
+      --radius: 14px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+
+    /* ─── Nav ─── */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(250,250,249,0.85);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0 24px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-left { display: flex; align-items: center; gap: 12px; }
+    .nav-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .nav-date { font-size: 13px; color: var(--text-tertiary); font-weight: 400; }
+    .nav-tabs {
+      display: flex; gap: 2px; background: var(--border-light); border-radius: 10px; padding: 3px;
+    }
+    .nav-tab {
+      padding: 5px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      border: none; cursor: pointer; background: transparent; color: var(--text-secondary);
+      transition: all 0.18s ease;
+    }
+    .nav-tab.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+
+    /* ─── User Avatar ─── */
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent-soft); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      transition: all 0.18s ease; overflow: hidden;
+    }
+    .user-avatar:hover { border-color: var(--text-tertiary); }
+
+    /* ─── Main ─── */
+    main { flex: 1; padding: 24px 24px 100px; max-width: 560px; margin: 0 auto; width: 100%; }
+
+    /* ─── Today View ─── */
+    .today-header { margin-bottom: 28px; }
+    .today-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; line-height: 1.2; }
+    .today-header p { font-size: 15px; color: var(--text-secondary); margin-top: 6px; font-weight: 400; }
+
+    /* ─── Nickname — warm, subtle, editable ─── */
+    .nickname-row {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+    .nickname-row.visible { opacity: 1; }
+    .nickname-label {
+      font-size: 14px;
+      color: rgba(100,90,75,0.65);
+      font-weight: 400;
+      cursor: pointer;
+      letter-spacing: 0.2px;
+      border-bottom: 1px dotted transparent;
+      transition: border-color 0.3s;
+    }
+    .nickname-label:hover { border-bottom-color: rgba(100,90,75,0.35); }
+    .nickname-input {
+      display: none;
+      font-size: 14px;
+      padding: 4px 10px;
+      border: 1px solid rgba(180,170,155,0.35);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text-primary);
+      outline: none;
+      width: 140px;
+      font-family: inherit;
+      transition: border-color 0.25s;
+    }
+    .nickname-input.show {
+      display: inline-block;
+    }
+    .nickname-input:focus {
+      border-color: rgba(134,168,130,0.5);
+    }
+    .nickname-edit-btn {
+      display: none;
+      font-size: 13px;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 0.25s;
+    }
+    .nickname-edit-btn:hover { opacity: 0.7; }
+
+    /* ─── Encouragement / Milestone Area — whisper-quiet, no visual noise ─── */
+    .encouragement-area {
+      margin-top: 12px;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    .encouragement-area.visible {
+      opacity: 1;
+    }
+    .encouragement-text {
+      font-size: 13px;
+      color: #86a882;
+      line-height: 1.7;
+      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .progress-dots { display: flex; gap: 6px; }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border); transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .dot.filled { background: var(--text-primary); transform: scale(1.1); }
+    .progress-label { font-size: 13px; color: var(--text-tertiary); }
+
+    /* ─── Entry Cards ─── */
+    .entries-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+
+    .entry-card {
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: box-shadow 0.2s ease;
+    }
+    .entry-card:focus-within { box-shadow: var(--shadow-md); border-color: var(--border); }
+
+    .entry-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px;
+    }
+    .entry-number {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+      color: var(--text-tertiary); text-transform: uppercase;
+    }
+    .entry-tag {
+      font-size: 11px; color: var(--text-tertiary);
+      background: var(--accent-soft); border-radius: 6px; padding: 2px 8px;
+    }
+    .entry-tag.done { color: var(--success); background: #f0fdf4; }
+
+    .entry-textarea {
+      width: 100%; border: none; outline: none; resize: none;
+      font-size: 15px; font-weight: 400; line-height: 1.6;
+      color: var(--text-primary); background: transparent;
+      padding: 0 16px 14px; min-height: 60px; max-height: 120px;
+      font-family: inherit;
+    }
+    .entry-textarea::placeholder { color: var(--text-tertiary); }
+    .entry-textarea:disabled {
+      color: var(--text-primary); cursor: default; opacity: 1;
+    }
+
+    /* ─── Submit Button ─── */
+    .submit-btn {
+      width: 100%; padding: 15px;
+      background: var(--text-primary); color: #fafaf9;
+      border: none; border-radius: var(--radius);
+      font-size: 15px; font-weight: 600; letter-spacing: -0.2px;
+      cursor: pointer; transition: all 0.18s ease;
+    }
+    .submit-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .submit-btn:active:not(:disabled) { transform: scale(0.98); }
+    .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* ─── Empty / Completed state ─── */
+    .completed-state {
+      text-align: center; padding: 48px 24px;
+      display: none;
+    }
+    .completed-icon {
+      width: 64px; height: 64px; margin: 0 auto 16px;
+      background: #f0fdf4; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .completed-icon svg { color: var(--success); }
+    .completed-state h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
+    .completed-state p { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+    .edit-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 24px;
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: all 0.18s ease; font-family: inherit;
+    }
+    .edit-btn:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--text-tertiary); }
+
+    /* ─── v2: Past Light entry in completed state ─── */
+    .past-light {
+      margin-top: 28px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .past-light.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .past-light:hover { opacity: 0.85; }
+    .past-light-text {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      font-weight: 400;
+      font-style: italic;
+      transition: color 0.3s;
+    }
+    .past-light:hover .past-light-text { color: var(--text-secondary); }
+    .past-light-arrow {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      transition: color 0.3s, transform 0.3s;
+    }
+    .past-light:hover .past-light-arrow { color: var(--text-secondary); transform: translateX(2px); }
+
+    /* ─── History View ─── */
+    .history-header { margin-bottom: 24px; }
+    .history-header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .history-header p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* Search */
+    .search-wrap { position: relative; margin-bottom: 20px; }
+    .search-icon {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; color: var(--text-tertiary); pointer-events: none;
+    }
+    .search-input {
+      width: 100%; padding: 11px 14px 11px 40px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 15px; background: var(--surface); color: var(--text-primary);
+      outline: none; transition: border-color 0.18s, box-shadow 0.18s; font-family: inherit;
+    }
+    .search-input:focus { border-color: #a8a29e; box-shadow: var(--shadow-sm); }
+    .search-input::placeholder { color: var(--text-tertiary); }
+
+    /* History groups */
+    .history-group { margin-bottom: 24px; }
+    .history-group-date {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+      color: var(--text-tertiary); text-transform: uppercase;
+      margin-bottom: 8px; padding: 0 2px;
+    }
+    .history-card {
+      background: var(--surface); border: 1px solid var(--border-light);
+      border-radius: var(--radius); padding: 14px 16px;
+    }
+    .history-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0;
+    }
+    .history-item:not(:last-child) { border-bottom: 1px solid var(--border-light); }
+    .history-bullet {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-tertiary); margin-top: 7px; flex-shrink: 0;
+    }
+    .history-text { font-size: 15px; line-height: 1.6; flex: 1; }
+    .highlight { background: #fef9c3; border-radius: 3px; padding: 0 2px; }
+
+    .empty-history {
+      text-align: center; padding: 60px 24px;
+      color: var(--text-tertiary);
+    }
+    .empty-history svg { margin-bottom: 12px; opacity: 0.4; }
+    .empty-history p { font-size: 15px; }
+
+    /* ─── Toast Modal ─── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.2);
+      backdrop-filter: blur(4px); z-index: 100;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: var(--surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: 32px 28px calc(32px + env(safe-area-inset-bottom));
+      width: 100%; max-width: 560px;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+      text-align: center;
+    }
+    .overlay.show .modal { transform: translateY(0); }
+    .modal-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+    .modal-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .modal-desc { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; }
+    .modal-btn {
+      width: 100%; padding: 15px;
+      background: var(--text-primary); color: #fafaf9;
+      border: none; border-radius: var(--radius);
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: opacity 0.18s; font-family: inherit;
+    }
+    .modal-btn:hover { opacity: 0.88; }
+
+    /* ─── Notification Banner ─── */
+    .notif-banner {
+      position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: var(--text-primary); color: #fafaf9;
+      border-radius: 12px; padding: 12px 20px;
+      font-size: 14px; font-weight: 500;
+      box-shadow: var(--shadow-lg); z-index: 200;
+      opacity: 0; pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+      white-space: nowrap;
+    }
+    .notif-banner.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ─── Login View ─── */
+    .login-view {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100dvh; padding: 40px 24px; text-align: center;
+      position: relative;
+    }
+    .login-logo {
+      width: 72px; height: 72px; margin-bottom: 24px;
+      background: #f0fdf4; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    .login-title { font-size: 28px; font-weight: 700; letter-spacing: -0.8px; margin-bottom: 8px; }
+    .login-subtitle { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 36px; }
+    .login-form { width: 100%; max-width: 360px; }
+    .login-input {
+      width: 100%; padding: 14px 16px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 15px; background: var(--surface); color: var(--text-primary);
+      outline: none; transition: border-color 0.18s, box-shadow 0.18s; font-family: inherit;
+      text-align: center; margin-bottom: 12px;
+    }
+    .login-input:focus { border-color: #a8a29e; box-shadow: var(--shadow-sm); }
+    .login-input::placeholder { color: var(--text-tertiary); }
+    .login-btn {
+      width: 100%; padding: 15px;
+      background: var(--text-primary); color: #fafaf9;
+      border: none; border-radius: var(--radius);
+      font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: all 0.18s ease; font-family: inherit;
+      pointer-events: auto;
+    }
+    .login-btn:hover { opacity: 0.88; }
+    .login-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .login-hint {
+      font-size: 13px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6;
+    }
+    .login-password-wrap { position: relative; }
+    .login-password-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: var(--text-tertiary);
+      padding: 4px; display: flex; align-items: center;
+      pointer-events: auto;
+    }
+    .login-password-toggle:hover { color: var(--text-secondary); }
+
+    /* ─── Language Toggle ─── */
+    .lang-toggle {
+      position: absolute; top: 20px; right: 20px;
+      display: flex; border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; background: var(--surface);
+    }
+    .lang-btn {
+      padding: 6px 14px; border: none; background: transparent;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      color: var(--text-tertiary); transition: all 0.18s;
+      font-family: inherit;
+    }
+    .lang-btn.active {
+      background: var(--text-primary); color: #fafaf9;
+    }
+
+    /* ─── Install Banner ─── */
+    .install-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 16px 20px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+      transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+    }
+    .install-banner.show { transform: translateY(0); }
+    .install-banner-icon {
+      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+      background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+      display: flex; align-items: center; justify-content: center; font-size: 24px;
+    }
+    .install-banner-text { flex: 1; }
+    .install-banner-text h4 { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .install-banner-text p { font-size: 13px; color: var(--text-secondary); }
+    .install-banner-btn {
+      padding: 10px 20px; border-radius: 10px; border: none;
+      background: var(--text-primary); color: var(--bg);
+      font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      font-family: inherit; transition: opacity 0.18s;
+    }
+    .install-banner-btn:hover { opacity: 0.85; }
+    .install-banner-close {
+      background: none; border: none; cursor: pointer; padding: 4px;
+      color: var(--text-tertiary); display: flex; align-items: center;
+    }
+    .install-banner-close:hover { color: var(--text-secondary); }
+
+    /* ─── User Menu ─── */
+    .user-menu {
+      position: absolute; top: 60px; right: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 8px;
+      box-shadow: var(--shadow-lg); z-index: 60;
+      min-width: 180px; display: none;
+    }
+    .user-menu.show { display: block; }
+    .user-menu-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      font-size: 14px; color: var(--text-primary);
+      cursor: pointer; transition: background 0.15s;
+      border: none; background: transparent; width: 100%; text-align: left; font-family: inherit;
+    }
+    .user-menu-item:hover { background: var(--surface-hover); }
+    .user-menu-item.danger { color: #dc2626; }
+    .user-menu-divider { height: 1px; background: var(--border-light); margin: 4px 0; }
+    .user-menu-email {
+      padding: 8px 12px 4px; font-size: 12px; color: var(--text-tertiary);
+      border-bottom: 1px solid var(--border-light); margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    /* ─── Sync Indicator ─── */
+    .sync-badge {
+      font-size: 11px; color: var(--text-tertiary);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .sync-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+    }
+    .sync-dot.syncing { background: #eab308; animation: pulse 1s infinite; }
+    .sync-dot.offline { background: var(--text-tertiary); }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ─── Splash Screen ─── */
+    .splash-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #fafaf9;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity 0.5s ease;
+      opacity: 1; pointer-events: auto;
+      /* CSS-level fallback: auto-hide after 3.5s even if JS fails entirely */
+      animation: splashAutoHide 4s ease-in-out forwards;
+    }
+    .splash-overlay.hidden {
+      opacity: 0 !important; pointer-events: none;
+      animation: none !important;
+    }
+    .splash-motif {
+      position: relative;
+      width: 180px; height: 180px;
+      margin: 0 auto 40px;
+    }
+    .splash-glow {
+      position: absolute; border-radius: 50%;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .splash-glow-1 { width: 140px; height: 140px; background: rgba(236,253,245,0.8); }
+    .splash-glow-2 { width: 100px; height: 100px; background: rgba(209,250,229,0.6); }
+    .splash-glow-3 { width: 64px;  height: 64px;  background: rgba(167,243,208,0.4); }
+    .splash-ring {
+      position: absolute; border-radius: 50%;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .splash-ring-1 { width: 68px; height: 68px; border: 1.5px solid rgba(52,211,153,0.25); }
+    .splash-ring-2 { width: 52px; height: 52px; border: 1.5px solid rgba(16,185,129,0.3); }
+    .splash-ring-3 { width: 36px; height: 36px; border: 1.5px solid rgba(16,185,129,0.35); }
+    .splash-core {
+      position: absolute; border-radius: 50%;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      animation: splashPulse 2.5s ease-in-out infinite;
+    }
+    .splash-core-1 { width: 32px; height: 32px; background: rgba(209,250,229,0.7); }
+    .splash-core-2 { width: 18px; height: 18px; background: rgba(52,211,153,0.6); }
+    .splash-ray {
+      position: absolute; top: 50%; left: 50%;
+      width: 2px; height: 40px;
+      background: rgba(16,185,129,0.25);
+      border-radius: 2px;
+      transform-origin: bottom center;
+      animation: splashRayFade 2.2s ease-in-out infinite;
+    }
+    .splash-leaf-svg {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      animation: splashLeafBreathe 3s ease-in-out infinite;
+    }
+    .splash-name {
+      font-size: 28px; font-weight: 500;
+      color: #1c1917; letter-spacing: 4px;
+      margin-bottom: 10px;
+    }
+    .splash-tagline {
+      font-size: 15px; color: #15803D;
+      letter-spacing: 2px; margin-bottom: 16px;
+    }
+    .splash-divider {
+      width: 120px; height: 1px;
+      background: rgba(167,243,208,0.5);
+      margin: 0 auto 16px;
+    }
+    .splash-hint {
+      font-size: 11px; color: #6B7280; letter-spacing: 1px;
+    }
+    .splash-loading {
+      margin-top: 48px; display: flex; gap: 10px; justify-content: center;
+    }
+    .splash-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #D1D5DB;
+    }
+    .splash-dot.active {
+      background: #10B981;
+      animation: splashDotPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes splashPulse {
+      0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.55; }
+      50%     { transform: translate(-50%,-50%) scale(1.08); opacity: 0.7; }
+    }
+    @keyframes splashLeafBreathe {
+      0%,100% { transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+      50%     { transform: translate(-50%,-50%) scale(1.04) rotate(1deg); }
+    }
+    @keyframes splashDotPulse {
+      0%,100% { opacity: 0.4; transform: scale(0.9); }
+      50%     { opacity: 1; transform: scale(1.25); }
+    }
+    @keyframes splashRayFade {
+      0%,100% { opacity: 0; }
+      50%     { opacity: 0.35; }
+    }
+
+    /* Fallback: auto-hide splash after ~3.5s (87.5% of 4s) even if JS never runs */
+    @keyframes splashAutoHide {
+      0%, 85%   { opacity: 1; pointer-events: auto; }
+      95%       { opacity: 0; pointer-events: none; }
+      100%      { opacity: 0; pointer-events: none; visibility: hidden; }
+    }
+
+    /* ─── Animations ─── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+    .delay-1 { animation-delay: 0.05s; }
+    .delay-2 { animation-delay: 0.1s; }
+    .delay-3 { animation-delay: 0.15s; }
+
+    /* ─── v2: Watermark Light ─── */
+    .watermark {
+      margin-top: 18px;
+      opacity: 0.25;
+      transition: opacity 0.5s ease;
+      cursor: pointer;
+      line-height: 1.6;
+    }
+    .watermark:hover { opacity: 0.55; }
+    .watermark-content {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      font-style: italic;
+      transition: color 0.3s;
+    }
+    .watermark:hover .watermark-content { color: var(--text-primary); }
+    .watermark-date {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-left: 6px;
+      transition: color 0.3s;
+    }
+    .watermark:hover .watermark-date { color: var(--text-secondary); }
+
+    /* ─── v2: Echo (in thank-you modal) ─── */
+    .echo-section {
+      margin-bottom: 20px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 1.2s ease, transform 1.2s ease;
+    }
+    .echo-section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .echo-divider {
+      width: 40px;
+      height: 1px;
+      background: var(--border);
+      margin: 0 auto 16px;
+    }
+    .echo-date {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .echo-text {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      font-style: italic;
+      max-width: 280px;
+      margin: 0 auto;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .echo-text:hover { color: var(--text-primary); }
+    .echo-hint {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-top: 10px;
+    }
+
+    /* ─── v2: Reunion Full-screen ─── */
+    .reunion-overlay {
+      position: fixed; inset: 0; z-index: 150;
+      background: #1c1917;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.5s ease;
+      padding: 40px 28px;
+      overflow-y: auto;
+    }
+    .reunion-overlay.show { opacity: 1; pointer-events: auto; }
+
+    .reunion-close {
+      position: absolute; top: 20px; right: 20px;
+      background: none; border: none; cursor: pointer;
+      color: #a8a29e; font-size: 24px; line-height: 1;
+      padding: 8px; transition: color 0.2s;
+      font-family: inherit;
+    }
+    .reunion-close:hover { color: #fafaf9; }
+
+    .reunion-date {
+      font-size: 28px; font-weight: 700; color: #fafaf9;
+      letter-spacing: -0.5px; margin-bottom: 4px;
+      opacity: 0; transform: translateY(16px);
+      transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reunion-overlay.show .reunion-date.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .reunion-date-sub {
+      font-size: 13px; color: #78716c; margin-bottom: 36px;
+      opacity: 0; transform: translateY(12px);
+      transition: opacity 0.8s ease 0.15s, transform 0.8s cubic-bezier(0.16,1,0.3,1) 0.15s;
+    }
+    .reunion-overlay.show .reunion-date-sub.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .reunion-entries {
+      max-width: 400px; width: 100%; text-align: center;
+    }
+
+    .reunion-entry {
+      font-size: 16px; line-height: 1.7; color: #d6d3d1;
+      margin-bottom: 24px; font-weight: 400;
+      opacity: 0; transform: translateY(12px);
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reunion-overlay.show .reunion-entry.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+    .reunion-entry:first-child { font-size: 18px; color: #fafaf9; font-weight: 500; }
+    .reunion-entry.empty { color: #57534e; font-style: italic; display: none; }
+
+    .reunion-hint {
+      font-size: 13px; color: #78716c; margin-top: 12px;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+    .reunion-overlay.show .reunion-hint.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .reunion-divider {
+      width: 48px; height: 1px; background: #44403c;
+      margin: 32px auto 16px;
+      opacity: 0; transition: opacity 0.4s ease;
+    }
+    .reunion-overlay.show .reunion-divider.fade-in { opacity: 1; }
+
+    .reunion-keep-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px;
+      background: transparent; border: 1.5px solid #57534e;
+      color: #d6d3d1; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.25s ease; font-family: inherit;
+      opacity: 0; transform: translateY(8px);
+      transition: opacity 0.4s ease, transform 0.4s ease, background 0.25s, color 0.25s, border-color 0.25s;
+    }
+    .reunion-overlay.show .reunion-keep-btn.fade-in {
+      opacity: 1; transform: translateY(0);
+    }
+    .reunion-keep-btn:hover {
+      background: #fafaf9; color: #1c1917; border-color: #fafaf9;
+    }
+
+    /* ─── v2: Image Card Preview ─── */
+    .card-preview-overlay {
+      position: fixed; inset: 0; z-index: 160;
+      background: rgba(0,0,0,0.85);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px; gap: 16px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .card-preview-overlay.show { opacity: 1; pointer-events: auto; }
+    .card-preview-img { max-width: 360px; width: 100%; border-radius: 16px; }
+    .card-preview-actions {
+      display: flex; gap: 12px;
+    }
+    .card-action-btn {
+      padding: 12px 24px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; font-family: inherit; transition: opacity 0.2s;
+    }
+    .card-action-btn:hover { opacity: 0.85; }
+    .card-action-btn.primary { background: #fafaf9; color: #1c1917; }
+    .card-action-btn.secondary { background: transparent; color: #d6d3d1; border: 1px solid #57534e; }
+
+    [data-view] { display: none; }
+    [data-view].active { display: block; }
+
+    @media (max-width: 480px) {
+      main { padding: 20px 16px 100px; }
+      .nav { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ Splash Screen ═══ -->
+<div class="splash-overlay" id="splashOverlay">
+  <div class="splash-motif">
+    <div class="splash-glow splash-glow-1"></div>
+    <div class="splash-glow splash-glow-2"></div>
+    <div class="splash-glow splash-glow-3"></div>
+    <div class="splash-ring splash-ring-1"></div>
+    <div class="splash-ring splash-ring-2"></div>
+    <div class="splash-ring splash-ring-3"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(0deg) translateY(-18px); animation-delay:0s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(45deg) translateY(-18px); animation-delay:0.3s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(90deg) translateY(-18px); animation-delay:0.6s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(135deg) translateY(-18px); animation-delay:0.9s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(180deg) translateY(-18px); animation-delay:1.2s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(225deg) translateY(-18px); animation-delay:1.5s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(270deg) translateY(-18px); animation-delay:1.8s"></div>
+    <div class="splash-ray" style="transform: translate(-50%,-50%) rotate(315deg) translateY(-18px); animation-delay:2.1s"></div>
+    <div class="splash-core splash-core-1"></div>
+    <div class="splash-core splash-core-2"></div>
+    <svg class="splash-leaf-svg" width="64" height="80" viewBox="0 0 64 80"><path d="M32,63 Q30,48 32,33 Q35,18 32,3" stroke="#15803D" stroke-width="2.5" stroke-linecap="round" fill="none"/><ellipse cx="22" cy="21" rx="9" ry="14" transform="rotate(-30 22 21)" fill="#22C55E" opacity="0.9"/><ellipse cx="42" cy="18" rx="8" ry="13" transform="rotate(25 42 18)" fill="#16A34A" opacity="0.85"/><ellipse cx="19" cy="40" rx="7" ry="11" transform="rotate(-40 19 40)" fill="#22C55E" opacity="0.8"/><ellipse cx="45" cy="36" rx="7" ry="11" transform="rotate(35 45 36)" fill="#16A34A" opacity="0.75"/><ellipse cx="27" cy="9" rx="6" ry="10" transform="rotate(-20 27 9)" fill="#4ADE80" opacity="0.9"/><ellipse cx="37" cy="6" rx="5" ry="8" transform="rotate(20 37 6)" fill="#22C55E" opacity="0.85"/></svg>
+  </div>
+  <h1 class="splash-name">感恩日记</h1>
+  <p class="splash-tagline">留住每一束光</p>
+  <div class="splash-divider"></div>
+  <p class="splash-hint">每天记录 · 温柔提醒 · 收藏感动</p>
+  <div class="splash-loading">
+    <div class="splash-dot"></div>
+    <div class="splash-dot active"></div>
+    <div class="splash-dot"></div>
+  </div>
+</div>
+
+<!-- Force-clear old Service Worker caches from pre-login version -->
+<script>
+(function(){
+  if (!document.currentScript) return;
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs.forEach(function(reg) { reg.unregister(); });
+    });
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        names.forEach(function(name) { caches.delete(name); });
+      });
+    }
+  }
+})();
+</script>
+
+<!-- ═══ Login View (default visible) ═══ -->
+<div id="loginView" class="login-view">
+  <div class="lang-toggle" id="langToggle">
+    <button class="lang-btn active" data-lang="zh">中文</button>
+    <button class="lang-btn" data-lang="en">EN</button>
+  </div>
+  <div class="login-logo">🌿</div>
+  <div class="login-title" data-i18n="login_title">感恩日记</div>
+  <div class="login-subtitle" data-i18n="login_subtitle">每天记录三件感恩的事<br>跨设备同步，随时随地回顾</div>
+
+  <!-- Email + Password Login Form -->
+  <div class="login-form" id="loginForm">
+    <input type="email" class="login-input" id="loginEmail" data-i18n-placeholder="login_email_ph" placeholder="输入你的邮箱" autocomplete="email" />
+    <div class="login-password-wrap">
+      <input type="password" class="login-input" id="loginPassword" data-i18n-placeholder="login_password_ph" placeholder="设置密码（首次使用将自动注册）" autocomplete="current-password" style="margin-bottom:4px;" />
+      <button type="button" class="login-password-toggle" id="passwordToggle">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <button class="login-btn" id="loginBtn" data-i18n="login_btn" onclick="this.blur(); document.getElementById('loginBtn').dispatchEvent(new Event('click'));">登 录</button>
+    <div class="login-hint" data-i18n="login_hint">首次使用将自动注册账号，密码至少 6 位</div>
+  </div>
+</div>
+
+<!-- ═══ App Shell (hidden until confirmed auth) ═══ -->
+<div id="appShell" style="display:none;">
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-left">
+    <div>
+      <div class="nav-title" data-i18n="nav_title">感恩日记</div>
+      <div class="nav-date" id="navDate"></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="sync-badge" id="syncBadge">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncText">已同步</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="today" data-i18n="tab_today">今天</button>
+      <button class="nav-tab" data-tab="history" data-i18n="tab_history">历史</button>
+    </div>
+    <div class="user-avatar" id="userAvatar"></div>
+  </div>
+  <!-- User Menu -->
+  <div class="user-menu" id="userMenu">
+    <div class="user-menu-email" id="userMenuEmail"></div>
+    <button class="user-menu-item" id="aiSettingsBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.69-.95 1.65 1.65 0 0 0-1.12 1.74l.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.65-1.65V11a2 2 0 0 1 0-4v.09A1.65 1.65 0 0 0 6.6 9a1.65 1.65 0 0 0-1.1-1.65 1.65 1.65 0 0 0-1.69-.95l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 2.88a1.65 1.65 0 0 0-1.65-1.65V1a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1.65 1.65 1.65 1.65 0 0 0 1.1-1.65l-.06-.06a2 2 0 0 1 2.83 2.83l.06.06A1.65 1.65 0 0 0 15 4.68a1.65 1.65 0 0 0 1.65 1.65V7a2 2 0 0 1 4 0V6.91a1.65 1.65 0 0 0 1.65-1.65 1.65 1.65 0 0 0-.95-1.69l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 21.12 4.68a1.65 1.65 0 0 0 1.65 1.65V7a2 2 0 0 1 0 4v-.09a1.65 1.65 0 0 0-1.65-1.65z"/></svg>
+      <span data-i18n="ai_settings">AI 设置</span>
+    </button>
+    <button class="user-menu-item danger" id="logoutBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span data-i18n="logout">退出登录</span>
+    </button>
+  </div>
+</nav>
+
+<!-- v2-care: AI Settings Panel -->
+<div class="ai-settings-overlay" id="aiSettingsOverlay">
+  <div class="ai-settings-panel">
+    <div class="ai-settings-header">
+      <h3>AI 设置</h3>
+      <button class="ai-settings-close" id="aiSettingsClose">×</button>
+    </div>
+    <div class="ai-settings-body">
+      <div class="ai-setting-row">
+        <label>DeepSeek API Key</label>
+        <input type="password" id="aiApiKeyInput" placeholder="sk-..." autocomplete="off" />
+        <button class="ai-setting-save-btn" id="aiApiKeySaveBtn">保存</button>
+      </div>
+      <div class="ai-setting-row">
+        <label class="ai-toggle-label">
+          <input type="checkbox" id="aiFeat1" checked />
+          <span>鼓励语个性化</span>
+        </label>
+      </div>
+      <div class="ai-setting-row">
+        <label class="ai-toggle-label">
+          <input type="checkbox" id="aiFeat2" checked />
+          <span>Reunion 语义匹配</span>
+        </label>
+      </div>
+      <div class="ai-setting-row">
+        <label class="ai-toggle-label">
+          <input type="checkbox" id="aiFeat3" checked />
+          <span>给今天的我</span>
+        </label>
+      </div>
+      <div class="ai-setting-row">
+        <label class="ai-toggle-label">
+          <input type="checkbox" id="aiFeat4" checked />
+          <span>签名词匹配</span>
+        </label>
+      </div>
+      <div class="ai-settings-hint">API Key 仅保存在本设备，不会上传</div>
+    </div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ═══ Today View ═══ -->
+  <div data-view="today" class="active">
+
+    <div class="today-header fade-in-up">
+      <h1 id="greetingTitle">今天，<br>你感恩什么？</h1>
+      <p id="greetingSubtitle">写下今天让你心怀感激的三件事</p>
+      <!-- v2: Nickname — clickable to edit -->
+      <div class="nickname-row" id="nicknameRow" style="display:none;">
+        <span class="nickname-label" id="nicknameLabel"></span>
+        <input class="nickname-input" id="nicknameInput" type="text"
+               maxlength="16" placeholder="Your name" autocomplete="off" />
+        <span class="nickname-edit-btn" id="nicknameEditBtn">✏️</span>
+      </div>
+      <!-- v2: Encouragement / milestone area — always visible -->
+      <div class="encouragement-area" id="encouragementArea" style="display:none;">
+        <span class="encouragement-text" id="encouragementText"></span>
+      </div>
+      <!-- v2: Watermark light — a faint past gratitude, like light in the air -->
+      <div class="watermark" id="watermark" style="display:none;">
+        <span class="watermark-content" id="watermarkContent"></span>
+        <span class="watermark-date" id="watermarkDate"></span>
+      </div>
+    </div>
+
+    <div class="progress-row fade-in-up delay-1">
+      <div class="progress-dots">
+        <div class="dot" id="dot0"></div>
+        <div class="dot" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+      </div>
+      <span class="progress-label" id="progressLabel">0 / 3</span>
+    </div>
+
+    <div class="entries-list fade-in-up delay-2" id="entriesContainer">
+    </div>
+
+    <button class="submit-btn fade-in-up delay-3" id="submitBtn" disabled data-i18n="submit_btn">记录今天的感恩</button>
+
+    <!-- Completed state -->
+    <div class="completed-state" id="completedState">
+      <div class="completed-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      </div>
+      <h2 data-i18n="completed_title">今天的感恩已完成</h2>
+      <p data-i18n="completed_desc">你已记录了今天的三件感恩之事。<br>明天见 🌱</p>
+      <button class="edit-btn" id="editBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span data-i18n="edit_btn">修改今天的记录</span>
+      </button>
+      <!-- v2: Completed-state entry to past light — subtle, poetic -->
+      <div class="past-light" id="pastLight" style="display:none;">
+        <span class="past-light-text" id="pastLightText"></span>
+        <span class="past-light-arrow">→</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ History View ═══ -->
+  <div data-view="history">
+
+    <div class="history-header">
+      <h1 data-i18n="history_title">过去的光</h1>
+      <p id="historyStats"></p>
+    </div>
+
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input type="search" class="search-input" id="searchInput" data-i18n-placeholder="search_ph" placeholder="搜索感恩内容…" />
+    </div>
+
+    <div id="historyList">
+    </div>
+
+  </div>
+
+</main>
+
+</div><!-- end appShell -->
+
+<!-- Thank You Modal (v2: with Echo) -->
+<div class="overlay" id="thanksOverlay">
+  <div class="modal">
+    <span class="modal-icon">🌿</span>
+    <div class="modal-title" data-i18n="modal_title">谢谢你今天的感恩</div>
+    <div class="modal-desc" data-i18n="modal_desc">每一次感恩都在悄悄改变你<br>看待世界的方式。明天继续加油。</div>
+
+    <!-- v2: Echo — a past gratitude fades in here -->
+    <div class="echo-section" id="echoSection" style="display:none;">
+      <div class="echo-divider"></div>
+      <div class="echo-date" id="echoDate"></div>
+      <div class="echo-text" id="echoText"></div>
+      <div class="echo-hint" id="echoHint"></div>
+    </div>
+
+    <button class="modal-btn" id="modalCloseBtn" data-i18n="modal_btn">好，我知道了</button>
+  </div>
+</div>
+
+<!-- v2: Reunion Full-screen Overlay -->
+<div class="reunion-overlay" id="reunionOverlay">
+  <button class="reunion-close" id="reunionClose">×</button>
+  <div class="reunion-date" id="reunionDate"></div>
+  <div class="reunion-date-sub" id="reunionDateSub"></div>
+  <div class="reunion-entries" id="reunionEntries"></div>
+  <div class="reunion-divider"></div>
+  <div class="reunion-hint" id="reunionHint"></div>
+  <button class="reunion-keep-btn" id="reunionKeepBtn">
+    🌿 <span data-i18n="reunion_keep">留住这束光</span>
+  </button>
+</div>
+
+<!-- v2: Image Card Preview Overlay -->
+<div class="card-preview-overlay" id="cardPreviewOverlay">
+  <img class="card-preview-img" id="cardPreviewImg" />
+  <div class="card-preview-actions">
+    <button class="card-action-btn primary" id="cardSaveBtn" data-i18n="reunion_save">保存图片</button>
+    <button class="card-action-btn secondary" id="cardCloseBtn" data-i18n="reunion_close">×</button>
+  </div>
+</div>
+
+<!-- Notification Banner -->
+<div class="notif-banner" id="notifBanner"></div>
+
+<script>
+// ─── Path fix ──
+(function() {
+  var basePath = '/gratitude-app/v2';
+  if (location.pathname !== basePath && location.pathname !== basePath + '/' &&
+      !location.pathname.startsWith(basePath)) {
+    location.replace(basePath + '/');
+  }
+})();
+
+// ─── i18n ──────────────────────────────────────────────────────────────────
+const I18N = {
+  zh: {
+    login_title: '感恩日记',
+    login_subtitle: '每天记录三件感恩的事<br>跨设备同步，随时随地回顾',
+    login_email_ph: '输入你的邮箱',
+    login_password_ph: '设置密码（首次使用将自动注册）',
+    login_btn: '登 录',
+    login_btn_loading: '登录中…',
+    login_hint: '首次使用将自动注册账号，密码至少 6 位',
+    nav_title: '感恩日记',
+    tab_today: '今天',
+    tab_history: '历史',
+    logout: '退出登录',
+    submit_btn: '记录今天的感恩',
+    completed_title: '今天的感恩已完成',
+    completed_desc: '你已记录了今天的三件感恩之事。<br>明天见 🌱',
+    edit_btn: '修改今天的记录',
+    history_title: '过去的光',
+    history_stats_0: '还没有记录',
+    history_stats_n: '共记录 {n} 天',
+    search_ph: '搜索感恩内容…',
+    empty_history: '还没有记录，从今天开始吧',
+    no_match: '没有找到相关记录',
+    modal_title: '谢谢你今天的感恩',
+    modal_desc: '每一次感恩都在悄悄改变你<br>看待世界的方式。明天继续加油。',
+    modal_btn: '好，我知道了',
+    synced: '已同步',
+    syncing: '同步中',
+    offline: '离线',
+    entry_num: '感恩 {n}',
+    tag_done: '已填写',
+    tag_pending: '待填写',
+    prompt_0: '今天有哪个人让你感激？',
+    prompt_1: '今天有哪件小事让你微笑？',
+    prompt_2: '今天有什么是你习以为常但值得珍惜的？',
+    greeting_night: '感谢今天的，\n照到我身上的光',
+    greeting_night_sub: '记录三件让你心怀感激的事',
+    greeting_morning: '感谢今天的，\n照到我身上的光',
+    greeting_morning_sub: '清晨的光，值得被记住',
+    greeting_noon: '感谢今天的，\n照到我身上的光',
+    greeting_noon_sub: '午后的光，也值得被收藏',
+    greeting_afternoon: '感谢今天的，\n照到我身上的光',
+    greeting_afternoon_sub: '每一天的光都不同',
+    greeting_evening: '感谢今天的，\n照到我身上的光',
+    greeting_evening_sub: '傍晚的光，最温柔',
+    greeting_welcome: '欢迎回来，\n光一直在等你 ✦',
+    greeting_welcome_sub: '今天，写下你想感恩的事',
+    reminder_banner: '🌙 今天快结束了，有没有什么想感恩的？',
+    reminder_notif: '睡前，记录一束光吧 ✦',
+    reminder_notif_title: '感恩日记 🌿',
+    install_title: '添加到主屏幕',
+    install_desc: '像原生 App 一样快速打开',
+    install_btn: '安装',
+    ios_install_desc: '点底部 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> 然后"添加到主屏幕"',
+    err_email: '请输入邮箱地址',
+    err_password: '请输入密码',
+    err_password_short: '密码至少需要 6 位',
+    err_login: '登录失败，请重试',
+    err_confirm_email: '注册成功，但需要确认邮箱才能登录。请在 Supabase 控制台关闭"Confirm email"',
+    err_email_not_confirmed: '邮箱尚未确认。请在 Supabase 控制台关闭"Confirm email"',
+    migrated: '✅ 已将 {n} 天的本地记录同步到云端',
+    progress_done: '3 / 3 ✓',
+    progress_count: '{n} / 3',
+    // ── v2: Echo + Watermark ──
+    echo_title: '留住这束光',
+    echo_date: '{n} 天前',
+    echo_date_year: '去年的今天',
+    echo_hint: '你曾为这个瞬间心动',
+    watermark_prefix: '「',
+    watermark_suffix: '」',
+    watermark_daysago: '— {n} 天前',
+    watermark_yesterday: '— 昨天',
+    watermark_lastyear: '— 去年的今天',
+    // ── v2: Reunion + Keep Light ──
+    reunion_close: '×',
+    reunion_hint: '你曾为这些瞬间心动',
+    reunion_keep: '留住这束光',
+    reunion_save: '保存图片',
+    past_light_text: '曾经的微光',
+    past_light_none: '每一束光，都在等待被记住',
+    reunion_share: '分享',
+    reunion_saving: '生成中…',
+    reunion_saved: '✅ 图片已保存',
+    card_app_name: '感恩日记 · Gratitude',
+    card_tagline: '留住这束光',
+    // ── Milestone Encouragement System ──
+    ms_1_title: '第一束光，点亮了 ✦',
+    ms_1_sub: '你开始了一段旅程',
+    ms_2_title: '光开始有了温度 ✦',
+    ms_2_sub: '你让这束光不再孤单',
+    ms_3_title: '三天连续，小习惯初现 ✦',
+    ms_3_sub: '光是会蔓延的',
+    ms_4_title: '你已是光的收藏家 ✦',
+    ms_4_sub: '七束光，已足以照亮一段路',
+    ms_5_title: '你的气场，已被净化 ✦',
+    ms_5_sub: '感恩不再是习惯，而是你的一部分',
+  },
+  en: {
+    login_title: 'Gratitude',
+    login_subtitle: 'Write 3 things you\'re grateful for daily<br>Sync across devices, reflect anytime',
+    login_email_ph: 'Enter your email',
+    login_password_ph: 'Set password (auto-register on first use)',
+    login_btn: 'Sign In',
+    login_btn_loading: 'Signing in…',
+    login_hint: 'First time? You\'ll auto-register. Password: 6+ chars.',
+    nav_title: 'Gratitude',
+    tab_today: 'Today',
+    tab_history: 'History',
+    logout: 'Sign Out',
+    submit_btn: 'Record Today\'s Gratitude',
+    completed_title: 'Today\'s Gratitude Complete',
+    completed_desc: 'You\'ve recorded three things to be grateful for.<br>See you tomorrow 🌱',
+    edit_btn: 'Edit today\'s entry',
+    history_title: 'Past Light',
+    history_stats_0: 'No entries yet',
+    history_stats_n: '{n} days recorded',
+    search_ph: 'Search entries…',
+    empty_history: 'No entries yet. Start today!',
+    no_match: 'No matching entries found',
+    modal_title: 'Thank you for today',
+    modal_desc: 'Each act of gratitude quietly shifts<br>how you see the world. Keep going.',
+    modal_btn: 'Got it',
+    synced: 'Synced',
+    syncing: 'Syncing',
+    offline: 'Offline',
+    entry_num: 'Gratitude {n}',
+    tag_done: 'Done',
+    tag_pending: 'Pending',
+    prompt_0: 'Who are you grateful for today?',
+    prompt_1: 'What small thing made you smile today?',
+    prompt_2: 'What do you take for granted but truly cherish?',
+    greeting_night: 'Grateful for the light\nthat found me today',
+    greeting_night_sub: 'Write three things you\'re grateful for',
+    greeting_morning: 'Grateful for the light\nthat found me today',
+    greeting_morning_sub: 'Morning light deserves to be remembered',
+    greeting_noon: 'Grateful for the light\nthat found me today',
+    greeting_noon_sub: 'Afternoon light is worth keeping too',
+    greeting_afternoon: 'Grateful for the light\nthat found me today',
+    greeting_afternoon_sub: 'Every day\'s light is different',
+    greeting_evening: 'Grateful for the light\nthat found me today',
+    greeting_evening_sub: 'Evening light is the gentlest',
+    greeting_welcome: 'Welcome back,\nthe light has been waiting for you ✦',
+    greeting_welcome_sub: 'Today, write what you\'re grateful for',
+    reminder_banner: '🌙 The day is almost over. Anything you\'re grateful for?',
+    reminder_notif: 'Before sleep, capture a beam of light ✦',
+    reminder_notif_title: 'Gratitude 🌿',
+    install_title: 'Add to Home Screen',
+    install_desc: 'Open like a native app',
+    install_btn: 'Install',
+    ios_install_desc: 'Tap <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> then "Add to Home Screen"',
+    err_email: 'Please enter your email',
+    err_password: 'Please enter a password',
+    err_password_short: 'Password must be at least 6 characters',
+    err_login: 'Sign in failed. Please try again.',
+    err_confirm_email: 'Registered! Confirm your email to sign in, or disable "Confirm email" in Supabase.',
+    err_email_not_confirmed: 'Email not confirmed. Disable "Confirm email" in Supabase or check your inbox.',
+    migrated: '✅ Synced {n} local entries to cloud',
+    progress_done: '3 / 3 ✓',
+    progress_count: '{n} / 3',
+    // ── v2: Echo + Watermark ──
+    echo_title: 'Keep this light',
+    echo_date: '{n} days ago',
+    echo_date_year: 'This day last year',
+    echo_hint: 'You once felt moved by this moment',
+    watermark_prefix: '"',
+    watermark_suffix: '"',
+    watermark_daysago: '— {n} days ago',
+    watermark_yesterday: '— Yesterday',
+    watermark_lastyear: '— This day last year',
+    // ── v2: Reunion + Keep Light ──
+    reunion_close: '×',
+    reunion_hint: 'You once felt moved by these moments',
+    reunion_keep: 'Keep this light',
+    reunion_save: 'Save Image',
+    past_light_text: 'A flicker of past light',
+    past_light_none: 'Every light waits to be remembered',
+    reunion_share: 'Share',
+    reunion_saving: 'Generating…',
+    reunion_saved: '✅ Image saved',
+    card_app_name: 'Gratitude Journal',
+    card_tagline: 'Keep this light',
+    // ── Milestone Encouragement System ──
+    ms_1_title: 'Your first light shines ✦',
+    ms_1_sub: 'A journey has begun',
+    ms_2_title: 'Your light grows warm ✦',
+    ms_2_sub: 'It no longer stands alone',
+    ms_3_title: 'Three days, a habit takes shape ✦',
+    ms_3_sub: 'Light spreads gently',
+    ms_4_title: 'You are a collector of light ✦',
+    ms_4_sub: 'Seven lights, enough to illuminate a path',
+    ms_5_title: 'Your spirit field is purified ✦',
+    ms_5_sub: 'Gratitude is no longer a habit — it is you',
+  },
+};
+
+let LANG = localStorage.getItem('lang') || 'zh';
+
+// ─── Card Background Images ──────────────────────────────────────────────
+// Using picsum.photos (reliable, CORS-enabled, works globally)
+// Plus beautiful procedural gradient fallbacks
+const CARD_BG_SEEDS = [
+  1068, 1080, 1337, 1376, 1418, 1455, 1472, 1501, 1524, 1537,
+  1551, 1573, 1586, 1604, 1613, 1629, 1642, 1659, 1674, 1688,
+  1695, 1705, 1715, 1723, // nature, water, mist, light themes
+];
+function pickCardBgSeed() {
+  return CARD_BG_SEEDS[Math.floor(Math.random() * CARD_BG_SEEDS.length)];
+}
+
+function t(key, vars) {
+  let s = I18N[LANG]?.[key] || I18N.zh[key] || key;
+  if (vars) Object.entries(vars).forEach(([k, v]) => { s = s.replace(`{${k}}`, v); });
+  return s;
+}
+
+function setLang(lang) {
+  LANG = lang;
+  localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = lang === 'zh' ? '感恩日记 · Gratitude' : 'Gratitude Journal';
+  applyI18n();
+  // Re-render dynamic content
+  if (document.getElementById('appShell').style.display !== 'none') {
+    setNavDate();
+    setGreeting();
+    renderToday();
+    renderHistory(document.getElementById('searchInput')?.value?.trim() || '');
+  }
+}
+
+function applyI18n() {
+  // data-i18n → textContent
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val.includes('<br>')) {
+      el.innerHTML = val;
+    } else {
+      el.textContent = val;
+    }
+  });
+  // data-i18n-placeholder → placeholder
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  // Lang toggle buttons
+  document.querySelectorAll('#langToggle .lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === LANG);
+  });
+}
+
+// Init lang on load
+applyI18n();
+
+// Lang toggle click handler
+document.querySelectorAll('#langToggle .lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.lang));
+});
+
+// ─── Supabase Config ────────────────────────────────────────────────────────
+const SB_URL = 'https://reaoliuszbameeibzjvl.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlYW9saXVzemJhbWVlaWJ6anZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzNjYsImV4cCI6MjA5NzI3NDM2Nn0.36r_ubgSCFAiQGoCsj_OmqWshPPX1KVHAlcF-8l0F_8';
+
+const SB = {
+  _tokens: null,
+  _listeners: [],
+
+  _loadTokens() {
+    try {
+      const raw = localStorage.getItem('sb_auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Return tokens even if expired — getSession will attempt refresh
+        if (parsed.access_token) {
+          this._tokens = parsed;
+          return parsed;
+        }
+      }
+    } catch { this._tokens = null; }
+    return null;
+  },
+
+  _saveTokens(session) {
+    if (!session) { localStorage.removeItem('sb_auth'); this._tokens = null; return; }
+    const t = {
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_at: session.expires_at || (Date.now() / 1000 + 3600),
+      user: session.user
+    };
+    localStorage.setItem('sb_auth', JSON.stringify(t));
+    this._tokens = t;
+  },
+
+  async _api(path, opts = {}) {
+    const headers = {
+      'apikey': SB_KEY,
+      'Content-Type': 'application/json',
+    };
+    if (this._tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${this._tokens.access_token}`;
+    }
+    const res = await fetch(`${SB_URL}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+    if (res.status === 429 || res.status === 503) throw new Error('RATE_LIMITED');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'API error');
+    return data;
+  },
+
+  async signUp(email, password, _retry = 0) {
+    const res = await fetch(`${SB_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.status === 429 || res.status === 503) {
+      if (_retry < 1) { await new Promise(r => setTimeout(r, 3000)); return this.signUp(email, password, _retry + 1); }
+      throw new Error('RATE_LIMITED');
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Signup failed');
+    return data;
+  },
+
+  async signInWithPassword(email, password, _retry = 0) {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    // Rate limited → auto-retry (2 × 3s ≈ 6s, fast recovery)
+    if (res.status === 429 || res.status === 503) {
+      if (_retry < 2) { await new Promise(r => setTimeout(r, 3000)); return this.signInWithPassword(email, password, _retry + 1); }
+      throw new Error('RATE_LIMITED');
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Login failed');
+    if (data.access_token) {
+      let user = null;
+      try {
+        const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+        user = { id: payload.sub, email: payload.email, aud: payload.aud };
+      } catch {}
+      const session = {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || '',
+        expires_at: data.expires_at || (Date.now() / 1000 + 3600),
+        user: user || data.user,
+      };
+      this._saveTokens(session);
+      this._notify('SIGNED_IN', session);
+      return session;
+    }
+    throw new Error(t('err_login'));
+  },
+
+  async getSession() {
+    const tokens = this._loadTokens();
+    if (!tokens) return null;
+    // If token expires within 5 minutes, try to refresh
+    if (tokens.expires_at && Date.now() / 1000 > tokens.expires_at - 1800) {
+      if (!tokens.refresh_token) {
+        // No refresh token — can't renew, but keep current tokens if still valid
+        if (Date.now() / 1000 < tokens.expires_at) return tokens;
+        localStorage.removeItem('sb_auth');
+        this._tokens = null;
+        return null;
+      }
+      try {
+        const refreshed = await this._refreshToken(tokens.refresh_token);
+        if (refreshed) return this._tokens;
+        // Refresh was rate-limited — keep existing session
+        return tokens;
+      } catch (e) {
+        const msg = e.message || '';
+        // Only clear session for real auth errors (bad refresh token)
+        // Don't clear for network errors — user may be offline
+        if (msg.includes('Invalid Refresh Token') || msg.includes('Token has expired') || msg.includes('invalid_grant')) {
+          localStorage.removeItem('sb_auth');
+          this._tokens = null;
+          return null;
+        }
+        // Network error: return current (expired) tokens — app will show cached data
+        console.warn('Token refresh failed (network?), keeping session:', msg);
+        return tokens;
+      }
+    }
+    return tokens;
+  },
+
+  async getUser() {
+    const session = await this.getSession();
+    if (!session) return null;
+    try {
+      const data = await this._api('/auth/v1/user');
+      this._tokens.user = data;
+      this._saveTokens(this._tokens);
+      return data;
+    } catch { return session.user; }
+  },
+
+  async _refreshToken(refreshToken) {
+    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (res.status === 429 || res.status === 503) {
+      // Rate limited — don't throw, return null; caller will use cached tokens
+      console.warn('Refresh rate-limited, keeping existing session');
+      return null;
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || 'Refresh failed');
+    this._saveTokens(data);
+    this._notify('TOKEN_REFRESHED', data);
+    return data;
+  },
+
+  async signOut() {
+    try { await this._api('/auth/v1/logout', { method: 'POST' }); } catch {}
+    localStorage.removeItem('sb_auth');
+    this._tokens = null;
+    this._notify('SIGNED_OUT', null);
+  },
+
+  onAuthStateChange(callback) { this._listeners.push(callback); },
+  _notify(event, session) { this._listeners.forEach(fn => { try { fn(event, session); } catch {} }); },
+
+  async getEntries(userId) {
+    return this._api(`/rest/v1/entries?user_id=eq.${userId}&order=date.desc&select=*`);
+  },
+  async upsertEntry(userId, date, c1, c2, c3) {
+    await this._api('/rest/v1/entries', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ user_id: userId, date, content1: c1 || '', content2: c2 || '', content3: c3 || '' }),
+    });
+  },
+};
+
+// ─── Storage ───────────────────────────────────────────────────────────────
+async function logEvent(event, properties = {}) {
+  if (!SB._tokens?.user?.id) return;
+  try {
+    await fetch(`${SB_URL}/rest/v1/events`, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB._tokens.access_token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        user_id: SB._tokens.user.id,
+        event: event,
+        properties: properties,
+      }),
+    });
+  } catch {}
+}
+
+const STORAGE_KEY = 'gratitude_entries_v1';
+function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
+function saveLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+// ─── Cloud Data ────────────────────────────────────────────────────────────
+let allEntries = {};
+
+async function loadCloud() {
+  if (!SB._tokens) return {};
+  try {
+    setSyncStatus('syncing');
+    const user = SB._tokens.user;
+    const rows = await SB.getEntries(user.id);
+    const map = {};
+    (rows || []).forEach(row => { map[row.date] = [row.content1 || '', row.content2 || '', row.content3 || '']; });
+    setSyncStatus('online');
+    return map;
+  } catch (e) { console.error('Cloud load error:', e); setSyncStatus('offline'); return {}; }
+}
+
+async function saveCloud(dateKey, contents) {
+  if (!SB._tokens) return;
+  try {
+    setSyncStatus('syncing');
+    const user = SB._tokens.user;
+    await SB.upsertEntry(user.id, dateKey, contents[0] || '', contents[1] || '', contents[2] || '');
+    setSyncStatus('online');
+  } catch (e) { console.error('Cloud save error:', e); setSyncStatus('offline'); }
+}
+
+async function migrateLocalToCloud() {
+  const localData = loadLocal();
+  const keys = Object.keys(localData);
+  if (!keys.length || !SB._tokens) return;
+  const cloudData = await loadCloud();
+  let migrated = 0;
+  for (const key of keys) {
+    if (cloudData[key]) continue;
+    const contents = localData[key];
+    if (contents && contents.length === 3 && contents.some(c => c.trim())) {
+      await saveCloud(key, contents);
+      migrated++;
+    }
+  }
+  if (migrated > 0) showBanner(t('migrated', { n: migrated }));
+  allEntries = { ...localData, ...cloudData };
+}
+
+function mergeData(localData, cloudData) {
+  const merged = { ...localData };
+  for (const key of Object.keys(cloudData)) merged[key] = cloudData[key];
+  return merged;
+}
+
+// ─── Sync Status ──────────────────────────────────────────────────────────
+function setSyncStatus(status) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (!dot || !text) return;
+  dot.className = 'sync-dot';
+  if (status === 'syncing') { dot.classList.add('syncing'); text.textContent = t('syncing'); }
+  else if (status === 'online') { text.textContent = t('synced'); }
+  else if (status === 'offline') { dot.classList.add('offline'); text.textContent = t('offline'); }
+}
+
+// ─── State ─────────────────────────────────────────────────────────────────
+let entries = ['', '', ''];
+let todayDone = false;
+let currentUser = null;
+let reminderBannerShown = false;
+
+// ─── Auth UI ───────────────────────────────────────────────────────────────
+function hideSplash() {
+  var splash = document.getElementById('splashOverlay');
+  if (!splash || splash.classList.contains('hidden')) return;
+  splash.classList.add('hidden');
+  setTimeout(function() {
+    splash.style.display = 'none';
+  }, 500);
+}
+
+// Auto-hide splash after 2 seconds, or tap anywhere to dismiss immediately
+document.getElementById('splashOverlay').addEventListener('click', hideSplash);
+document.getElementById('splashOverlay').addEventListener('touchstart', hideSplash);
+setTimeout(hideSplash, 2000);
+
+function showLogin() {
+  document.getElementById('loginView').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+  hideSplash();
+}
+function showApp() {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  hideSplash();
+}
+
+async function initAuth() {
+  try {
+    // 3-second timeout: if getSession hangs (e.g. rate-limited refresh), just show login
+    const session = await Promise.race([
+      SB.getSession(),
+      new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 3000))
+    ]);
+    if (session && session !== 'TIMEOUT' && session?.user) {
+      currentUser = session.user;
+      showApp();
+      await startApp();
+      logEvent('session_start');
+      return;
+    }
+  } catch (e) { console.error('initAuth error:', e); }
+  showLogin();
+}
+
+setTimeout(function() {
+  var lv = document.getElementById('loginView');
+  var as = document.getElementById('appShell');
+  if (lv && as && lv.style.display === 'none' && as.style.display === 'none') showLogin();
+}, 3000);
+
+SB.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    currentUser = session.user;
+    showApp();
+    await startApp();
+    logEvent('session_start');
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    allEntries = {};
+    showLogin();
+  }
+});
+
+// ── Login ──
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email) { showBanner(t('err_email')); return; }
+  if (!password) { showBanner(t('err_password')); return; }
+  if (password.length < 6) { showBanner(t('err_password_short')); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = t('login_btn_loading');
+
+  // Helper: login — auto-retries on rate limits (10s × 3)
+  async function doLogin() {
+    try {
+      const session = await SB.signInWithPassword(email, password);
+      currentUser = session.user;
+      showApp();
+      await startApp();
+      return;
+    } catch (signInErr) {
+      const errMsg = signInErr.message || '';
+
+      // Rate limited — all retries exhausted, show gentle message
+      if (errMsg === 'RATE_LIMITED') {
+        showBanner(LANG === 'zh' ? '网络暂时繁忙，请稍后重试' : 'Network busy, please try again shortly');
+        return;
+      }
+
+      // Invalid credentials → try signup
+      if (errMsg.includes('Invalid login credentials')) {
+        try {
+          const signUpResult = await SB.signUp(email, password);
+          if (signUpResult.access_token) {
+            let user = null;
+            try { const payload = JSON.parse(atob(signUpResult.access_token.split('.')[1])); user = { id: payload.sub, email: payload.email, aud: payload.aud }; } catch {}
+            const session = { access_token: signUpResult.access_token, refresh_token: signUpResult.refresh_token || '', expires_at: signUpResult.expires_at || (Date.now() / 1000 + 3600), user: user || signUpResult.user };
+            SB._saveTokens(session); currentUser = session.user; showApp(); await startApp();
+            return;
+          }
+          // Signup succeeded but no token → try signing in once
+          try {
+            const session2 = await SB.signInWithPassword(email, password);
+            currentUser = session2.user; showApp(); await startApp(); return;
+          } catch (e2) {
+          if (e2.message === 'RATE_LIMITED') {
+            showBanner(LANG === 'zh' ? '注册成功，网络暂时繁忙，请稍后重试' : 'Signed up, network busy, please retry shortly');
+            return;
+          }
+            throw new Error(t('err_confirm_email'));
+          }
+        } catch (signUpErr) {
+          if ((signUpErr.message || '') === 'RATE_LIMITED') {
+            showBanner(LANG === 'zh' ? '网络暂时繁忙，请稍后重试' : 'Network busy, please try again shortly');
+            return;
+          }
+          throw new Error(t('err_confirm_email'));
+        }
+      }
+      if (errMsg.includes('Email not confirmed')) throw new Error(t('err_email_not_confirmed'));
+      throw signInErr;
+    }
+  }
+
+  try {
+    await doLogin();
+  } catch (e) {
+    console.error('Login error:', e);
+    const msg = e.message || '';
+    if (msg === 'RATE_LIMITED') {
+      showBanner(LANG === 'zh' ? '网络暂时繁忙，请稍后重试' : 'Network busy, please try again shortly');
+    } else {
+      showBanner(msg || t('err_login'));
+    }
+    btn.disabled = false;
+    btn.textContent = t('login_btn');
+  }
+});
+
+['loginEmail', 'loginPassword'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+});
+
+document.getElementById('passwordToggle').addEventListener('click', () => {
+  const pwInput = document.getElementById('loginPassword');
+  const eyeIcon = document.getElementById('eyeIcon');
+  if (pwInput.type === 'password') {
+    pwInput.type = 'text';
+    eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    pwInput.type = 'password';
+    eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await SB.signOut();
+  document.getElementById('userMenu').classList.remove('show');
+  allEntries = {};
+  currentUser = null;
+  showLogin();
+});
+
+document.getElementById('userAvatar').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('userMenu').classList.toggle('show');
+});
+document.addEventListener('click', () => { document.getElementById('userMenu').classList.remove('show'); });
+
+function updateUserUI() {
+  if (!currentUser) return;
+  const email = currentUser.email || '';
+  document.getElementById('userMenuEmail').textContent = email;
+  const avatar = document.getElementById('userAvatar');
+  avatar.textContent = email.charAt(0).toUpperCase();
+}
+
+// ─── Start App ──────────────────────────────────────────────────────────────
+async function startApp() {
+  updateUserUI();
+  const cloudData = await loadCloud();
+  const localData = loadLocal();
+  allEntries = mergeData(localData, cloudData);
+  await migrateLocalToCloud();
+  const updatedCloud = await loadCloud();
+  allEntries = mergeData(localData, updatedCloud);
+  saveLocal(allEntries);
+  const key = todayKey();
+  if (allEntries[key] && allEntries[key].some(c => c.trim())) {
+    entries = allEntries[key];
+    todayDone = isSubmitted(key);
+  }
+  // If not submitted today, check for a draft (overrides partial cloud data)
+  if (!todayDone) {
+    const draft = loadDraft();
+    if (draft) entries = draft;
+  }
+  setNavDate();
+  setGreeting();
+  initNickname();
+  // Pre-render signature words (sharpie style) for instant card stamping
+  preRenderSigWords();
+  renderToday();
+  renderHistory();
+  scheduleReminder();
+  // v2: Show watermark light on homepage (only if today is not yet submitted)
+  if (!todayDone) showWatermark();
+}
+
+// ─── Nickname — load, display, edit ────────────────────────────────────────
+const NICK_KEY = 'gratitude_nickname';
+function initNickname() {
+  const row = document.getElementById('nicknameRow');
+  const label = document.getElementById('nicknameLabel');
+  const input = document.getElementById('nicknameInput');
+  const btn = document.getElementById('nicknameEditBtn');
+
+  if (!row) return;
+  let name = localStorage.getItem(NICK_KEY) || '';
+
+  function showName(n) {
+    if (n && n.trim()) {
+      label.textContent = '— ' + n.trim();
+      input.value = n.trim();
+      row.style.display = 'flex';
+      // Delay for fade-in
+      requestAnimationFrame(() => requestAnimationFrame(() => row.classList.add('visible')));
+      btn.style.display = 'inline';
+    } else {
+      row.style.display = 'none';
+      row.classList.remove('visible');
+      btn.style.display = 'none';
+    }
+  }
+
+  // Click label → switch to edit mode
+  label.addEventListener('click', (e) => {
+    e.stopPropagation();
+    label.style.display = 'none';
+    btn.style.display = 'none';
+    input.classList.add('show');
+    input.focus();
+    input.select();
+  });
+
+  // Click pencil → same as clicking label
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    label.click();
+  });
+
+  // Save on Enter or blur
+  function saveNickname() {
+    const val = input.value.trim();
+    if (val.length > 0 && val.length <= 16) {
+      localStorage.setItem(NICK_KEY, val);
+      name = val;
+    } else {
+      localStorage.removeItem(NICK_KEY);
+      name = '';
+    }
+    input.classList.remove('show');
+    showName(name);
+  }
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveNickname(); input.blur(); } });
+  input.addEventListener('blur', () => setTimeout(saveNickname, 100));
+  input.addEventListener('click', (e) => e.stopPropagation());
+
+  // Initial display
+  showName(name);
+}
+
+// ─── Nav & Greeting ────────────────────────────────────────────────────────
+function setNavDate() {
+  const d = new Date();
+  const locale = LANG === 'zh' ? 'zh-CN' : 'en-US';
+  const fmt = d.toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' });
+  document.getElementById('navDate').textContent = fmt;
+}
+
+function setGreeting() {
+  // Priority 1: Check milestones that show in greeting area (M3, M4, M5)
+  const ms = checkMilestone('greeting');
+  if (ms === 3 || ms === 4 || ms === 5) {
+    showMilestoneInGreeting(ms);
+    return;
+  }
+
+  // Priority 2: Check if user is returning after 2+ days — show welcome-back greeting
+  const lastWritten = localStorage.getItem('gratitude_last_written');
+  if (lastWritten) {
+    const lastDate = new Date(lastWritten + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 2) {
+      document.getElementById('greetingTitle').innerText = t('greeting_welcome').replace(/\\n/g, '\n');
+      document.getElementById('greetingSubtitle').textContent = t('greeting_welcome_sub');
+      return;
+    }
+  }
+
+  // Note: M1/M2 milestones show in the thank-you modal (not here).
+  // M3/M4/M5 are handled above. Continue to time-based greeting.
+
+  const h = new Date().getHours();
+  let titleKey, subKey;
+  if (h < 6)       { titleKey = 'greeting_night'; subKey = 'greeting_night_sub'; }
+  else if (h < 11) { titleKey = 'greeting_morning'; subKey = 'greeting_morning_sub'; }
+  else if (h < 14) { titleKey = 'greeting_noon'; subKey = 'greeting_noon_sub'; }
+  else if (h < 18) { titleKey = 'greeting_afternoon'; subKey = 'greeting_afternoon_sub'; }
+  else             { titleKey = 'greeting_evening'; subKey = 'greeting_evening_sub'; }
+  document.getElementById('greetingTitle').innerText = t(titleKey).replace(/\\n/g, '\n');
+  document.getElementById('greetingSubtitle').textContent = t(subKey);
+
+  // Always show gentle encouragement hint (even without milestones)
+  showEncouragementHint();
+}
+
+// ─── Today Render ──────────────────────────────────────────────────────────
+function renderToday() {
+  const container = document.getElementById('entriesContainer');
+  const submitBtn = document.getElementById('submitBtn');
+  const completedState = document.getElementById('completedState');
+
+  if (todayDone) {
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    submitBtn.style.display = 'none';
+    completedState.style.display = 'block';
+    container.innerHTML = '';
+    entries.forEach((text, i) => { container.appendChild(makeEntryCard(i, text, true)); });
+    updateProgress();
+    // v2: Hide watermark when today is done, but show past-light entry instead
+    document.getElementById('watermark')?.style && (document.getElementById('watermark').style.display = 'none');
+    showPastLight();
+    return;
+  }
+
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  completedState.style.display = 'none';
+  submitBtn.style.display = 'block';
+  container.innerHTML = '';
+  entries.forEach((text, i) => { container.appendChild(makeEntryCard(i, text, false)); });
+  updateProgress();
+  updateSubmitBtn();
+  // v2: Show watermark if not yet submitted
+  showWatermark();
+}
+
+function makeEntryCard(index, value, disabled) {
+  const card = document.createElement('div');
+  card.className = 'entry-card';
+  card.innerHTML = `
+    <div class="entry-card-header">
+      <span class="entry-number">${t('entry_num', { n: index + 1 })}</span>
+      <span class="entry-tag ${value.trim() ? 'done' : ''}" id="tag-${index}">
+        ${value.trim() ? t('tag_done') : t('tag_pending')}
+      </span>
+    </div>
+    <textarea
+      class="entry-textarea"
+      id="entry-${index}"
+      placeholder="${t('prompt_' + index)}"
+      rows="2"
+      maxlength="200"
+      ${disabled ? 'disabled' : ''}
+    >${value}</textarea>
+  `;
+  if (!disabled) {
+    const ta = card.querySelector(`#entry-${index}`);
+    ta.addEventListener('input', () => onEntryInput(index, ta.value));
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && index < 2) {
+        e.preventDefault();
+        const next = document.getElementById(`entry-${index+1}`);
+        if (next) next.focus();
+      }
+    });
+  }
+  return card;
+}
+
+function onEntryInput(index, value) {
+  entries[index] = value;
+  const tag = document.getElementById(`tag-${index}`);
+  if (tag) {
+    tag.textContent = value.trim() ? t('tag_done') : t('tag_pending');
+    tag.className = 'entry-tag ' + (value.trim() ? 'done' : '');
+  }
+  updateProgress();
+  updateSubmitBtn();
+  const ta = document.getElementById(`entry-${index}`);
+  if (ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  // Auto-save draft immediately — even partial entries
+  saveDraft();
+}
+
+// ─── Draft (unsaved today's entries) ──────────────────────────────────────
+const DRAFT_KEY = 'gratitude_draft_v1';
+const SUBMITTED_KEY = 'gratitude_submitted_v1';
+
+function saveDraft() {
+  // Only save if today's entries are not yet submitted
+  if (todayDone) return;
+  const key = todayKey();
+  if (entries.some(e => e.trim())) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ date: key, entries }));
+  } else {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    // Only valid if draft is for today and today is not yet submitted
+    if (draft.date === todayKey() && !todayDone) return draft.entries;
+    return null;
+  } catch { return null; }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+function isSubmitted(dateKey) {
+  try {
+    const raw = localStorage.getItem(SUBMITTED_KEY);
+    if (!raw) return false;
+    const dates = JSON.parse(raw);
+    return Array.isArray(dates) && dates.includes(dateKey);
+  } catch { return false; }
+}
+
+function markSubmitted(dateKey) {
+  try {
+    const raw = localStorage.getItem(SUBMITTED_KEY);
+    const dates = raw ? JSON.parse(raw) : [];
+    if (!dates.includes(dateKey)) {
+      dates.push(dateKey);
+      if (dates.length > 90) dates.splice(0, dates.length - 90);
+      localStorage.setItem(SUBMITTED_KEY, JSON.stringify(dates));
+    }
+    // Save last written date for welcome-back greeting
+    localStorage.setItem('gratitude_last_written', dateKey);
+    // Milestone: count total submissions
+    incrementTotalCount();
+  } catch {}
+}
+
+function updateProgress() {
+  const filled = entries.filter(e => e.trim()).length;
+  for (let i = 0; i < 3; i++) {
+    document.getElementById(`dot${i}`).classList.toggle('filled', i < filled || todayDone);
+  }
+  document.getElementById('progressLabel').textContent =
+    todayDone ? t('progress_done') : t('progress_count', { n: filled });
+}
+
+function updateSubmitBtn() {
+  document.getElementById('submitBtn').disabled = !entries.some(e => e.trim().length >= 5);
+}
+
+// ─── Milestone Encouragement System ──────────────────────────────────────
+// 5 progressive milestones to gently encourage habit formation
+// Each triggers ONLY ONCE, stored in localStorage
+
+const MS_PREFIX = 'gratitude_ms_'; // gratitude_ms_1 through gratitude_ms_5
+const MS_COUNT_KEY = 'gratitude_total_count';
+
+function getTotalCount() {
+  return parseInt(localStorage.getItem(MS_COUNT_KEY) || '0', 10);
+}
+
+function incrementTotalCount() {
+  const n = getTotalCount() + 1;
+  localStorage.setItem(MS_COUNT_KEY, String(n));
+  return n;
+}
+
+function msDone(n) {
+  return localStorage.getItem(MS_PREFIX + n) === 'true';
+}
+
+function markMsDone(n) {
+  localStorage.setItem(MS_PREFIX + n, 'true');
+}
+
+// Check if last 3 days are consecutive (for M3)
+function checkConsecutive3() {
+  const raw = localStorage.getItem(SUBMITTED_KEY);
+  if (!raw) return false;
+  const dates = JSON.parse(raw);
+  if (dates.length < 3) return false;
+
+  const sorted = dates.slice().sort().reverse();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d1 = new Date(sorted[0] + 'T00:00:00');
+  const d2 = new Date(sorted[1] + 'T00:00:00');
+  const d3 = new Date(sorted[2] + 'T00:00:00');
+
+  const diff1 = Math.round((today - d1) / 86400000); // today vs most recent
+  const diff12 = Math.round((d1 - d2) / 86400000);
+  const diff23 = Math.round((d2 - d3) / 86400000);
+
+  return diff1 === 0 && diff12 === 1 && diff23 === 1;
+}
+
+// Returns milestone number that just triggered, or 0
+// mode: 'submit' = called after submission (checks M1,M2,M3,M4,M5)
+//       'greeting' = called on page load (checks M3,M4,M5 only)
+function checkMilestone(mode) {
+  const count = getTotalCount();
+
+  // M1: First time ever
+  if (count >= 1 && !msDone(1)) {
+    markMsDone(1);
+    return 1;
+  }
+
+  // M2: Second time ever (submit-only)
+  if (mode === 'submit' && count >= 2 && !msDone(2)) {
+    markMsDone(2);
+    return 2;
+  }
+
+  // M3: 3 consecutive days (either mode — show in greeting area)
+  if (!msDone(3) && checkConsecutive3()) {
+    markMsDone(3);
+    return 3;
+  }
+
+  // M4: 7+ total submissions
+  if (count >= 7 && !msDone(4)) {
+    markMsDone(4);
+    return 4;
+  }
+
+  // M5: 20+ total submissions
+  if (count >= 20 && !msDone(5)) {
+    markMsDone(5);
+    return 5;
+  }
+
+  return 0;
+}
+
+// Show milestone message in the thank-you modal (M1, M2)
+function showMilestoneInModal(msNum) {
+  const titleEl = document.getElementById('modalTitle');  // data-i18n="modal_title"
+  const subEl = document.getElementById('modalDesc');     // data-i18n="modal_desc"
+  if (titleEl && subEl) {
+    titleEl.textContent = t('ms_' + msNum + '_title');
+    subEl.textContent = t('ms_' + msNum + '_sub');
+    // Make it warm and noticeable
+    titleEl.style.color = '#b45309';
+    titleEl.style.fontSize = '22px';
+    subEl.style.color = '#a16207';
+  }
+
+  // ALSO show in dedicated encouragement area
+  const encArea = document.getElementById('encouragementArea');
+  const encText = document.getElementById('encouragementText');
+  if (encArea && encText) {
+    encText.textContent = t('ms_' + msNum + '_title').replace(/\n/g, ' ') + ' — ' + t('ms_' + msNum + '_sub');
+    encArea.style.display = 'block';
+    requestAnimationFrame(() => { encArea.classList.add('visible'); });
+  }
+}
+
+// Show milestone message in greeting area (M3, M4, M5)
+function showMilestoneInGreeting(msNum) {
+  const titleEl = document.getElementById('greetingTitle');
+  const subEl = document.getElementById('greetingSubtitle');
+  if (titleEl && subEl) {
+    titleEl.textContent = t('ms_' + msNum + '_title').replace(/\n/g, '\n');
+    subEl.textContent = t('ms_' + msNum + '_sub');
+    // Make milestone greeting stand out — gentle warm highlight
+    titleEl.style.color = '#b45309';   // warm amber
+    subEl.style.color = '#a16207';
+  }
+
+  // ALSO show in dedicated encouragement area (prominent, persistent)
+  const encArea = document.getElementById('encouragementArea');
+  const encText = document.getElementById('encouragementText');
+  if (encArea && encText) {
+    encText.textContent = t('ms_' + msNum + '_title').replace(/\n/g, ' ') + ' — ' + t('ms_' + msNum + '_sub');
+    encArea.style.display = 'block';
+    requestAnimationFrame(() => { encArea.classList.add('visible'); });
+  }
+}
+
+// Show gentle encouragement hint in the dedicated area (always visible, no milestone needed)
+function showEncouragementHint() {
+  const count = getTotalCount();
+  const encArea = document.getElementById('encouragementArea');
+  const encText = document.getElementById('encouragementText');
+  if (!encArea || !encText) return;
+
+  let hint = '';
+  if (count === 0) {
+    hint = LANG === 'zh'
+      ? '✦ 每一束光都值得被记录，从今天开始吧'
+      : '✦ Every ray of light deserves to be recorded — start today';
+  } else if (count < 3) {
+    hint = LANG === 'zh'
+      ? '✦ 你已经记录了 ' + count + ' 束光，继续收集'
+      : '✦ You\'ve recorded ' + count + ' rays of light. Keep collecting.';
+  } else if (count < 7) {
+    hint = LANG === 'zh'
+      ? '✦ 已记录 ' + count + ' 束光，光是会蔓延的'
+      : '✦ ' + count + ' rays recorded. Light spreads gently.';
+  } else if (count < 20) {
+    hint = LANG === 'zh'
+      ? '✦ 光的收藏家，已收集 ' + count + ' 束光'
+      : '✦ Collector of light — ' + count + ' rays gathered';
+  } else {
+    hint = LANG === 'zh'
+      ? '✦ ' + count + ' 束光，你的气场已被净化'
+      : '✦ ' + count + ' rays — your spirit field is purified';
+  }
+
+  encText.textContent = hint;
+  encArea.style.display = 'block';
+  requestAnimationFrame(() => { encArea.classList.add('visible'); });
+}
+
+document.getElementById('editBtn').addEventListener('click', () => {
+  todayDone = false;
+  // Reset past-light visibility
+  const pastLight = document.getElementById('pastLight');
+  pastLight.style.display = 'none';
+  pastLight.classList.remove('visible');
+  renderToday();
+});
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  if (!entries.some(e => e.trim())) return;
+  const key = todayKey();
+  const trimmed = entries.map(e => e.trim());
+  allEntries[key] = trimmed;
+  saveLocal(allEntries);
+  if (currentUser) await saveCloud(key, trimmed);
+  markSubmitted(key);
+  clearDraft();
+  todayDone = true;
+  renderToday();
+  renderHistory();
+
+  logEvent('entry_submitted', { count: trimmed.filter(e => e.length >= 5).length });
+
+  // Check milestones on submit
+  const ms = checkMilestone('submit');
+  showThanksModal(ms);
+});
+
+function showThanksModal(milestoneNum) {
+  document.getElementById('thanksOverlay').classList.add('show');
+  // If a milestone just triggered, show milestone message instead of default
+  if (milestoneNum && (milestoneNum === 1 || milestoneNum === 2)) {
+    showMilestoneInModal(milestoneNum);
+  }
+  // v2: Show echo in modal (past gratitude fading in after 2s)
+  showEchoInModal();
+}
+document.getElementById('modalCloseBtn').addEventListener('click', () => {
+  document.getElementById('thanksOverlay').classList.remove('show');
+  // Reset echo section for next time
+  const echoSection = document.getElementById('echoSection');
+  if (echoSection) { echoSection.style.display = 'none'; echoSection.classList.remove('visible'); }
+});
+document.getElementById('thanksOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    e.currentTarget.classList.remove('show');
+    const echoSection = document.getElementById('echoSection');
+    if (echoSection) { echoSection.style.display = 'none'; echoSection.classList.remove('visible'); }
+  }
+});
+
+// ─── v2: pickMemory Algorithm ──────────────────────────────────────────────
+// Picks a past gratitude entry to show the user.
+// Priority: same-day anniversary → 100 days ago → weighted random → silent if <7 entries
+
+function pickMemory() {
+  const keys = Object.keys(allEntries).sort((a, b) => a.localeCompare(b));
+  const today = todayKey();
+  // Remove today and future dates
+  const pastKeys = keys.filter(k => k < today && allEntries[k].some(c => c.trim()));
+  if (pastKeys.length < 1) return null; // No past entries — stay silent
+
+  // 1. Same-day anniversary: exactly 1 year ago, 2 years ago, etc.
+  const todayDate = new Date(today + 'T00:00:00');
+  for (let years = 1; years <= 5; years++) {
+    const anniversary = new Date(todayDate);
+    anniversary.setFullYear(anniversary.getFullYear() - years);
+    const anniversaryKey = anniversary.toISOString().slice(0, 10);
+    if (pastKeys.includes(anniversaryKey) && allEntries[anniversaryKey].some(c => c.trim())) {
+      return { date: anniversaryKey, entries: allEntries[anniversaryKey], isAnniversary: true, yearsAgo: years };
+    }
+  }
+
+  // 2. 100 days ago
+  const hundredDays = new Date(todayDate);
+  hundredDays.setDate(hundredDays.getDate() - 100);
+  const hundredKey = hundredDays.toISOString().slice(0, 10);
+  if (pastKeys.includes(hundredKey) && allEntries[hundredKey].some(c => c.trim())) {
+    return { date: hundredKey, entries: allEntries[hundredKey], isAnniversary: false };
+  }
+
+  // 3. Weighted random: prefer 30-365 days ago, weighted by distance
+  const eligible = pastKeys.filter(k => {
+    const diff = Math.floor((todayDate - new Date(k + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    return diff >= 30 && diff <= 365;
+  });
+
+  if (eligible.length === 0) {
+    // Fallback: any past entry
+    const fallback = pastKeys[Math.floor(Math.random() * pastKeys.length)];
+    return { date: fallback, entries: allEntries[fallback], isAnniversary: false };
+  }
+
+  // Weight by distance: further entries get slightly higher weight (surprise factor)
+  const weights = eligible.map(k => {
+    const diff = Math.floor((todayDate - new Date(k + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    return Math.sqrt(diff); // sqrt gives gentle preference for older entries
+  });
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  let rand = Math.random() * totalWeight;
+  for (let i = 0; i < eligible.length; i++) {
+    rand -= weights[i];
+    if (rand <= 0) {
+      return { date: eligible[i], entries: allEntries[eligible[i]], isAnniversary: false };
+    }
+  }
+  return { date: eligible[eligible.length - 1], entries: allEntries[eligible[eligible.length - 1]], isAnniversary: false };
+}
+
+function formatMemoryDate(memory) {
+  const today = new Date(todayKey() + 'T00:00:00');
+  const memDate = new Date(memory.date + 'T00:00:00');
+  const diffDays = Math.floor((today - memDate) / (1000 * 60 * 60 * 24));
+
+  if (memory.isAnniversary && memory.yearsAgo === 1) return t('watermark_lastyear');
+  if (diffDays === 1) return t('watermark_yesterday');
+  return t('watermark_daysago', { n: diffDays });
+}
+
+// ─── v2: Echo (past gratitude in thank-you modal) ──────────────────────────
+function showEchoInModal() {
+  const memory = pickMemory();
+  if (!memory) return; // Too few entries — stay silent
+
+  // Find a non-empty entry from that day
+  const nonEmpty = memory.entries.filter(c => c.trim());
+  if (!nonEmpty.length) return;
+
+  // Pick one entry randomly (or the first)
+  const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  const echoSection = document.getElementById('echoSection');
+  const echoDate = document.getElementById('echoDate');
+  const echoText = document.getElementById('echoText');
+  const echoHint = document.getElementById('echoHint');
+
+  if (!echoSection || !echoDate || !echoText || !echoHint) return;
+
+  const diffDays = Math.floor((new Date(todayKey() + 'T00:00:00') - new Date(memory.date + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+  const dateLabel = memory.isAnniversary && memory.yearsAgo === 1
+    ? t('echo_date_year')
+    : t('echo_date', { n: diffDays });
+
+  echoDate.textContent = dateLabel;
+  echoText.textContent = chosenText;
+  echoHint.textContent = t('echo_hint');
+
+  echoSection.style.display = 'block';
+  echoSection.classList.remove('visible');
+
+  // Fade in after 2 seconds — gentle, not abrupt
+  setTimeout(() => {
+    echoSection.classList.add('visible');
+  }, 2000);
+}
+
+// ─── v2: Watermark Light (homepage subtle past gratitude) ──────────────────
+let currentMemoryData = null; // Store for reuse in reunion
+
+function showWatermark() {
+  const memory = pickMemory();
+  if (!memory) {
+    document.getElementById('watermark').style.display = 'none';
+    currentMemoryData = null;
+    return;
+  }
+
+  const nonEmpty = memory.entries.filter(c => c.trim());
+  if (!nonEmpty.length) {
+    document.getElementById('watermark').style.display = 'none';
+    currentMemoryData = null;
+    return;
+  }
+
+  // Pick one entry randomly
+  const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  const watermark = document.getElementById('watermark');
+  const watermarkContent = document.getElementById('watermarkContent');
+  const watermarkDate = document.getElementById('watermarkDate');
+
+  watermarkContent.textContent = t('watermark_prefix') + chosenText + t('watermark_suffix');
+  watermarkDate.textContent = formatMemoryDate(memory);
+
+  watermark.style.display = 'block';
+  currentMemoryData = memory;
+}
+
+// Click watermark → open reunion
+document.getElementById('watermark').addEventListener('click', () => {
+  if (currentMemoryData) openReunion(currentMemoryData);
+});
+
+// ─── v2: Past Light (completed-state entry to Reunion) ──────────────────────
+function showPastLight() {
+  const pastLight = document.getElementById('pastLight');
+  const pastLightText = document.getElementById('pastLightText');
+  const memory = pickMemory();
+
+  if (!memory) {
+    // No past memories yet — show poetic placeholder
+    pastLightText.textContent = t('past_light_none');
+    pastLight.style.display = 'flex';
+    // Fade in with delay
+    setTimeout(() => pastLight.classList.add('visible'), 600);
+    currentMemoryData = null;
+    return;
+  }
+
+  const nonEmpty = memory.entries.filter(c => c.trim());
+  if (!nonEmpty.length) {
+    pastLightText.textContent = t('past_light_none');
+    pastLight.style.display = 'flex';
+    setTimeout(() => pastLight.classList.add('visible'), 600);
+    currentMemoryData = null;
+    return;
+  }
+
+  // Show "曾经的微光" with a snippet
+  const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  const snippet = chosenText.length > 18 ? chosenText.slice(0, 18) + '…' : chosenText;
+  pastLightText.textContent = t('past_light_text') + ' 「' + snippet + '」';
+  pastLight.style.display = 'flex';
+  currentMemoryData = memory;
+  // Fade in with delay, like a gentle afterthought
+  setTimeout(() => pastLight.classList.add('visible'), 600);
+}
+
+// Click past-light → open reunion (or navigate to history if no data)
+document.getElementById('pastLight').addEventListener('click', () => {
+  if (currentMemoryData) {
+    openReunion(currentMemoryData);
+  } else {
+    // No past memories — gently guide user to history
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[data-view]').forEach(v => v.classList.remove('active'));
+    document.querySelector('.nav-tab[data-tab="history"]').classList.add('active');
+    document.querySelector('[data-view="history"]').classList.add('active');
+    renderHistory('');
+  }
+});
+
+// ─── v2: Reunion Full-screen ───────────────────────────────────────────────
+function openReunion(memory) {
+  logEvent('reunion_opened');
+  const overlay = document.getElementById('reunionOverlay');
+  const dateEl = document.getElementById('reunionDate');
+  const dateSubEl = document.getElementById('reunionDateSub');
+  const entriesEl = document.getElementById('reunionEntries');
+  const hintEl = document.getElementById('reunionHint');
+
+  // Format date for display
+  const dateObj = new Date(memory.date + 'T00:00:00');
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+
+  if (LANG === 'zh') {
+    dateEl.textContent = `${year}年${month}月${day}日`;
+    const diffDays = Math.floor((new Date(todayKey() + 'T00:00:00') - dateObj) / (1000 * 60 * 60 * 24));
+    dateSubEl.textContent = memory.isAnniversary && memory.yearsAgo === 1
+      ? '去年的今天'
+      : `${diffDays} 天前`;
+  } else {
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    dateEl.textContent = `${monthNames[month-1]} ${day}, ${year}`;
+    const diffDays = Math.floor((new Date(todayKey() + 'T00:00:00') - dateObj) / (1000 * 60 * 60 * 24));
+    dateSubEl.textContent = memory.isAnniversary && memory.yearsAgo === 1
+      ? 'This day last year'
+      : `${diffDays} days ago`;
+  }
+
+  // ── Pick ONE random non-empty entry (syncs with card) ──
+  const nonEmptyEntries = memory.entries.filter(t => t.trim());
+  const chosenEntry = nonEmptyEntries.length > 0
+    ? nonEmptyEntries[Math.floor(Math.random() * nonEmptyEntries.length)]
+    : '';
+  // Store chosen entry so card generation uses the exact same one
+  overlay._chosenEntry = chosenEntry;
+
+  // Build entries HTML — only ONE entry
+  entriesEl.innerHTML = '';
+  if (chosenEntry.trim()) {
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'reunion-entry';
+    entryDiv.textContent = chosenEntry.trim();
+    entriesEl.appendChild(entryDiv);
+  }
+
+  hintEl.textContent = t('reunion_hint');
+
+  // Store memory for "keep this light" button
+  overlay._memoryData = memory;
+
+  // Show overlay
+  overlay.classList.add('show');
+
+  // Animate elements with staggered delays
+  setTimeout(() => dateEl.classList.add('fade-in'), 100);
+  setTimeout(() => dateSubEl.classList.add('fade-in'), 200);
+  const entryDivs = entriesEl.querySelectorAll('.reunion-entry');
+  entryDivs.forEach((div, i) => {
+    setTimeout(() => div.classList.add('fade-in'), 400 + i * 300);
+  });
+  const baseDelay = 400 + entryDivs.length * 300;
+  setTimeout(() => {
+    const divider = overlay.querySelector('.reunion-divider');
+    if (divider) divider.classList.add('fade-in');
+  }, baseDelay + 200);
+  setTimeout(() => hintEl.classList.add('fade-in'), baseDelay + 400);
+  setTimeout(() => document.getElementById('reunionKeepBtn').classList.add('fade-in'), baseDelay + 600);
+}
+
+// Close reunion
+document.getElementById('reunionClose').addEventListener('click', closeReunion);
+document.getElementById('reunionOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeReunion();
+});
+function closeReunion() {
+  const overlay = document.getElementById('reunionOverlay');
+  overlay.classList.remove('show');
+  // Reset all fade-in classes
+  overlay.querySelectorAll('.fade-in').forEach(el => el.classList.remove('fade-in'));
+}
+
+// ─── v2: 留住这束光 — Generate image card ──────────────────────────────────
+document.getElementById('reunionKeepBtn').addEventListener('click', () => {
+  const overlay = document.getElementById('reunionOverlay');
+  const memory = overlay._memoryData;
+  if (!memory) return;
+  generateCard(memory);
+});
+
+// ════════════════════════════════════════
+// ─── PRE-RENDERED SIGNATURE WORD CACHE ───
+// ════════════════════════════════════════
+// Renders all signature words at app init using "Permanent Marker" font (sharpie style).
+// Stores as Image objects so generateCard() can stamp them instantly — no font loading at card-gen time.
+var _sigCache = {};
+var _sigWordsAll = [
+  'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
+  'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
+  'radiance', 'calm', 'cherish', 'mindful', 'intimacy', 'kiss',
+  'sunrise', 'breathe', 'present', 'alive', 'kindness', 'shine',
+  'whisper', 'embrace', 'wander', 'free', 'soft', 'golden'
+];
+
+function preRenderSigWords() {
+  // Satisfy: expressive script font (SIL license, Google Fonts)
+  // Fallback: cursive system font if Google Fonts blocked in China
+  var FONT_SIZE = 240;       // larger render = crisper when scaled down, captures script flourishes
+  var FONT = FONT_SIZE + 'px "Satisfy", "Playlist Script", "Caveat", cursive';
+  var COLOR = 'rgba(18,14,10,0.86)';  // slightly darker for more contrast
+
+  _sigWordsAll.forEach(function(word) {
+    try {
+      // Measure word first
+      var mc = document.createElement('canvas');
+      var mctx = mc.getContext('2d');
+      mctx.font = FONT;
+      var metrics = mctx.measureText(word);
+      var padX = Math.round(FONT_SIZE * 0.6);
+      var padY = Math.round(FONT_SIZE * 0.4);
+      var cw = Math.ceil(metrics.width) + padX * 2;
+      var ch = FONT_SIZE + padY * 2;
+
+      // Render to offscreen canvas
+      var c = document.createElement('canvas');
+      c.width = cw;
+      c.height = ch;
+      var cx = c.getContext('2d');
+      cx.font = FONT;
+      cx.fillStyle = COLOR;
+      cx.textAlign = 'left';
+      cx.textBaseline = 'alphabetic';
+      cx.fillText(word, padX, FONT_SIZE + padY - padY * 0.3);
+
+      // Store as Image for fast drawImage stamping
+      var img = new Image();
+      img.src = c.toDataURL('image/png');
+      _sigCache[word] = img;
+    } catch(e) {
+      console.warn('preRenderSigWords failed for:', word, e);
+      _sigCache[word] = null;
+    }
+  });
+}
+
+function generateCard(memory) {
+  const canvas = document.createElement('canvas');
+  // Polaroid proportions — photo ~68%, bottom caption ~32% (larger text)
+  const W = 720, H = 1080;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ─── Use the SAME entry that reunion displays (sync) ───
+  let entryText = '';
+  const reunionOverlay = document.getElementById('reunionOverlay');
+  if (reunionOverlay._chosenEntry && reunionOverlay._chosenEntry.trim()) {
+    entryText = reunionOverlay._chosenEntry.trim();
+  } else {
+    // Fallback: pick one random non-empty entry
+    const nonEmpty = memory.entries.filter(t => t.trim());
+    if (!nonEmpty.length) return;
+    entryText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)].trim();
+  }
+
+  // ─── Polaroid dimensions ───
+  const BORDER = 20;
+  const BOTTOM_BORDER = 320;   // extra space for large text
+  const photoX = BORDER;
+  const photoY = BORDER;
+  const photoW = W - BORDER * 2;
+  const photoH = H - BORDER - BOTTOM_BORDER;
+
+  // ════════════════════════════════════════
+  // Warm cream base (like real Polaroid paper)
+  // ══════════════════════════════════════
+  ctx.fillStyle = '#faf8f5';
+  ctx.fillRect(0, 0, W, H);
+
+  // Soft shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.10)';
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = '#faf8f5';
+  ctx.fillRect(0, 0, W, H);
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
+  // Load background image
+  const seed = pickCardBgSeed();
+  const bgUrl = `https://picsum.photos/seed/${seed}/${photoW * 2}/${photoH * 2}`;
+
+  const drawPolaroid = (imgLoaded) => {
+    if (imgLoaded) {
+      try {
+        // Draw photo clipped to rounded rect
+        ctx.save();
+        roundRect(ctx, photoX, photoY, photoW, photoH, 3);
+        ctx.clip();
+        ctx.drawImage(bgImg, photoX, photoY, photoW, photoH);
+
+        // ── Polaroid-style warm/pink vintage overlay ──
+        // Step 1: Slight fade (reduce contrast like old film)
+        ctx.fillStyle = 'rgba(255,250,245,0.08)';
+        ctx.fillRect(photoX, photoY, photoW, photoH);
+        // Step 2: Warm peach-pink tint (the signature Polaroid look)
+        ctx.fillStyle = 'rgba(255,220,195,0.13)';
+        ctx.fillRect(photoX, photoY, photoW, photoH);
+        // Step 3: Subtle purple-pink shift in shadows (Polaroid characteristic)
+        const tintGrad = ctx.createLinearGradient(photoX, photoY, photoX, photoY + photoH);
+        tintGrad.addColorStop(0, 'rgba(255,235,225,0.04)');
+        tintGrad.addColorStop(0.5, 'rgba(230,200,210,0.07)');
+        tintGrad.addColorStop(1, 'rgba(200,180,190,0.09)');
+        ctx.fillStyle = tintGrad;
+        ctx.fillRect(photoX, photoY, photoW, photoH);
+        // Step 4: Vignette (dark edges, lighter center)
+        const vg = ctx.createRadialGradient(
+          photoX + photoW*0.48, photoY + photoH*0.38, photoH*0.12,
+          photoX + photoW*0.50, photoY + photoH*0.42, photoH*0.58
+        );
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(0.6, 'rgba(40,25,15,0.12)');
+        vg.addColorStop(1, 'rgba(35,20,12,0.32)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(photoX, photoY, photoW, photoH);
+
+        // Thin inner edge
+        ctx.strokeStyle = 'rgba(60,45,30,0.06)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, photoX+0.5, photoY+0.5, photoW-1, photoH-1, 3);
+        ctx.stroke();
+        ctx.restore();
+      } catch(e) { drawPhotoFallback(); }
+    } else { drawPhotoFallback(); }
+
+    function drawPhotoFallback() {
+      ctx.save();
+      roundRect(ctx, photoX, photoY, photoW, photoH, 3);
+      ctx.clip();
+      // Warm sepia-toned gradient
+      const g = ctx.createLinearGradient(photoX, photoY, photoX+photoW, photoY+photoH);
+      g.addColorStop(0, '#e8d9c5');   g.addColorStop(0.3, '#ddd0b8');
+      g.addColorStop(0.65, '#d4c4a8'); g.addColorStop(1, '#c9b89a');
+      ctx.fillStyle = g; ctx.fillRect(photoX, photoY, photoW, photoH);
+      // Pink-warm tint layer
+      ctx.fillStyle = 'rgba(255,218,195,0.18)';
+      ctx.fillRect(photoX, photoY, photoW, photoH);
+      // Soft grain texture
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let i=0;i<400;i++){
+        ctx.beginPath();
+        ctx.arc(photoX+Math.random()*photoW, photoY+Math.random()*photoH,
+                Math.random()*1.2+0.2, 0, Math.PI*2); ctx.fill();
+      }
+      // Vignette
+      const vgf = ctx.createRadialGradient(
+        photoX+photoW*0.48, photoY+photoH*0.38, photoH*0.1,
+        photoX+photoW*0.50, photoY+photoH*0.42, photoH*0.58
+      );
+      vgf.addColorStop(0,'rgba(0,0,0,0)');
+      vgf.addColorStop(1,'rgba(50,35,20,0.28)');
+      ctx.fillStyle = vgf; ctx.fillRect(photoX, photoY, photoW, photoH);
+      ctx.restore();
+      ctx.strokeStyle='rgba(60,45,30,0.06)';
+      ctx.lineWidth=1;
+      roundRect(ctx, photoX+0.5, photoY+0.5, photoW-1, photoH-1, 3);
+      ctx.stroke();
+    }
+
+    // ══════════════════════════════════════════════════
+    // ─── CAPTION AREA: Clean, peaceful, readable ───
+    // ══════════════════════════════════════════════════
+    const capTop = photoY + photoH + 18;
+    const capCenterX = W / 2;
+
+    // Thin, light system font — ultra-clean, Apple-quality
+    const peaceFont = LANG === 'zh'
+      ? '"PingFang SC", "SF Pro Display", "-apple-system", "Helvetica Neue Light", sans-serif'
+      : '"SF Pro Display Light", "Helvetica Neue Light", "-apple-system", sans-serif';
+
+    // Date — darker gray (+2 levels), larger (+20%), left-aligned, quiet
+    const d = new Date(memory.date + 'T00:00:00');
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${year}.${month}.${day}`;
+
+    ctx.font = '300 16px ' + peaceFont;
+    ctx.fillStyle = 'rgba(110,100,85,0.60)';
+    ctx.textAlign = 'left';
+    ctx.fillText(dateStr, BORDER + 16, capTop + 26);
+
+    // Main entry text — adaptive size based on content length
+    // Layout: left 20% padding, right-aligned (peaceful, like margin notes)
+    const textStartY = capTop + 56;
+    const textLeft = Math.round(W * 0.20);   // 20% from left
+    const maxTextW = W - textLeft - 32;       // remaining width minus right margin
+    const capBottom = H - BORDER;             // bottom edge of caption area
+    const availH = capBottom - textStartY;     // available height for text
+
+    // Start with a reasonable base, shrink based on content length AND line count
+    let fSize = 36;
+    if (entryText.length > 6) fSize = 30;
+    if (entryText.length > 10) fSize = 26;
+    if (entryText.length > 16) fSize = 22;
+    if (entryText.length > 24) fSize = 19;
+    if (entryText.length > 36) fSize = 16;
+    if (entryText.length > 55) fSize = 14;
+
+    // Adaptive: if lines would overflow, keep shrinking until they fit
+    ctx.font = `200 ${fSize}px ${peaceFont}`;
+    let lines = wrapText(ctx, entryText, maxTextW);
+    let neededH = lines.length * Math.round(fSize * 1.75);
+    while (neededH > availH && fSize > 12) {
+      fSize -= 1;
+      ctx.font = `200 ${fSize}px ${peaceFont}`;
+      lines = wrapText(ctx, entryText, maxTextW);
+      neededH = lines.length * Math.round(fSize * 1.75);
+    }
+    ctx.fillStyle = 'rgba(25,22,18,0.82)';
+    ctx.textAlign = 'right';
+
+    // Clean lines, no decoration, no wobble — peaceful
+    // Right-aligned within 80% width (20% left padding)
+    lines.forEach((ln, i) => {
+      ctx.fillText(ln, W - 32, textStartY + i * Math.round(fSize * 1.75));
+    });
+
+    // ─── SIGNATURE WORD — sharpie/marker handwriting feel ───
+    // Emotion-based word selection (Feature 4)
+    var _sigWordsEmotion = {
+      warm:    ['love','warmth','bloom','kiss','shine','golden','radiance','kindness','alive'],
+      calm:    ['peaceful','serenity','calm','breathe','soft','present','mindful','whisper'],
+      hope:    ['hope','light','sunrise','shine','bloom','alive','free'],
+      gentle:  ['gentle','tender','kindness','whisper','embrace','mindful','soft'],
+      soulful: ['soul','gratitude','intimacy','cherish','present','free']
+    };
+    var sigWords = [
+      'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
+      'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
+      'radiance', 'calm', 'cherish', 'mindful', 'intimacy', 'kiss',
+      'sunrise', 'breathe', 'present', 'alive', 'kindness', 'shine',
+      'whisper', 'embrace', 'wander', 'free', 'soft', 'golden'
+    ];
+    // Try emotion-based selection
+    try {
+      var _todayKey = typeof todayKey === 'function' ? todayKey() : null;
+      var _todayEntries = _todayKey && typeof allEntries !== 'undefined' && allEntries[_todayKey] ? allEntries[_todayKey] : [];
+      var _text = _todayEntries.filter(function(e){ return e && e.trim(); }).join(' ');
+      var _emotion = 'gentle';
+      if (_text) {
+        var _scores = { warm:0, calm:0, hope:0, gentle:0 };
+        ['爱','暖','温','笑','开心','快乐','喜','甜','阳光','光','热','感谢','幸福','美好'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.warm++; });
+        ['静','安','平','宁','息','放松','呼吸','安静','平静','宁静','淡','慢'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.calm++; });
+        ['希望','梦想','未来','期待','明天','相信','可能','光明'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.hope++; });
+        ['温柔','柔软','细腻','轻轻','慢慢','柔和','微风','月光','花','叶'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.gentle++; });
+        var _best = 'gentle'; var _bestScore = -1;
+        Object.keys(_scores).forEach(function(k){ if(_scores[k] > _bestScore) { _bestScore = _scores[k]; _best = k; } });
+        if (_bestScore > 0) _emotion = _best;
+      }
+      var _catWords = _sigWordsEmotion[_emotion];
+      if (_catWords && _catWords.length) sigWords = _catWords;
+    } catch(e) {}
+    var sigWord = sigWords[Math.floor(Math.random() * sigWords.length)];
+    var sigImg = _sigCache[sigWord];  // pre-rendered Image or null
+
+    if (sigImg) {
+      // Stamp pre-rendered sharpie signature — straddles photo bottom & white border (like real Polaroid)
+      ctx.save();
+      var _stampW = sigImg.width;
+      var _stampH = sigImg.height;
+      var _scale = Math.min((W * 0.68) / _stampW, 1.5);  // ~68% card width (30% bigger than before)
+      var _drawW = Math.round(_stampW * _scale);
+      var _drawH = Math.round(_stampH * _scale);
+      // Position: lower-left, overlapping photo bottom edge by ~20-30%
+      var _placeX = BORDER + 12;
+      var _placeY = photoY + photoH - _drawH * 0.38;  // top ~38% on photo, rest on white
+      // Random slight rotation like real handwriting (-10° to +7°)
+      var _tilt = (Math.random() * 17 - 10) * Math.PI / 180;
+      ctx.translate(_placeX + _drawW / 2, _placeY + _drawH / 2);
+      ctx.rotate(_tilt);
+      ctx.drawImage(sigImg, -_drawW / 2, -_drawH / 2, _drawW, _drawH);
+      ctx.restore();
+    }
+
+    var dataUrl = canvas.toDataURL('image/png');
+    showCardPreview(dataUrl);
+  };
+
+  const bgImg = new Image();
+  bgImg.crossOrigin = 'anonymous';
+  bgImg.onload = () => { drawPolaroid(true); };
+  bgImg.onerror = () => { drawPolaroid(false); };
+  bgImg.src = bgUrl;
+}
+
+// Helper: rounded rectangle path
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// Word-wrap helper for Canvas
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split('');
+  const lines = [];
+  let currentLine = '';
+
+  for (let i = 0; i < words.length; i++) {
+    const testLine = currentLine + words[i];
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && currentLine.length > 0) {
+      lines.push(currentLine);
+      currentLine = words[i];
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+function showCardPreview(dataUrl) {
+  logEvent('card_generated');
+  const previewOverlay = document.getElementById('cardPreviewOverlay');
+  const img = document.getElementById('cardPreviewImg');
+  img.src = dataUrl;
+  previewOverlay.classList.add('show');
+
+  // Save button
+  document.getElementById('cardSaveBtn').onclick = () => {
+    logEvent('card_saved');
+    // Create download link
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'gratitude-light.png';
+    a.click();
+    showBanner(t('reunion_saved'));
+  };
+
+  document.getElementById('cardCloseBtn').onclick = () => {
+    previewOverlay.classList.remove('show');
+  };
+}
+
+// Also allow echo text to open reunion (clicking the echo entry)
+document.getElementById('echoText').addEventListener('click', () => {
+  // Re-pick same memory or use the current one
+  // Since we don't store the echo's memory, re-pick
+  const memory = pickMemory();
+  if (memory) {
+    // Close the thanks modal first
+    document.getElementById('thanksOverlay').classList.remove('show');
+    const echoSection = document.getElementById('echoSection');
+    if (echoSection) { echoSection.style.display = 'none'; echoSection.classList.remove('visible'); }
+    setTimeout(() => openReunion(memory), 300);
+  }
+});
+
+// ─── History Render ────────────────────────────────────────────────────────
+function renderHistory(query = '') {
+  const keys = Object.keys(allEntries).sort((a, b) => b.localeCompare(a));
+  const statsEl = document.getElementById('historyStats');
+  statsEl.textContent = keys.length ? t('history_stats_n', { n: keys.length }) : t('history_stats_0');
+
+  const listEl = document.getElementById('historyList');
+  listEl.innerHTML = '';
+
+  if (!keys.length) {
+    listEl.innerHTML = `<div class="empty-history">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+      </svg>
+      <p>${t('empty_history')}</p>
+    </div>`;
+    return;
+  }
+
+  const locale = LANG === 'zh' ? 'zh-CN' : 'en-US';
+  let anyMatch = false;
+  keys.forEach(key => {
+    const dayEntries = allEntries[key];
+    const filtered = query ? dayEntries.filter(e => e.toLowerCase().includes(query.toLowerCase())) : dayEntries;
+    if (!filtered.length) return;
+    anyMatch = true;
+
+    const d = new Date(key + 'T00:00:00');
+    const label = d.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+
+    const group = document.createElement('div');
+    group.className = 'history-group';
+    group.innerHTML = `<div class="history-group-date">${label}</div>`;
+
+    const card = document.createElement('div');
+    card.className = 'history-card';
+
+    dayEntries.forEach(text => {
+      const visible = !query || text.toLowerCase().includes(query.toLowerCase());
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.style.opacity = visible ? '1' : '0.3';
+      item.innerHTML = `<div class="history-bullet"></div><div class="history-text">${query ? highlight(text, query) : escapeHtml(text)}</div>`;
+      card.appendChild(item);
+    });
+
+    group.appendChild(card);
+    listEl.appendChild(group);
+  });
+
+  if (!anyMatch && query) {
+    listEl.innerHTML = `<div class="empty-history">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <p>${t('no_match')}</p>
+    </div>`;
+  }
+}
+
+function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function highlight(text, query) {
+  const escaped = escapeHtml(text);
+  const q = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return escaped.replace(new RegExp(`(${q})`, 'gi'), '<mark class="highlight">$1</mark>');
+}
+
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => renderHistory(e.target.value.trim()), 200);
+});
+
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[data-view]').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`[data-view="${tab}"]`).classList.add('active');
+    if (tab === 'history') { renderHistory(document.getElementById('searchInput').value.trim()); logEvent('history_opened'); }
+  });
+});
+
+// ─── Reminder ──────────────────────────────────────────────────────────────
+function scheduleReminder() {
+  let lastBannerMinute = -1;
+  function checkAndNotify() {
+    const key = todayKey();
+    if (allEntries[key] && allEntries[key].length === 3 && allEntries[key].some(e => e.trim())) return;
+    const now = new Date();
+    if (h === 23 && m === 0 && !reminderBannerShown) {
+      reminderBannerShown = true;
+      showBanner(t('reminder_banner'));
+    }
+    if (h === 0) reminderBannerShown = false; // reset at midnight
+  }
+  checkAndNotify();
+  setInterval(checkAndNotify, 60 * 1000);
+
+  if ('Notification' in window) {
+    const scheduleWebNotif = () => {
+      const now = new Date();
+      const target = new Date();
+      target.setHours(23, 0, 0, 0);
+      if (now >= target) target.setDate(target.getDate() + 1);
+      const msUntil = target - now;
+      setTimeout(() => {
+        const key = todayKey();
+        if (!allEntries[key] || !allEntries[key].some(e => e.trim())) {
+          if (Notification.permission === 'granted') {
+            new Notification(t('reminder_notif_title'), { body: t('reminder_notif'), tag: 'gratitude-reminder' });
+          }
+        }
+        scheduleWebNotif();
+      }, msUntil);
+    };
+    document.addEventListener('click', function requestPerm() {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(() => scheduleWebNotif());
+      } else if (Notification.permission === 'granted') {
+        scheduleWebNotif();
+      }
+      document.removeEventListener('click', requestPerm);
+    }, { once: false });
+  }
+}
+
+function showBanner(msg) {
+  const el = document.getElementById('notifBanner');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// ─── Boot ──────────────────────────────────────────────────────────────────
+initAuth();
+
+// ─── Service Worker ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const swPath = new URL('sw.js', window.location.href).pathname;
+  navigator.serviceWorker.register(swPath + '?v=3').then(reg => {
+    reg.update();
+  }).catch(err => {
+    console.warn('[SW] Registration failed:', err.message);
+  });
+}
+
+// ─── PWA Install Prompt ───────────────────────────────────────────────────
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallBanner();
+  logEvent('pwa_install_prompt');
+});
+
+function showInstallBanner() {
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (localStorage.getItem('install_dismissed')) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'install-banner';
+  banner.id = 'installBanner';
+  banner.innerHTML = `
+    <div class="install-banner-icon">🌿</div>
+    <div class="install-banner-text">
+      <h4>${t('install_title')}</h4>
+      <p>${t('install_desc')}</p>
+    </div>
+    <button class="install-banner-btn" id="installBtn">${t('install_btn')}</button>
+    <button class="install-banner-close" id="installClose">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  `;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => { requestAnimationFrame(() => banner.classList.add('show')); });
+
+  document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    banner.classList.remove('show');
+    setTimeout(() => banner.remove(), 400);
+  });
+
+  document.getElementById('installClose').addEventListener('click', () => {
+    localStorage.setItem('install_dismissed', '1');
+    banner.classList.remove('show');
+    setTimeout(() => banner.remove(), 400);
+  });
+}
+
+// iOS install guide
+(function checkIOSInstall() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isSafari = /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+  if (isIOS && isSafari && !isStandalone && !localStorage.getItem('ios_install_dismissed')) {
+    setTimeout(() => {
+      const banner = document.createElement('div');
+      banner.className = 'install-banner';
+      banner.id = 'iosInstallBanner';
+      banner.innerHTML = `
+        <div class="install-banner-icon">🌿</div>
+        <div class="install-banner-text">
+          <h4>${t('install_title')}</h4>
+          <p>${t('ios_install_desc')}</p>
+        </div>
+        <button class="install-banner-close" id="iosInstallClose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      `;
+      document.body.appendChild(banner);
+      requestAnimationFrame(() => { requestAnimationFrame(() => banner.classList.add('show')); });
+      document.getElementById('iosInstallClose').addEventListener('click', () => {
+        localStorage.setItem('ios_install_dismissed', '1');
+        banner.classList.remove('show');
+        setTimeout(() => banner.remove(), 400);
+      });
+    }, 2000);
+  }
+})();
+</script>
+<script src="ai-care.js"></script>
+</body>
+</html>
