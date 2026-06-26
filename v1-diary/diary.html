@@ -451,7 +451,7 @@
     <div class="preview-area" id="previewArea"></div>
   </div>
 
-  <button class="generate-btn fade-in-up delay-2" id="generateBtn" onclick="generateDiary()">
+  <button class="generate-btn fade-in-up delay-2" id="generateBtn" onclick="handleGenerateBtn()">
     ✦ 整理成日记
   </button>
 
@@ -507,7 +507,6 @@
             <button class="output-action-btn" onclick="saveDiary()">💾 保存</button>
             <button class="output-action-btn" onclick="shareDiary()">📤 分享</button>
             <button class="output-action-btn" onclick="regenerateImage()">🖼️ 换图</button>
-            <button class="output-action-btn primary" onclick="resetForNew()">✦ 再写一篇</button>
           </div>
         </div>
 
@@ -702,9 +701,26 @@ function generateDiary(){
     var os=document.getElementById('outputSection');os.classList.add('active');os.classList.add('fade-in-up');
     setTimeout(function(){os.scrollIntoView({behavior:'smooth',block:'start'});},100);
 
+    // 生成完成后，把提交按钮改成「再写一篇」
+    var btn = document.getElementById('generateBtn');
+    btn.innerHTML = '✦ 再写一篇';
+    btn.dataset.mode = 'reset';
+
     clearDraft();
     logEvent('diary_generated',{emotion:currentEmotion,hasImages:attachedImages.length,hasAudio:!!attachedAudio});
   },1500+Math.random()*1000);
+}
+
+// ══════════════════════════════════════
+// Generate Button Handler (dynamic: generate / reset)
+// ══════════════════════════════════════
+function handleGenerateBtn(){
+  var btn = document.getElementById('generateBtn');
+  if(btn.dataset.mode === 'reset'){
+    resetForNew();
+  } else {
+    generateDiary();
+  }
 }
 
 // ══════════════════════════════════════
@@ -726,6 +742,11 @@ function resetForNew(){
   // Scroll to top
   window.scrollTo({behavior:'smooth',top:0});
   logEvent('diary_new_started');
+
+  // 重置提交按钮文字和行为
+  var btn = document.getElementById('generateBtn');
+  btn.innerHTML = '✦ 整理成日记';
+  btn.dataset.mode = 'generate';
 }
 
 // ══════════════════════════════════════
