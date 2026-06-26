@@ -805,6 +805,42 @@
       main { padding: 20px 16px 100px; }
       .nav { padding: 0 16px; }
     }
+  /* ─── v2-care: Settings Panel ─── */
+  .ai-settings-overlay {
+    display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;
+    background:rgba(61,43,31,0.25);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  .ai-settings-overlay.active { display:flex;align-items:center;justify-content:center; }
+  .ai-settings-card {
+    background:var(--surface);border-radius:var(--radius-lg);
+    padding:28px 24px;width:92%;max-width:360px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.18);
+    animation:fadeInUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  .ai-settings-title { font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:16px; }
+  .ai-settings-label { font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;letter-spacing:0.3px; }
+  .ai-settings-input {
+    width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;
+    font-size:13.5px;font-family:'SF Mono','Fira Code',monospace;
+    color:var(--text-primary);background:var(--bg);outline:none;transition:border-color 0.15s ease;
+  }
+  .ai-settings-input:focus { border-color:var(--accent); }
+  .ai-settings-input::placeholder { color:var(--text-tertiary);opacity:0.5; }
+  .ai-settings-hint { font-size:11px;color:var(--text-tertiary);margin-top:8px;line-height:1.6; }
+  .ai-settings-actions { display:flex;gap:10px;margin-top:20px; }
+  .ai-settings-btn {
+    flex:1;padding:10px;border-radius:10px;font-size:13.5px;font-weight:600;
+    cursor:pointer;transition:all 0.15s ease;font-family:inherit;border:none;
+  }
+  .ai-settings-btn.cancel { background:var(--accent-soft);color:var(--text-secondary); }
+  .ai-settings-btn.cancel:hover { background:var(--border-light); }
+  .ai-settings-btn.save { background:linear-gradient(135deg,#d4a574,#e8b88a);color:#fff; }
+  .ai-settings-btn.save:hover { box-shadow:0 3px 14px rgba(212,165,116,0.3); }
+  .ai-settings-status { font-size:12px;margin-top:10px;display:none; }
+  .ai-settings-status.ok { color:#5a8a5a;display:block; }
+  .ai-settings-status.err { color:var(--danger);display:block; }
+  .nav-settings:hover { color:var(--text-secondary); }
   </style>
 </head>
 <body>
@@ -923,14 +959,13 @@
   </button>
 </nav>
 
-<!-- v2-care: AI Settings Panel (clean, v1-diary style) -->
+<!-- v2-care: Settings Panel -->
 <div class="ai-settings-overlay" id="aiSettingsOverlay">
   <div class="ai-settings-card">
-    <div class="ai-settings-title">AI 设置</div>
-    <div class="ai-settings-sub">配置 DeepSeek API Key 后，鼓励语、Reunion 匹配、签名选词将由 AI 智能生成。</div>
-    <div class="ai-settings-label">DeepSeek API Key</div>
+    <div class="ai-settings-title">设置</div>
+    <div class="ai-settings-label">API Key</div>
     <input class="ai-settings-input" id="aiApiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
-    <div class="ai-settings-hint">Key 仅保存在本设备，不会上传到任何服务器。</div>
+    <div class="ai-settings-hint">仅保存在本设备，不会上传。</div>
     <div class="ai-settings-status" id="aiSettingsStatus"></div>
     <div class="ai-settings-actions">
       <button class="ai-settings-btn cancel" onclick="toggleAISettings()">取消</button>
