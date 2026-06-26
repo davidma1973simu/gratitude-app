@@ -10,6 +10,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="apple-mobile-web-app-title" content="光之日记">
+  <!-- html2canvas for card export -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
 
@@ -561,7 +563,7 @@
 
           <!-- Actions -->
           <div class="output-actions">
-            <button class="output-action-btn" onclick="saveDiary()">💾 保存</button>
+            <button class="output-action-btn primary" onclick="saveDiary()">💾 保存图片</button>
             <button class="output-action-btn" onclick="shareDiary()">📤 分享</button>
             <button class="output-action-btn" onclick="regenerateImage()">🖼️ 换图</button>
           </div>
@@ -1118,16 +1120,71 @@ function renderEmotionDots(scores){
 // Save / Share
 // ══════════════════════════════════════
 function saveDiary(){
+  var btn = document.querySelector('.output-action-btn[onclick="saveDiary()"]');
+  if(btn){ btn.disabled = true; btn.innerHTML = '⏳ 生成中'; }
+
+  // Clone card content, strip UI elements that shouldn't appear in image
+  var cardEl = document.getElementById('outputSection');
+  var clone = cardEl.cloneNode(true);
+  clone.style.position = 'absolute';
+  clone.style.left = '-9999px';
+  clone.style.top = '0';
+  clone.style.width = cardEl.offsetWidth + 'px';
+  document.body.appendChild(clone);
+
+  // Remove unwanted elements from clone
+  var removeSelectors = ['.output-actions', '.diary-edit-hint'];
+  removeSelectors.forEach(function(sel){
+    clone.querySelectorAll(sel).forEach(function(el){ el.remove(); });
+  });
+
+  // Remove contenteditable from user input in clone (fixes cursor rendering)
+  var userInput = clone.querySelector('.diary-user-input');
+  if(userInput) userInput.removeAttribute('contenteditable');
+
+  html2canvas(clone, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    allowTaint: false
+  }).then(function(canvas){
+    // Download as PNG
+    var link = document.createElement('a');
+    var dateStr = formatDate(new Date());
+    link.download = '光之日记_' + dateStr + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    // Cleanup
+    document.body.removeChild(clone);
+    if(btn){ btn.disabled = false; btn.innerHTML = '💾 保存图片'; }
+    showNotification('卡片已保存 ✦');
+
+    // Also persist text data to localStorage (for history)
+    persistDiaryData();
+    logEvent('diary_card_saved',{emotion:currentEmotion});
+  }).catch(function(err){
+    console.warn('html2canvas error:', err);
+    document.body.removeChild(clone);
+    if(btn){ btn.disabled = false; btn.innerHTML = '💾 保存图片'; }
+    // Fallback: just persist text data
+    persistDiaryData();
+    showNotification('图片生成失败，已保存文字');
+    logEvent('diary_save_fallback');
+  });
+}
+
+// Persist diary data to localStorage for history list
+function persistDiaryData(){
   var t=document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
   var k='diary_'+formatDate(new Date());
   try{
     var saved=JSON.parse(localStorage.getItem('saved_diaries')||'{}');
     saved[k]={text:t,image:document.getElementById('outputImage').src,emotion:currentEmotion,savedAt:new Date().toISOString()};
     localStorage.setItem('saved_diaries',JSON.stringify(saved));
-    showNotification('已保存 ✦');
-    logEvent('diary_saved',{emotion:currentEmotion});
     renderHistory();
-  }catch(e){showNotification('保存失败');}
+  }catch(e){}
 }
 function shareDiary(){
   var t=document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
