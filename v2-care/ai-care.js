@@ -295,3 +295,132 @@ setTimeout(function() {
     });
   });
 }, 200);
+
+// ═══ Feature 2: Semantic Reunion Matching ═══
+// Override pickMemory() with keyword-overlap scoring
+setTimeout(function() {
+  if (typeof window.pickMemory === 'function') {
+    var _origPickMemory = window.pickMemory;
+    window.pickMemory = function() {
+      // If feature disabled, use original
+      if (!AI_CFG.features.reunion) return _origPickMemory();
+
+      var todayKey = window.todayKey ? window.todayKey() : null;
+      if (!todayKey || !allEntries) return _origPickMemory();
+
+      var todayEntries = allEntries[todayKey] || [];
+      var todayText = todayEntries.filter(function(e) { return e && e.trim(); }).join(' ');
+      if (!todayText.trim()) return _origPickMemory();
+
+      // Build keyword set for today
+      var todayWords = _extractKeywords(todayText);
+
+      // Score all past entries
+      var keys = Object.keys(allEntries).sort();
+      var pastKeys = keys.filter(function(k) { return k < todayKey; });
+      if (pastKeys.length < 1) return _origPickMemory();
+
+      var bestMatch = null, bestScore = -1;
+
+      for (var i = 0; i < pastKeys.length; i++) {
+        var pk = pastKeys[i];
+        var pEntries = (allEntries[pk] || []).filter(function(e) { return e && e.trim(); });
+        if (!pEntries.length) continue;
+        var pText = pEntries.join(' ');
+        var pWords = _extractKeywords(pText);
+        var score = _jaccardSimilarity(todayWords, pWords);
+        // Boost recent entries (30-180 days ago)
+        var diff = Math.floor((new Date(todayKey) - new Date(pk)) / 86400000);
+        if (diff >= 30 && diff <= 180) score *= 1.4;
+        if (score > bestScore) { bestScore = score; bestMatch = pk; }
+      }
+
+      // Use semantic match if score > threshold
+      if (bestMatch && bestScore > 0.04) {
+        return { date: bestMatch, entries: allEntries[bestMatch], isAnniversary: false, _semantic: true };
+      }
+
+      // Fallback to original
+      return _origPickMemory();
+    };
+  }
+}, 300);
+
+function _extractKeywords(text) {
+  var stop = new Set(['的','了','是','在','我','有','和','就','不','人','都','一','上','也','很','到','说','要','去','你','会','着','没有','看','好','自己','这','那','什么','怎么','为什么','因为','所以','可以','已经','还是','但是','虽然','如果','一个','这个','那个','不是']);
+  var words = new Set();
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (/[\u4e00-\u9fff]/.test(ch)) {
+      if (!stop.has(ch)) words.add(ch);
+      if (i < text.length - 1) {
+        var bg = ch + text[i+1];
+        if (!stop.has(bg)) words.add(bg);
+      }
+    }
+  }
+  return words;
+}
+
+function _jaccardSimilarity(a, b) {
+  var sA = new Set(a), sB = new Set(b);
+  var inter = 0; sA.forEach(function(x) { if (sB.has(x)) inter++; });
+  var union = sA.size + sB.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+// ═══ Feature 3: "给今天的我" Insight ═══
+var _todayInsight = null;
+
+async function generateTodaysInsight() {
+  if (!AI_CFG.features.insight || !AI_CFG.apiKey) return null;
+  var tk = window.todayKey ? window.todayKey() : null;
+  var entries = (tk && allEntries && allEntries[tk]) || [];
+  var nonEmpty = entries.filter(function(e) { return e && e.trim(); });
+  if (!nonEmpty.length) return null;
+
+  var systemPrompt = '你是感恩日记App的"给今天的我"功能。\n用户刚写完今天的感恩条目。请根据内容生成一句30-50字的安静洞察，像是对自己说的一句轻声提醒或有温度的发现。\n风格：诗意、克制、有洞察力（不是彩虹屁）。不要用感叹号。\n只输出洞察本身，不要解释或加前缀。';
+
+  var userPrompt = '今天的感恩条目：\n';
+  nonEmpty.forEach(function(e, i) { userPrompt += (i+1) + '. ' + e + '\n'; });
+  userPrompt += '\n请生成一句30-50字、安静、有洞察力的话，像对自己轻声说的。';
+
+  var result = await callDeepSeek(userPrompt, systemPrompt, 15000);
+  if (result && result.length >= 8 && result.length <= 300) {
+    _todayInsight = result;
+    _displayInsight(result);
+  }
+  return result;
+}
+
+function _displayInsight(text) {
+  // Display quietly in the thank-you modal (after the echo section)
+  var echo = document.getElementById('echoSection');
+  if (!echo) return;
+  var el = document.getElementById('aiInsight');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'aiInsight';
+    el.style.cssText = 'margin-top:14px;font-size:12.5px;color:#86a882;line-height:1.8;font-family:-apple-system,"SF Pro Text",sans-serif;opacity:0;transition:opacity 1.8s ease;';
+    echo.parentNode.insertBefore(el, echo.nextSibling);
+  }
+  el.textContent = '✦ ' + text;
+  setTimeout(function() { el.style.opacity = '1'; }, 200);
+}
+
+// Hook into submit flow: generate insight after submission
+setTimeout(function() {
+  var submitBtn = document.getElementById('submitBtn');
+  if (submitBtn && !submitBtn._aiInsightPatched) {
+    submitBtn._aiInsightPatched = true;
+    var _origClick = submitBtn.onclick;
+    submitBtn.addEventListener('click', function() {
+      setTimeout(function() {
+        if (AI_CFG.features.insight && AI_CFG.apiKey) {
+          generateTodaysInsight();
+        }
+      }, 2800); // After thank-you modal appears
+    });
+  }
+}, 500);
+
