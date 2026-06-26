@@ -67,7 +67,14 @@
     }
     .nav-back:hover { background: var(--accent-soft); }
     .nav-title { font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px; }
-    .nav-right { width: 60px; }
+    .nav-right { width: 60px; display: flex; align-items: center; justify-content: flex-end; }
+    .nav-settings {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-tertiary); transition: all 0.15s ease;
+    }
+    .nav-settings:hover { background: var(--accent-soft); color: var(--accent); }
 
     /* ─── Main ─── */
     main { flex:1; padding: 24px 20px 120px; max-width: 600px; margin:0 auto; width:100%; }
@@ -401,6 +408,51 @@
       background: var(--accent-soft); color: var(--accent); font-weight: 600;
     }
 
+    /* ─── Settings Panel ─── */
+    .settings-panel {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 100;
+      background: rgba(61,43,31,0.25);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .settings-panel.active { display: flex; align-items: center; justify-content: center; }
+    .settings-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      width: 92%; max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      animation: fadeInUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    .settings-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+    .settings-sub { font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 18px; line-height: 1.6; }
+    .settings-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.3px; }
+    .settings-input {
+      width: 100%; padding: 10px 14px;
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: 13.5px; font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text-primary); background: var(--bg);
+      outline: none; transition: border-color 0.15s ease;
+    }
+    .settings-input:focus { border-color: var(--accent); }
+    .settings-input::placeholder { color: var(--text-tertiary); opacity: 0.5; }
+    .settings-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 8px; line-height: 1.6; }
+    .settings-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .settings-btn {
+      flex: 1; padding: 10px; border-radius: 10px;
+      font-size: 13.5px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s ease; font-family: inherit;
+      border: none;
+    }
+    .settings-btn.cancel { background: var(--accent-soft); color: var(--text-secondary); }
+    .settings-btn.cancel:hover { background: var(--border-light); }
+    .settings-btn.save { background: linear-gradient(135deg, #d4a574, #e8b88a); color: white; }
+    .settings-btn.save:hover { box-shadow: 0 3px 14px rgba(212,165,116,0.3); }
+    .settings-status { font-size: 12px; margin-top: 10px; display: none; }
+    .settings-status.ok { color: #5a8a5a; display: block; }
+    .settings-status.err { color: var(--danger); display: block; }
+
     @media (max-width: 480px) {
       main { padding: 14px 12px 90px; }
       .input-section { padding: 14px; }
@@ -417,7 +469,11 @@
     返回
   </button>
   <div class="nav-title">光之日记</div>
-  <div class="nav-right"></div>
+  <div class="nav-right">
+    <button class="nav-settings" id="settingsBtn" onclick="toggleSettings()" title="AI 设置">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 0 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
 </nav>
 
 <main>
@@ -532,7 +588,58 @@
 
 </main>
 
+<!-- Settings Panel -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-card">
+    <div class="settings-title">AI 设置</div>
+    <div class="settings-sub">配置 DeepSeek API Key 后，日记将由 AI 辅助生成，效果更贴合你的内容。</div>
+    <div class="settings-label">DeepSeek API Key</div>
+    <input class="settings-input" id="apiKeyInput" type="password" placeholder="sk-..." autocomplete="off">
+    <div class="settings-hint">Key 仅保存在本设备，不会上传到任何服务器。</div>
+    <div class="settings-status" id="settingsStatus"></div>
+    <div class="settings-actions">
+      <button class="settings-btn cancel" onclick="toggleSettings()">取消</button>
+      <button class="settings-btn save" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ══════════════════════════════════════
+// Settings
+// ══════════════════════════════════════
+function toggleSettings(){
+  var panel = document.getElementById('settingsPanel');
+  if(panel.classList.contains('active')){
+    panel.classList.remove('active');
+  } else {
+    var key = localStorage.getItem('diary_ai_key') || '';
+    document.getElementById('apiKeyInput').value = key;
+    panel.classList.add('active');
+    setTimeout(function(){ document.getElementById('apiKeyInput').focus(); }, 100);
+  }
+}
+function saveSettings(){
+  var key = document.getElementById('apiKeyInput').value.trim();
+  var status = document.getElementById('settingsStatus');
+  if(!key){
+    localStorage.removeItem('diary_ai_key');
+    status.className = 'settings-status ok';
+    status.textContent = '已清除 API Key，将使用模拟模式';
+    setTimeout(function(){ toggleSettings(); }, 1200);
+    return;
+  }
+  if(!key.startsWith('sk-')){
+    status.className = 'settings-status err';
+    status.textContent = 'Key 格式不正确，应以 sk- 开头';
+    return;
+  }
+  localStorage.setItem('diary_ai_key', key);
+  status.className = 'settings-status ok';
+  status.textContent = '已保存 ✦';
+  setTimeout(function(){ toggleSettings(); }, 1000);
+}
+
 // ══════════════════════════════════════
 // State
 // ══════════════════════════════════════
@@ -678,7 +785,7 @@ function restoreDraft(){try{var d=JSON.parse(localStorage.getItem('diary_draft')
 function clearDraft(){localStorage.removeItem('diary_draft');}
 
 // ══════════════════════════════════════
-// Core: Generate
+// Core: Generate (AI or Mock)
 // ══════════════════════════════════════
 function generateDiary(){
   var inp=document.getElementById('diaryInput').value.trim();
@@ -687,6 +794,84 @@ function generateDiary(){
   document.getElementById('loadingSection').classList.add('active');
   document.getElementById('outputSection').classList.remove('active');
 
+  var apiKey=(localStorage.getItem('diary_ai_key')||'').trim();
+
+  if(apiKey&&apiKey.startsWith('sk-')){
+    callDeepSeek(inp,apiKey).then(function(ai){
+      renderFromAI(inp,ai);
+    }).catch(function(err){
+      console.warn('AI调用失败，使用模拟数据:',err);
+      generateMock(inp);
+    });
+  } else {
+    generateMock(inp);
+  }
+}
+
+// ══════════════════════════════════════
+// DeepSeek API Call
+// ══════════════════════════════════════
+function callDeepSeek(inputText,apiKey){
+  return new Promise(function(resolve,reject){
+    var ac=new AbortController();
+    var tid=setTimeout(function(){ac.abort();},19000);
+    var sysTxt='你是一个温暖的感恩日记助手。用户会写下今天感恩的片段，请生成以下内容并以纯JSON格式返回（不要有任何JSON以外的文字，不要加```标记）：\n1. "wrapper": 一段温暖的引导文字（35-65字），放在用户原始输入下方，语气温柔，与用户输入的具体细节相关，不要重复用户原话，而是延伸出一种感受\n2. "emotions": 情绪评分对象，四个维度各0-100的整数：{"warm":80,"calm":60,"hopeful":40,"gentle":70}\n3. "insight": 情绪洞察（30-50字），从用户输入中提取具体的人/事/物名，编织成一句温暖的鼓励，不要模板化通用话\n4. "tome": 致此刻的你（12-22字），一句话，与用户输入内容相关，温暖有力量\n只返回JSON。';
+    var usrTxt='用户写下：\n'+inputText+'\n\n请返回JSON：';
+    fetch('https://api.deepseek.com/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({model:'deepseek-chat',messages:[{role:'system',content:sysTxt},{role:'user',content:usrTxt}],temperature:0.82,max_tokens:600}),
+      signal:ac.signal
+    }).then(function(r){
+      clearTimeout(tid);
+      if(!r.ok){if(r.status===401)throw new Error('API_KEY_INVALID');throw new Error('API error '+r.status);}
+      return r.json();
+    }).then(function(data){
+      clearTimeout(tid);
+      var text=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+      text=text.trim().replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'');
+      resolve(JSON.parse(text.trim()));
+    }).catch(function(e){clearTimeout(tid);reject(e);});
+  });
+}
+
+// ══════════════════════════════════════
+// Render from AI result
+// ══════════════════════════════════════
+function renderFromAI(inputText,ai){
+  var wrapper=ai.wrapper||'';
+  var emotions=ai.emotions||{};
+  var insight=ai.insight||'';
+  var tome=ai.tome||'';
+
+  // Validate emotions
+  var emotionKeys=['warm','calm','hopeful','gentle'];
+  emotionKeys.forEach(function(k){if(typeof emotions[k]!=='number'||emotions[k]<0||emotions[k]>100)emotions[k]=50;});
+
+  currentEmotion=getDominantEmotion(emotions);
+  var imageUrl=pickImage(currentEmotion);
+
+  var parts={userText:inputText,aiText:wrapper};
+
+  renderOutput(parts,imageUrl,emotions,insight,tome);
+
+  currentDiaryKey='diary_'+formatDate(new Date());
+  document.getElementById('loadingSection').classList.remove('active');
+  var os=document.getElementById('outputSection');os.classList.add('active');os.classList.add('fade-in-up');
+  setTimeout(function(){os.scrollIntoView({behavior:'smooth',block:'start'});},100);
+
+  var btn=document.getElementById('generateBtn');
+  btn.innerHTML='✦ 再写一篇';
+  btn.dataset.mode='reset';
+
+  clearDraft();
+  logEvent('diary_ai_generated',{emotion:currentEmotion,hasImages:attachedImages.length,hasAudio:!!attachedAudio});
+}
+
+// ══════════════════════════════════════
+// Generate with Mock Data (fallback)
+// ══════════════════════════════════════
+function generateMock(inp){
   setTimeout(function(){
     var emotions=analyzeEmotions(inp);
     currentEmotion=getDominantEmotion(emotions);
@@ -696,20 +881,19 @@ function generateDiary(){
     var tome=genTome(inp,emotions);
 
     renderOutput(diaryParts,imageUrl,emotions,analysis,tome);
-    currentDiaryKey = 'diary_' + formatDate(new Date());
+    currentDiaryKey='diary_'+formatDate(new Date());
 
     document.getElementById('loadingSection').classList.remove('active');
     var os=document.getElementById('outputSection');os.classList.add('active');os.classList.add('fade-in-up');
     setTimeout(function(){os.scrollIntoView({behavior:'smooth',block:'start'});},100);
 
-    // 生成完成后，把提交按钮改成「再写一篇」
-    var btn = document.getElementById('generateBtn');
-    btn.innerHTML = '✦ 再写一篇';
-    btn.dataset.mode = 'reset';
+    var btn=document.getElementById('generateBtn');
+    btn.innerHTML='✦ 再写一篇';
+    btn.dataset.mode='reset';
 
     clearDraft();
-    logEvent('diary_generated',{emotion:currentEmotion,hasImages:attachedImages.length,hasAudio:!!attachedAudio});
-  },1500+Math.random()*1000);
+    logEvent('diary_mock_generated',{emotion:currentEmotion,hasImages:attachedImages.length,hasAudio:!!attachedAudio});
+  },1000+Math.random()*800);
 }
 
 // ══════════════════════════════════════
