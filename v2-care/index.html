@@ -916,46 +916,25 @@
       <span data-i18n="logout">退出登录</span>
     </button>
   </div>
+
+  <!-- AI Settings Gear Icon -->
+  <button class="nav-settings" id="aiSettingsBtn" onclick="toggleAISettings()" title="AI 设置" style="background:none;border:none;cursor:pointer;padding:6px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--text-tertiary);transition:color 0.15s;">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
 </nav>
 
-<!-- v2-care: AI Settings Panel -->
+<!-- v2-care: AI Settings Panel (clean, v1-diary style) -->
 <div class="ai-settings-overlay" id="aiSettingsOverlay">
-  <div class="ai-settings-panel">
-    <div class="ai-settings-header">
-      <h3>AI 设置</h3>
-      <button class="ai-settings-close" id="aiSettingsClose">×</button>
-    </div>
-    <div class="ai-settings-body">
-      <div class="ai-setting-row">
-        <label>DeepSeek API Key</label>
-        <input type="password" id="aiApiKeyInput" placeholder="sk-..." autocomplete="off" />
-        <button class="ai-setting-save-btn" id="aiApiKeySaveBtn">保存</button>
-      </div>
-      <div class="ai-setting-row">
-        <label class="ai-toggle-label">
-          <input type="checkbox" id="aiFeat1" checked />
-          <span>鼓励语个性化</span>
-        </label>
-      </div>
-      <div class="ai-setting-row">
-        <label class="ai-toggle-label">
-          <input type="checkbox" id="aiFeat2" checked />
-          <span>Reunion 语义匹配</span>
-        </label>
-      </div>
-      <div class="ai-setting-row">
-        <label class="ai-toggle-label">
-          <input type="checkbox" id="aiFeat3" checked />
-          <span>给今天的我</span>
-        </label>
-      </div>
-      <div class="ai-setting-row">
-        <label class="ai-toggle-label">
-          <input type="checkbox" id="aiFeat4" checked />
-          <span>签名词匹配</span>
-        </label>
-      </div>
-      <div class="ai-settings-hint">API Key 仅保存在本设备，不会上传</div>
+  <div class="ai-settings-card">
+    <div class="ai-settings-title">AI 设置</div>
+    <div class="ai-settings-sub">配置 DeepSeek API Key 后，鼓励语、Reunion 匹配、签名选词将由 AI 智能生成。</div>
+    <div class="ai-settings-label">DeepSeek API Key</div>
+    <input class="ai-settings-input" id="aiApiKeyInput" type="password" placeholder="sk-..." autocomplete="off" />
+    <div class="ai-settings-hint">Key 仅保存在本设备，不会上传到任何服务器。</div>
+    <div class="ai-settings-status" id="aiSettingsStatus"></div>
+    <div class="ai-settings-actions">
+      <button class="ai-settings-btn cancel" onclick="toggleAISettings()">取消</button>
+      <button class="ai-settings-btn save" onclick="saveAISettings()">保存</button>
     </div>
   </div>
 </div>
