@@ -1,6 +1,9 @@
 // ═══ v2-care: AI Features (clean, hidden from user) ═══
 // All 4 features auto-enabled when API Key is set.
 // User only sees a small gear icon → clean API key input.
+//
+// NOTE: vars from index.html inline script are exposed as window.*
+//   window.allEntries, window.getTotalCount, window.todayKey
 
 var V2CARE_API_KEY = localStorage.getItem('v2care_api_key') || '';
 
@@ -91,7 +94,7 @@ setTimeout(function() {
 
 // ── Feature 1: Personalized Encouragement ────────────────────────────────
 async function showEncouragementHintAI() {
-  var count = getTotalCount ? getTotalCount() : 0;
+  var count = window.getTotalCount ? window.getTotalCount() : 0;
   var encArea = document.getElementById('encouragementArea');
   var encText = document.getElementById('encouragementText');
   if (!encArea || !encText) return;
@@ -124,7 +127,7 @@ async function showEncouragementHintAI() {
 }
 
 function showEncouragementHintFallback() {
-  var count = getTotalCount ? getTotalCount() : 0;
+  var count = window.getTotalCount ? window.getTotalCount() : 0;
   var encArea = document.getElementById('encouragementArea');
   var encText = document.getElementById('encouragementText');
   if (!encArea || !encText) return;
@@ -147,10 +150,11 @@ function showEncouragementHintFallback() {
 
 function getRecentEntries(n) {
   n = n || 6;
-  var keys = Object.keys(typeof allEntries !== 'undefined' ? allEntries : {}).sort(function(a, b) { return b.localeCompare(a); });
+  var entriesMap = window.allEntries || {};
+  var keys = Object.keys(entriesMap).sort(function(a, b) { return b.localeCompare(a); });
   var result = [];
   for (var i = 0; i < keys.length && result.length < n; i++) {
-    var entries = ((allEntries || {})[keys[i]] || []);
+    var entries = (entriesMap[keys[i]] || []);
     for (var j = 0; j < entries.length && result.length < n; j++) {
       if (entries[j] && entries[j].trim()) result.push(entries[j].trim());
     }
@@ -192,8 +196,9 @@ function detectEmotion(text) {
 
 function pickEmotionBasedSigWord() {
   if (typeof _sigWordsAll === 'undefined') return 'light';
-  var todayKey = window.todayKey ? window.todayKey() : null;
-  var todayEntries = todayKey && allEntries && allEntries[todayKey] ? allEntries[todayKey] : [];
+  var entriesMap = window.allEntries || {};
+  var tk = window.todayKey ? window.todayKey() : null;
+  var todayEntries = (tk && entriesMap[tk]) ? entriesMap[tk] : [];
   var text = todayEntries.filter(function(e) { return e && e.trim(); }).join(' ');
   var emotion = detectEmotion(text);
   var words = SIG_CATEGORIES[emotion] || _sigWordsAll;
@@ -225,19 +230,20 @@ setTimeout(function() {
     var _origPickMemory = window.pickMemory;
     window.pickMemory = function() {
       if (!V2CARE_API_KEY) return _origPickMemory();
+      var entriesMap = window.allEntries || {};
       var tk = window.todayKey ? window.todayKey() : null;
-      if (!tk || !allEntries) return _origPickMemory();
-      var todayEntries = allEntries[tk] || [];
+      if (!tk) return _origPickMemory();
+      var todayEntries = entriesMap[tk] || [];
       var todayText = todayEntries.filter(function(e) { return e && e.trim(); }).join(' ');
       if (!todayText.trim()) return _origPickMemory();
       var todayWords = _extractKeywords(todayText);
-      var keys = Object.keys(allEntries).sort();
+      var keys = Object.keys(entriesMap).sort();
       var pastKeys = keys.filter(function(k) { return k < tk; });
       if (pastKeys.length < 1) return _origPickMemory();
       var bestMatch = null, bestScore = -1;
       for (var i = 0; i < pastKeys.length; i++) {
         var pk = pastKeys[i];
-        var pEntries = (allEntries[pk] || []).filter(function(e) { return e && e.trim(); });
+        var pEntries = (entriesMap[pk] || []).filter(function(e) { return e && e.trim(); });
         if (!pEntries.length) continue;
         var pWords = _extractKeywords(pEntries.join(' '));
         var score = _jaccardSimilarity(todayWords, pWords);
@@ -246,7 +252,7 @@ setTimeout(function() {
         if (score > bestScore) { bestScore = score; bestMatch = pk; }
       }
       if (bestMatch && bestScore > 0.04) {
-        return { date: bestMatch, entries: allEntries[bestMatch], isAnniversary: false, _semantic: true };
+        return { date: bestMatch, entries: entriesMap[bestMatch], isAnniversary: false, _semantic: true };
       }
       return _origPickMemory();
     };
@@ -257,7 +263,8 @@ setTimeout(function() {
 async function generateTodaysInsight() {
   if (!V2CARE_API_KEY) return null;
   var tk = window.todayKey ? window.todayKey() : null;
-  var entries = (tk && allEntries && allEntries[tk]) || [];
+  var entriesMap = window.allEntries || {};
+  var entries = (tk && entriesMap[tk]) || [];
   var nonEmpty = entries.filter(function(e) { return e && e.trim(); });
   if (!nonEmpty.length) return null;
 
@@ -300,3 +307,17 @@ setTimeout(function() {
     });
   }
 }, 500);
+
+// ── Expose functions for index.html to call ─────────────────────────────
+window.pickEmotionBasedSigWord = pickEmotionBasedSigWord;
+window.callDeepSeek = callDeepSeek;
+window.showEncouragementHintAI = showEncouragementHintAI;
+
+// Wait for window.allEntries to be ready, then re-patch
+var _aiCareRetry = setInterval(function() {
+  if (window.allEntries && typeof showEncouragementHint === 'function') {
+    window.showEncouragementHint = showEncouragementHintAI;
+    clearInterval(_aiCareRetry);
+  }
+}, 200);
+setTimeout(function() { clearInterval(_aiCareRetry); }, 10000);

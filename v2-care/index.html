@@ -1583,7 +1583,8 @@ function saveLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data
 function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
 // ─── Cloud Data ────────────────────────────────────────────────────────────
-let allEntries = {};
+var allEntries = {};
+window.allEntries = allEntries;
 
 async function loadCloud() {
   if (!SB._tokens) return {};
@@ -3224,6 +3225,12 @@ function showInstallBanner() {
   }
 })();
 </script>
+
+// ─── v2-care: expose vars for ai-care.js ─────────────────────────────
+window.allEntries = allEntries;
+window.getTotalCount = getTotalCount;
+window.todayKey = todayKey;
+
 <script src="ai-care.js"></script>
 </body>
 </html>
