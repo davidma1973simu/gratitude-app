@@ -407,6 +407,32 @@
       display: inline-block; margin-top: 6px;
       font-size: 10px; letter-spacing: 0.4px;
       padding: 2px 7px; border-radius: 7px;
+    }
+    /* Share hint bar */
+    .share-hint-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(62,43,31,0.92); color: #fefcf9;
+      padding: 13px 20px; z-index: 150;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; font-size: 12.5px; line-height: 1.5;
+      transform: translateY(100%); opacity: 0;
+      transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .share-hint-bar.show { transform: translateY(0); opacity: 1; }
+    .share-hint-text { flex: 1; opacity: 0.82; }
+    .share-hint-btn {
+      background: rgba(255,255,255,0.15); color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 6px 14px; border-radius: 9px;
+      font-size: 12px; cursor: pointer; white-space: nowrap;
+      transition: all 0.15s ease; flex-shrink: 0;
+    }
+    .share-hint-btn:active { background: rgba(255,255,255,0.28); }
+    .share-hint-dismiss {
+      background: none; border: none; color: rgba(255,255,255,0.45);
+      font-size: 15px; cursor: pointer; padding: 4px; flex-shrink: 0;
+    }
       background: var(--accent-soft); color: var(--accent); font-weight: 600;
     }
 
@@ -1160,6 +1186,7 @@ function saveDiary(){
     document.body.removeChild(clone);
     if(btn){ btn.disabled = false; btn.innerHTML = '💾 保存图片'; }
     showNotification('卡片已保存 ✦');
+    showShareHint();
 
     // Also persist text data to localStorage (for history)
     persistDiaryData();
@@ -1280,6 +1307,24 @@ function showNotification(msg){
 }
 function logEvent(ev,props){try{var es=JSON.parse(localStorage.getItem('diary_events')||'[]');es.push({event:ev,properties:props||{},ts:new Date().toISOString()});if(es.length>200)es=es.slice(-200);localStorage.setItem('diary_events',JSON.stringify(es));}catch(e){}}
 
+
+function showShareHint(){
+  var bar = document.getElementById('shareHintBar');
+  if(bar){ bar.classList.add('show'); setTimeout(function(){ bar.classList.remove('show'); }, 8000); }
+}
+function copyShareLink(){
+  var link = '光之日记 — 用 AI 把感恩写成一封给自己的信
+https://davidma1973simu.github.io/gratitude-app/v1-diary/';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(function(){ showNotification('已复制链接 📋'); });
+  }
+  dismissShareHint();
+}
+function dismissShareHint(){
+  var bar = document.getElementById('shareHintBar');
+  if(bar) bar.classList.remove('show');
+}
+
 // ─── 浏览器返回按钮保护 ───
 (function(){
   var basePath = window.location.pathname.replace(/[^/]*$/, '');
@@ -1292,5 +1337,12 @@ function logEvent(ev,props){try{var es=JSON.parse(localStorage.getItem('diary_ev
 })();
 </script>
 
+
+<!-- Share hint bar -->
+<div class="share-hint-bar" id="shareHintBar">
+  <span class="share-hint-text">图片已保存 · 如果分享后有人问起，可以告诉他们</span>
+  <button class="share-hint-btn" onclick="copyShareLink()">复制链接</button>
+  <button class="share-hint-dismiss" onclick="dismissShareHint()">✕</button>
+</div>
 </body>
 </html>
