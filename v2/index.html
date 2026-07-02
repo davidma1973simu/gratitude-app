@@ -360,6 +360,32 @@
     .modal-btn:hover { opacity: 0.88; }
 
     /* ─── Notification Banner ─── */
+
+    /* Share hint bar (reused from v1-diary) */
+    .share-hint-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(62,43,31,0.92); color: #fefcf9;
+      padding: 13px 20px; z-index: 150;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; font-size: 12.5px; line-height: 1.5;
+      transform: translateY(100%); opacity: 0;
+      transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    }
+    .share-hint-bar.show { transform: translateY(0); opacity: 1; }
+    .share-hint-text { flex: 1; opacity: 0.82; }
+    .share-hint-btn {
+      background: rgba(255,255,255,0.15); color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 6px 14px; border-radius: 9px;
+      font-size: 12px; cursor: pointer; white-space: nowrap;
+      transition: all 0.15s ease; flex-shrink: 0;
+    }
+    .share-hint-btn:active { background: rgba(255,255,255,0.28); }
+    .share-hint-dismiss {
+      background: none; border: none; color: rgba(255,255,255,0.45);
+      font-size: 15px; cursor: pointer; padding: 4px; flex-shrink: 0;
+    }
     .notif-banner {
       position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
       background: var(--text-primary); color: #fafaf9;
@@ -2889,6 +2915,7 @@ function showCardPreview(dataUrl) {
     a.download = 'gratitude-light.png';
     a.click();
     showBanner(t('reunion_saved'));
+    showShareHint();
   };
 
   document.getElementById('cardCloseBtn').onclick = () => {
@@ -3138,5 +3165,30 @@ function showInstallBanner() {
   }
 })();
 </script>
+
+<script>
+function showShareHint(){
+  var bar = document.getElementById('shareHintBar');
+  if(bar){ bar.classList.add('show'); setTimeout(function(){ bar.classList.remove('show'); }, 8000); }
+}
+function copyShareLink(){
+  var link = '感恩日记 V2 — 你写下的光，会回来找你
+https://davidma1973simu.github.io/gratitude-app/v2/';
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(function(){ showBanner('✅ 已复制链接'); });
+  }
+  dismissShareHint();
+}
+function dismissShareHint(){
+  var bar = document.getElementById('shareHintBar');
+  if(bar) bar.classList.remove('show');
+}
+</script>
+<!-- Share hint bar -->
+<div class="share-hint-bar" id="shareHintBar">
+  <span class="share-hint-text">图片已保存 · 如果分享后有人问起，可以告诉他们</span>
+  <button class="share-hint-btn" onclick="copyShareLink()">复制链接</button>
+  <button class="share-hint-dismiss" onclick="dismissShareHint()">✕</button>
+</div>
 </body>
 </html>
