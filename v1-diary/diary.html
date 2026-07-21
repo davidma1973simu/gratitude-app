@@ -1313,8 +1313,7 @@ function showShareHint(){
   if(bar){ bar.classList.add('show'); setTimeout(function(){ bar.classList.remove('show'); }, 8000); }
 }
 function copyShareLink(){
-  var link = '光之日记 — 用 AI 把感恩写成一封给自己的信
-https://davidma1973simu.github.io/gratitude-app/v1-diary/';
+  var link = '光之日记 — 用 AI 把感恩写成一封给自己的信\nhttps://davidma1973simu.github.io/gratitude-app/v1-diary/';
   if(navigator.clipboard){
     navigator.clipboard.writeText(link).then(function(){ showNotification('已复制链接 📋'); });
   }
