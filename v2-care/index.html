@@ -165,6 +165,37 @@
       letter-spacing: 0.3px;
     }
 
+    /* ─── Gentle question — a quiet reflection after writing (no new channel) ─── */
+    .gentle-area {
+      margin-top: 10px;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 1s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .gentle-area.visible { opacity: 1; }
+    .gentle-label {
+      font-size: 11px;
+      color: #a7c0a3;
+      letter-spacing: 2px;
+      margin-bottom: 5px;
+    }
+    .gentle-text {
+      font-size: 13px;
+      color: #7a9a86;
+      line-height: 1.8;
+      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      font-weight: 400;
+      white-space: pre-line;
+    }
+    .gentle-hint {
+      font-size: 11px;
+      color: #b6c8b3;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
     .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
     .progress-dots { display: flex; gap: 6px; }
     .dot {
@@ -992,6 +1023,12 @@
       <!-- v2: Encouragement / milestone area — always visible -->
       <div class="encouragement-area" id="encouragementArea" style="display:none;">
         <span class="encouragement-text" id="encouragementText"></span>
+      </div>
+      <!-- v2: Gentle question — a quiet reflection after writing -->
+      <div class="gentle-area" id="gentleArea" style="display:none;">
+        <div class="gentle-label" id="gentleLabel">轻轻一问</div>
+        <div class="gentle-text" id="gentleText"></div>
+        <div class="gentle-hint" id="gentleHint">不用回答也可以 · 轻点此处收起</div>
       </div>
       <!-- v2: Watermark light — a faint past gratitude, like light in the air -->
       <div class="watermark" id="watermark" style="display:none;">
@@ -2296,12 +2333,67 @@ function showEncouragementHint() {
   requestAnimationFrame(() => { encArea.classList.add('visible'); });
 }
 
+// ─── Gentle question — a quiet, optional reflection after writing (no new channel) ───
+const GENTLE_QUESTIONS = {
+  zh: [
+    '写下来之后，有没有哪一刻，你特别想留住？',
+    '如果现在有人问你「为什么值得感谢」，你会先说起什么？',
+    '这件事，让你身体哪个地方悄悄松了一点？',
+    '回头看，你有没有发现自己比以为的更被照顾着？',
+    '把它写下的这一秒，你心里是暖的，还是静的？'
+  ],
+  en: [
+    'After writing it down, is there a moment you especially want to keep?',
+    'If someone asked why it’s worth gratitude, what would you say first?',
+    'Did this loosen something quietly inside you?',
+    'Looking back, do you notice you’re more cared for than you thought?',
+    'In this second of writing, were you warm, or calm?'
+  ]
+};
+
+function showGentleQuestion(entryText) {
+  const area = document.getElementById('gentleArea');
+  const label = document.getElementById('gentleLabel');
+  const textEl = document.getElementById('gentleText');
+  const hintEl = document.getElementById('gentleHint');
+  if (!area || !textEl) return;
+
+  const qs = GENTLE_QUESTIONS[LANG === 'zh' ? 'zh' : 'en'];
+  // Rotate by day + a touch of randomness so it isn't always the same line
+  const idx = (new Date().getDate() + Math.floor(Math.random() * qs.length)) % qs.length;
+
+  // Softly echo back the user's own words (no AI needed) so the question stays about what they wrote
+  let prefix = '';
+  const firstEntry = (entryText || '').split('\n').map(s => s.trim()).find(s => s.length > 0) || '';
+  if (firstEntry) {
+    const clipped = firstEntry.length > 14 ? firstEntry.slice(0, 14) + '…' : firstEntry;
+    prefix = (LANG === 'zh' ? '你刚写下：「' : 'You just wrote: "') + clipped + (LANG === 'zh' ? '」\n' : '"\n');
+  }
+
+  label.textContent = LANG === 'zh' ? '轻轻一问' : 'A quiet question';
+  textEl.textContent = prefix + qs[idx];
+  hintEl.textContent = LANG === 'zh' ? '不用回答也可以 · 轻点此处收起' : 'No need to answer · tap to dismiss';
+  area.style.display = 'block';
+  requestAnimationFrame(() => area.classList.add('visible'));
+}
+
+// Tap to dismiss the gentle question — it should never feel like a task
+document.getElementById('gentleArea').addEventListener('click', () => {
+  const area = document.getElementById('gentleArea');
+  if (!area) return;
+  area.classList.remove('visible');
+  setTimeout(() => { area.style.display = 'none'; }, 1000);
+});
+
 document.getElementById('editBtn').addEventListener('click', () => {
   todayDone = false;
   // Reset past-light visibility
   const pastLight = document.getElementById('pastLight');
   pastLight.style.display = 'none';
   pastLight.classList.remove('visible');
+  // Hide the gentle question when re-editing
+  const gentle = document.getElementById('gentleArea');
+  if (gentle) { gentle.classList.remove('visible'); gentle.style.display = 'none'; }
   renderToday();
 });
 
@@ -2317,6 +2409,9 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   todayDone = true;
   renderToday();
   renderHistory();
+
+  // A quiet reflection, revealed once the thanks modal is closed
+  showGentleQuestion(trimmed.join('\n'));
 
   logEvent('entry_submitted', { count: trimmed.filter(e => e.length >= 5).length });
 
