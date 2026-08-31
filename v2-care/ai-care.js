@@ -106,7 +106,7 @@ async function showEncouragementHintAI() {
 
   var systemPrompt = '你是感恩日记App的鼓励语助手。App哲学是"低语，不喊叫"——安静、克制、温暖的支持。\n根据用户最近的感恩条目，生成一句20-40字的个性化鼓励语。\n不要用感叹号。要温暖但有克制感。如果可以，引用用户条目中的具体细节。\n只输出鼓励语本身，不要解释。';
 
-  var userPrompt = '用户累计记录 ' + count + ' 条感恩。\n';
+  var userPrompt = '';
   if (name) userPrompt += '用户昵称：' + name + '\n';
   if (recent.length) {
     userPrompt += '最近的感恩条目：\n';
@@ -127,23 +127,24 @@ async function showEncouragementHintAI() {
 }
 
 function showEncouragementHintFallback() {
-  var count = window.getTotalCount ? window.getTotalCount() : 0;
   var encArea = document.getElementById('encouragementArea');
   var encText = document.getElementById('encouragementText');
   if (!encArea || !encText) return;
-  var hint = '';
-  if (count === 0) {
-    hint = '✦ 每一束光都值得被记录，从今天开始吧';
-  } else if (count < 3) {
-    hint = '✦ 你已经记录了 ' + count + ' 束光，继续收集';
-  } else if (count < 7) {
-    hint = '✦ 已记录 ' + count + ' 束光，光是会蔓延的';
-  } else if (count < 20) {
-    hint = '✦ 光的收藏家，已收集 ' + count + ' 束光';
-  } else {
-    hint = '✦ ' + count + ' 束光，你的气场已被净化';
-  }
-  encText.textContent = hint;
+  var lines = LANG === 'zh'
+    ? [
+        '✦ 写下来，就是看见的开始',
+        '✦ 今天的光，已经被你收下了',
+        '✦ 一句话也好，光不需要很长',
+        '✦ 你写下的，都会慢慢亮起来'
+      ]
+    : [
+        '✦ Writing it down is the first step to seeing',
+        '✦ Today’s light is already yours',
+        '✦ A single line is enough — light need not be long',
+        '✦ What you write will slowly brighten'
+      ];
+  var idx = new Date().getDate() % lines.length;
+  encText.textContent = lines[idx];
   encArea.style.display = 'block';
   requestAnimationFrame(function() { encArea.classList.add('visible'); });
 }

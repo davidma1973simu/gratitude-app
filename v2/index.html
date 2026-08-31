@@ -1191,14 +1191,14 @@ const I18N = {
     // ── Milestone Encouragement System ──
     ms_1_title: '第一束光，点亮了 ✦',
     ms_1_sub: '你开始了一段旅程',
-    ms_2_title: '光开始有了温度 ✦',
-    ms_2_sub: '你让这束光不再孤单',
-    ms_3_title: '三天连续，小习惯初现 ✦',
-    ms_3_sub: '光是会蔓延的',
-    ms_4_title: '你已是光的收藏家 ✦',
-    ms_4_sub: '七束光，已足以照亮一段路',
-    ms_5_title: '你的气场，已被净化 ✦',
-    ms_5_sub: '感恩不再是习惯，而是你的一部分',
+    ms_2_title: '你又回来了，光一直都在 ✦',
+    ms_2_sub: '隔了多久，都没关系',
+    ms_3_title: '隔了些日子，你又回来了 ✦',
+    ms_3_sub: '光一直在，不急着来',
+    ms_4_title: '你常回到同一束光 ✦',
+    ms_4_sub: '有些光，值得反复看见',
+    ms_5_title: '写了这么久，你发现了吗 ✦',
+    ms_5_sub: '留意光，已成了一种安静的习惯',
   },
   en: {
     login_title: 'Gratitude',
@@ -1287,14 +1287,14 @@ const I18N = {
     // ── Milestone Encouragement System ──
     ms_1_title: 'Your first light shines ✦',
     ms_1_sub: 'A journey has begun',
-    ms_2_title: 'Your light grows warm ✦',
-    ms_2_sub: 'It no longer stands alone',
-    ms_3_title: 'Three days, a habit takes shape ✦',
-    ms_3_sub: 'Light spreads gently',
-    ms_4_title: 'You are a collector of light ✦',
-    ms_4_sub: 'Seven lights, enough to illuminate a path',
-    ms_5_title: 'Your spirit field is purified ✦',
-    ms_5_sub: 'Gratitude is no longer a habit — it is you',
+    ms_2_title: 'You are back - the light was always here ✦',
+    ms_2_sub: 'However long it has been, it is okay',
+    ms_3_title: 'After some days, you returned ✦',
+    ms_3_sub: 'The light stayed - no rush',
+    ms_4_title: 'You return to the same light ✦',
+    ms_4_sub: 'Some light is worth seeing again',
+    ms_5_title: 'After all this writing, did you notice ✦',
+    ms_5_sub: 'Noticing light became a quiet habit',
   },
 };
 
@@ -1924,9 +1924,9 @@ function setNavDate() {
 }
 
 function setGreeting() {
-  // Priority 1: Check milestones that show in greeting area (M3, M4, M5)
+  // Priority 1: Check content-echo milestones that show in greeting area (M4, M5)
   const ms = checkMilestone('greeting');
-  if (ms === 3 || ms === 4 || ms === 5) {
+  if (ms === 4 || ms === 5) {
     showMilestoneInGreeting(ms);
     return;
   }
@@ -2110,8 +2110,10 @@ function updateSubmitBtn() {
 }
 
 // ─── Milestone Encouragement System ──────────────────────────────────────
-// 5 progressive milestones to gently encourage habit formation
-// Each triggers ONLY ONCE, stored in localStorage
+// ─── v2-revised: de-counted, content/return-based encouragement ───
+// No "consecutive days" streak. No visible counts.
+// Triggers: first/second visit (welcome), long-gap return (welcomed),
+// recurring gratitude theme (content echo), deep reflection after enough history.
 
 const MS_PREFIX = 'gratitude_ms_'; // gratitude_ms_1 through gratitude_ms_5
 const MS_COUNT_KEY = 'gratitude_total_count';
@@ -2134,72 +2136,88 @@ function markMsDone(n) {
   localStorage.setItem(MS_PREFIX + n, 'true');
 }
 
-// Check if last 3 days are consecutive (for M3)
-function checkConsecutive3() {
+// Days since last submission (based on stored submitted dates, before today is added).
+function daysSinceLastSubmit() {
   const raw = localStorage.getItem(SUBMITTED_KEY);
-  if (!raw) return false;
-  const dates = JSON.parse(raw);
-  if (dates.length < 3) return false;
-
+  if (!raw) return Infinity;
+  let dates;
+  try { dates = JSON.parse(raw); } catch { return Infinity; }
+  if (!Array.isArray(dates) || !dates.length) return Infinity;
   const sorted = dates.slice().sort().reverse();
+  const last = new Date(sorted[0] + 'T00:00:00');
   const today = new Date(); today.setHours(0,0,0,0);
-  const d1 = new Date(sorted[0] + 'T00:00:00');
-  const d2 = new Date(sorted[1] + 'T00:00:00');
-  const d3 = new Date(sorted[2] + 'T00:00:00');
+  return Math.round((today - last) / 86400000);
+}
 
-  const diff1 = Math.round((today - d1) / 86400000); // today vs most recent
-  const diff12 = Math.round((d1 - d2) / 86400000);
-  const diff23 = Math.round((d2 - d3) / 86400000);
+// Normalize a gratitude line for loose comparison
+function normLine(s) {
+  return (s || '').toLowerCase().replace(/[\s\p{P}]/gu, '');
+}
 
-  return diff1 === 0 && diff12 === 1 && diff23 === 1;
+// Find a gratitude line that recurs >= minTimes across all history.
+// Returns { phrase, count } or null.
+function findRecurringTheme(minTimes) {
+  const lines = [];
+  Object.keys(allEntries).forEach(k => {
+    (allEntries[k] || []).forEach(e => { if (e && e.trim()) lines.push(e.trim()); });
+  });
+  if (lines.length < minTimes) return null;
+  const normed = lines.map(normLine).filter(Boolean);
+  const cnt = {};
+  normed.forEach(n => { cnt[n] = (cnt[n] || 0) + 1; });
+  let best = null, bestN = 0;
+  Object.keys(cnt).forEach(n => {
+    if (cnt[n] >= minTimes && cnt[n] > bestN) { bestN = cnt[n]; best = n; }
+  });
+  if (!best) return null;
+  const orig = lines.find(l => normLine(l) === best) || best;
+  return { phrase: orig, count: bestN };
 }
 
 // Returns milestone number that just triggered, or 0
-// mode: 'submit' = called after submission (checks M1,M2,M3,M4,M5)
-//       'greeting' = called on page load (checks M3,M4,M5 only)
-function checkMilestone(mode) {
-  const count = getTotalCount();
+// mode: 'submit' = after submission (checks M1,M2,M3,M4,M5)
+//       'greeting' = on page load (checks M4,M5 only)
+// gapDays: days since previous submission (used for M3 long-gap return)
+function checkMilestone(mode, gapDays) {
+  // M1: first time ever
+  if (!msDone(1) && getTotalCount() >= 1) { markMsDone(1); return 1; }
 
-  // M1: First time ever
-  if (count >= 1 && !msDone(1)) {
-    markMsDone(1);
-    return 1;
+  // M2: second time ever — welcome back, no pressure (submit-only)
+  if (mode === 'submit' && !msDone(2) && getTotalCount() >= 2) { markMsDone(2); return 2; }
+
+  // M3: long gap return (>=7 days) — reframed as welcomed, not a broken streak (submit-only)
+  if (mode === 'submit' && !msDone(3) && gapDays != null && gapDays >= 7) { markMsDone(3); return 3; }
+
+  // M4: a gratitude theme recurs >= 3 times — content echo (both modes)
+  if (!msDone(4)) {
+    const th = findRecurringTheme(3);
+    if (th) { markMsDone(4); window.__msTheme = th.phrase; return 4; }
   }
 
-  // M2: Second time ever (submit-only)
-  if (mode === 'submit' && count >= 2 && !msDone(2)) {
-    markMsDone(2);
-    return 2;
-  }
-
-  // M3: 3 consecutive days (either mode — show in greeting area)
-  if (!msDone(3) && checkConsecutive3()) {
-    markMsDone(3);
-    return 3;
-  }
-
-  // M4: 7+ total submissions
-  if (count >= 7 && !msDone(4)) {
-    markMsDone(4);
-    return 4;
-  }
-
-  // M5: 20+ total submissions
-  if (count >= 20 && !msDone(5)) {
-    markMsDone(5);
-    return 5;
-  }
+  // M5: deep reflection after enough history (internal count only, never displayed)
+  if (!msDone(5) && getTotalCount() >= 20) { markMsDone(5); return 5; }
 
   return 0;
 }
 
+// Resolve milestone title/sub text (M4 uses the detected recurring theme)
+function milestoneText(msNum) {
+  if (msNum === 4 && window.__msTheme) {
+    return LANG === 'zh'
+      ? { title: '你常提到『' + window.__msTheme + '』 ✦', sub: '那对你，一定很重要' }
+      : { title: "You often return to '" + window.__msTheme + "' ✦", sub: 'That must mean a lot to you' };
+  }
+  return { title: t('ms_' + msNum + '_title'), sub: t('ms_' + msNum + '_sub') };
+}
+
 // Show milestone message in the thank-you modal (M1, M2)
 function showMilestoneInModal(msNum) {
+  const txt = milestoneText(msNum);
   const titleEl = document.getElementById('modalTitle');  // data-i18n="modal_title"
   const subEl = document.getElementById('modalDesc');     // data-i18n="modal_desc"
   if (titleEl && subEl) {
-    titleEl.textContent = t('ms_' + msNum + '_title');
-    subEl.textContent = t('ms_' + msNum + '_sub');
+    titleEl.textContent = txt.title;
+    subEl.textContent = txt.sub;
     // Make it warm and noticeable
     titleEl.style.color = '#b45309';
     titleEl.style.fontSize = '22px';
@@ -2210,19 +2228,20 @@ function showMilestoneInModal(msNum) {
   const encArea = document.getElementById('encouragementArea');
   const encText = document.getElementById('encouragementText');
   if (encArea && encText) {
-    encText.textContent = t('ms_' + msNum + '_title').replace(/\n/g, ' ') + ' — ' + t('ms_' + msNum + '_sub');
+    encText.textContent = txt.title + ' — ' + txt.sub;
     encArea.style.display = 'block';
     requestAnimationFrame(() => { encArea.classList.add('visible'); });
   }
 }
 
-// Show milestone message in greeting area (M3, M4, M5)
+// Show milestone message in greeting area (M4, M5)
 function showMilestoneInGreeting(msNum) {
+  const txt = milestoneText(msNum);
   const titleEl = document.getElementById('greetingTitle');
   const subEl = document.getElementById('greetingSubtitle');
   if (titleEl && subEl) {
-    titleEl.textContent = t('ms_' + msNum + '_title').replace(/\n/g, '\n');
-    subEl.textContent = t('ms_' + msNum + '_sub');
+    titleEl.textContent = txt.title;
+    subEl.textContent = txt.sub;
     // Make milestone greeting stand out — gentle warm highlight
     titleEl.style.color = '#b45309';   // warm amber
     subEl.style.color = '#a16207';
@@ -2232,43 +2251,34 @@ function showMilestoneInGreeting(msNum) {
   const encArea = document.getElementById('encouragementArea');
   const encText = document.getElementById('encouragementText');
   if (encArea && encText) {
-    encText.textContent = t('ms_' + msNum + '_title').replace(/\n/g, ' ') + ' — ' + t('ms_' + msNum + '_sub');
+    encText.textContent = txt.title + ' — ' + txt.sub;
     encArea.style.display = 'block';
     requestAnimationFrame(() => { encArea.classList.add('visible'); });
   }
 }
 
-// Show gentle encouragement hint in the dedicated area (always visible, no milestone needed)
+// Show gentle encouragement hint in the dedicated area (always visible, no counts)
 function showEncouragementHint() {
-  const count = getTotalCount();
   const encArea = document.getElementById('encouragementArea');
   const encText = document.getElementById('encouragementText');
   if (!encArea || !encText) return;
 
-  let hint = '';
-  if (count === 0) {
-    hint = LANG === 'zh'
-      ? '✦ 每一束光都值得被记录，从今天开始吧'
-      : '✦ Every ray of light deserves to be recorded — start today';
-  } else if (count < 3) {
-    hint = LANG === 'zh'
-      ? '✦ 你已经记录了 ' + count + ' 束光，继续收集'
-      : '✦ You\'ve recorded ' + count + ' rays of light. Keep collecting.';
-  } else if (count < 7) {
-    hint = LANG === 'zh'
-      ? '✦ 已记录 ' + count + ' 束光，光是会蔓延的'
-      : '✦ ' + count + ' rays recorded. Light spreads gently.';
-  } else if (count < 20) {
-    hint = LANG === 'zh'
-      ? '✦ 光的收藏家，已收集 ' + count + ' 束光'
-      : '✦ Collector of light — ' + count + ' rays gathered';
-  } else {
-    hint = LANG === 'zh'
-      ? '✦ ' + count + ' 束光，你的气场已被净化'
-      : '✦ ' + count + ' rays — your spirit field is purified';
-  }
-
-  encText.textContent = hint;
+  const lines = LANG === 'zh'
+    ? [
+        '✦ 写下来，就是看见的开始',
+        '✦ 今天的光，已经被你收下了',
+        '✦ 一句话也好，光不需要很长',
+        '✦ 你写下的，都会慢慢亮起来'
+      ]
+    : [
+        '✦ Writing it down is the first step to seeing',
+        '✦ Today’s light is already yours',
+        '✦ A single line is enough — light need not be long',
+        '✦ What you write will slowly brighten'
+      ];
+  // Stable per day so it doesn't flicker on re-render
+  const idx = new Date().getDate() % lines.length;
+  encText.textContent = lines[idx];
   encArea.style.display = 'block';
   requestAnimationFrame(() => { encArea.classList.add('visible'); });
 }
@@ -2289,6 +2299,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   allEntries[key] = trimmed;
   saveLocal(allEntries);
   if (currentUser) await saveCloud(key, trimmed);
+  const gapDays = daysSinceLastSubmit();
   markSubmitted(key);
   clearDraft();
   todayDone = true;
@@ -2297,8 +2308,8 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
   logEvent('entry_submitted', { count: trimmed.filter(e => e.length >= 5).length });
 
-  // Check milestones on submit
-  const ms = checkMilestone('submit');
+  // Check milestones on submit (gapDays feeds the long-gap-return trigger)
+  const ms = checkMilestone('submit', gapDays);
   showThanksModal(ms);
 });
 
@@ -3194,8 +3205,7 @@ function showShareHint(){
   if(bar){ bar.classList.add('show'); setTimeout(function(){ bar.classList.remove('show'); }, 8000); }
 }
 function copyShareLink(){
-  var link = '感恩日记 V2 — 你写下的光，会回来找你
-https://davidma1973simu.github.io/gratitude-app/v2/';
+  var link = '感恩日记 V2 — 你写下的光，会回来找你\nhttps://davidma1973simu.github.io/gratitude-app/v2/';
   if(navigator.clipboard){
     navigator.clipboard.writeText(link).then(function(){ showBanner('✅ 已复制链接'); });
   }
