@@ -436,18 +436,8 @@
   <div class="login-title" data-i18n="login_title">感恩日记</div>
   <div class="login-subtitle" data-i18n="login_subtitle">每天记录三件感恩的事<br>跨设备同步，随时随地回顾</div>
 
-  <!-- Email + Password Login Form -->
-  <div class="login-form" id="loginForm">
-    <input type="email" class="login-input" id="loginEmail" data-i18n-placeholder="login_email_ph" placeholder="输入你的邮箱" autocomplete="email" />
-    <div class="login-password-wrap">
-      <input type="password" class="login-input" id="loginPassword" data-i18n-placeholder="login_password_ph" placeholder="设置密码（首次使用将自动注册）" autocomplete="current-password" style="margin-bottom:4px;" />
-      <button type="button" class="login-password-toggle" id="passwordToggle">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button>
-    </div>
-    <button class="login-btn" id="loginBtn" data-i18n="login_btn">登 录</button>
-    <div class="login-hint" data-i18n="login_hint">首次使用将自动注册账号，密码至少 6 位</div>
-  </div>
+  <button class="login-btn" id="enterBtn">开始记录</button>
+  <div class="login-hint" data-i18n="login_hint">无需注册，写下即开始（记录只属于你）</div>
 </div>
 
 <!-- ═══ App Shell (hidden until confirmed auth) ═══ -->
@@ -560,6 +550,9 @@
 <!-- Notification Banner -->
 <div class="notif-banner" id="notifBanner"></div>
 
+<!-- CloudBase backend (vendor SDK + unified backend wrapper) -->
+<script src="/gratitude-app/vendor/cloudbase.js"></script>
+<script src="/gratitude-app/backend.js"></script>
 <script>
 // ─── Path fix ──
 (function() {
@@ -579,7 +572,7 @@ const I18N = {
     login_password_ph: '设置密码（首次使用将自动注册）',
     login_btn: '登 录',
     login_btn_loading: '登录中…',
-    login_hint: '首次使用将自动注册账号，密码至少 6 位',
+    login_hint: '无需注册，写下即开始（记录只属于你）',
     nav_title: '感恩日记',
     tab_today: '今天',
     tab_history: '历史',
@@ -640,7 +633,7 @@ const I18N = {
     login_password_ph: 'Set password (auto-register on first use)',
     login_btn: 'Sign In',
     login_btn_loading: 'Signing in…',
-    login_hint: 'First time? You\'ll auto-register. Password: 6+ chars.',
+    login_hint: 'No sign-up needed — just start writing. Your entries stay yours.',
     nav_title: 'Gratitude',
     tab_today: 'Today',
     tab_history: 'History',
@@ -749,166 +742,6 @@ document.querySelectorAll('#langToggle .lang-btn').forEach(btn => {
 });
 
 // ─── Supabase Config ────────────────────────────────────────────────────────
-const SB_URL = 'https://reaoliuszbameeibzjvl.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlYW9saXVzemJhbWVlaWJ6anZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTgzNjYsImV4cCI6MjA5NzI3NDM2Nn0.36r_ubgSCFAiQGoCsj_OmqWshPPX1KVHAlcF-8l0F_8';
-
-const SB = {
-  _tokens: null,
-  _listeners: [],
-
-  _loadTokens() {
-    try {
-      const raw = localStorage.getItem('sb_auth');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        // Return tokens even if expired — getSession will attempt refresh
-        if (parsed.access_token) {
-          this._tokens = parsed;
-          return parsed;
-        }
-      }
-    } catch { this._tokens = null; }
-    return null;
-  },
-
-  _saveTokens(session) {
-    if (!session) { localStorage.removeItem('sb_auth'); this._tokens = null; return; }
-    const t = {
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at || (Date.now() / 1000 + 3600),
-      user: session.user
-    };
-    localStorage.setItem('sb_auth', JSON.stringify(t));
-    this._tokens = t;
-  },
-
-  async _api(path, opts = {}) {
-    const headers = {
-      'apikey': SB_KEY,
-      'Content-Type': 'application/json',
-    };
-    if (this._tokens?.access_token) {
-      headers['Authorization'] = `Bearer ${this._tokens.access_token}`;
-    }
-    const res = await fetch(`${SB_URL}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'API error');
-    return data;
-  },
-
-  async signUp(email, password) {
-    return this._api('/auth/v1/signup', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-  },
-
-  async signInWithPassword(email, password) {
-    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Login failed');
-    if (data.access_token) {
-      let user = null;
-      try {
-        const payload = JSON.parse(atob(data.access_token.split('.')[1]));
-        user = { id: payload.sub, email: payload.email, aud: payload.aud };
-      } catch {}
-      const session = {
-        access_token: data.access_token,
-        refresh_token: data.refresh_token || '',
-        expires_at: data.expires_at || (Date.now() / 1000 + 3600),
-        user: user || data.user,
-      };
-      this._saveTokens(session);
-      this._notify('SIGNED_IN', session);
-      return session;
-    }
-    throw new Error(t('err_login'));
-  },
-
-  async getSession() {
-    const tokens = this._loadTokens();
-    if (!tokens) return null;
-    // If token expires within 5 minutes, try to refresh
-    if (tokens.expires_at && Date.now() / 1000 > tokens.expires_at - 300) {
-      if (!tokens.refresh_token) {
-        // No refresh token — can't renew, but keep current tokens if still valid
-        if (Date.now() / 1000 < tokens.expires_at) return tokens;
-        localStorage.removeItem('sb_auth');
-        this._tokens = null;
-        return null;
-      }
-      try {
-        await this._refreshToken(tokens.refresh_token);
-        return this._tokens;
-      } catch (e) {
-        const msg = e.message || '';
-        // Only clear session for real auth errors (bad refresh token)
-        // Don't clear for network errors — user may be offline
-        if (msg.includes('Invalid Refresh Token') || msg.includes('Token has expired') || msg.includes('invalid_grant')) {
-          localStorage.removeItem('sb_auth');
-          this._tokens = null;
-          return null;
-        }
-        // Network error: return current (expired) tokens — app will show cached data
-        console.warn('Token refresh failed (network?), keeping session:', msg);
-        return tokens;
-      }
-    }
-    return tokens;
-  },
-
-  async getUser() {
-    const session = await this.getSession();
-    if (!session) return null;
-    try {
-      const data = await this._api('/auth/v1/user');
-      this._tokens.user = data;
-      this._saveTokens(this._tokens);
-      return data;
-    } catch { return session.user; }
-  },
-
-  async _refreshToken(refreshToken) {
-    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg || 'Refresh failed');
-    this._saveTokens(data);
-    this._notify('TOKEN_REFRESHED', data);
-    return data;
-  },
-
-  async signOut() {
-    try { await this._api('/auth/v1/logout', { method: 'POST' }); } catch {}
-    localStorage.removeItem('sb_auth');
-    this._tokens = null;
-    this._notify('SIGNED_OUT', null);
-  },
-
-  onAuthStateChange(callback) { this._listeners.push(callback); },
-  _notify(event, session) { this._listeners.forEach(fn => { try { fn(event, session); } catch {} }); },
-
-  async getEntries(userId) {
-    return this._api(`/rest/v1/entries?user_id=eq.${userId}&order=date.desc&select=*`);
-  },
-  async upsertEntry(userId, date, c1, c2, c3) {
-    await this._api('/rest/v1/entries', {
-      method: 'POST',
-      headers: { 'Prefer': 'resolution=merge-duplicates' },
-      body: JSON.stringify({ user_id: userId, date, content1: c1 || '', content2: c2 || '', content3: c3 || '' }),
-    });
-  },
-};
-
 // ─── Storage ───────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'gratitude_entries_v1';
 function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
@@ -993,15 +826,17 @@ function showApp() {
 
 async function initAuth() {
   try {
-    const session = await SB.getSession();
-    if (session?.user) {
-      currentUser = session.user;
-      showApp();
-      await startApp();
+    // 匿名优先：自动匿名登录（5s 超时保护，避免卡死）
+    // onAuthStateChange 监听会在 SIGNED_IN 时驱动 showApp + startApp，这里不重复调用
+    const session = await Promise.race([
+      SB.ensureSession(),
+      new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 5000))
+    ]);
+    if (session && session !== 'TIMEOUT' && session?.user) {
       return;
     }
   } catch (e) { console.error('initAuth error:', e); }
-  showLogin();
+  showLogin(); // 离线/失败时显示「开始记录」重试入口
 }
 
 setTimeout(function() {
@@ -1022,86 +857,26 @@ SB.onAuthStateChange(async (event, session) => {
   }
 });
 
-// ── Login ──
-document.getElementById('loginBtn').addEventListener('click', async () => {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-
-  if (!email) { showBanner(t('err_email')); return; }
-  if (!password) { showBanner(t('err_password')); return; }
-  if (password.length < 6) { showBanner(t('err_password_short')); return; }
-
-  const btn = document.getElementById('loginBtn');
+// ── Entry (anonymous-first) ──
+document.getElementById('enterBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('enterBtn');
   btn.disabled = true;
-  btn.textContent = t('login_btn_loading');
-
+  btn.textContent = '正在进入…';
   try {
-    try {
-      const session = await SB.signInWithPassword(email, password);
+    const session = await SB.ensureSession();
+    if (session && session.user) {
       currentUser = session.user;
       showApp();
       await startApp();
       return;
-    } catch (signInErr) {
-      const errMsg = signInErr.message || '';
-      if (errMsg.includes('Invalid login credentials')) {
-        const signUpResult = await SB.signUp(email, password);
-        if (signUpResult.access_token) {
-          let user = null;
-          try {
-            const payload = JSON.parse(atob(signUpResult.access_token.split('.')[1]));
-            user = { id: payload.sub, email: payload.email, aud: payload.aud };
-          } catch {}
-          const session = {
-            access_token: signUpResult.access_token,
-            refresh_token: signUpResult.refresh_token || '',
-            expires_at: signUpResult.expires_at || (Date.now() / 1000 + 3600),
-            user: user || signUpResult.user,
-          };
-          SB._saveTokens(session);
-          currentUser = session.user;
-          showApp();
-          await startApp();
-          return;
-        }
-        try {
-          const session = await SB.signInWithPassword(email, password);
-          currentUser = session.user;
-          showApp();
-          await startApp();
-          return;
-        } catch (_) {
-          throw new Error(t('err_confirm_email'));
-        }
-      }
-      if (errMsg.includes('Email not confirmed')) {
-        throw new Error(t('err_email_not_confirmed'));
-      }
-      throw signInErr;
     }
+    showBanner('暂时无法连接，请检查网络后重试');
   } catch (e) {
-    console.error('Login error:', e);
-    showBanner(e.message || t('err_login'));
+    console.error('Entry error:', e);
+    showBanner('暂时无法连接，请检查网络后重试');
+  } finally {
     btn.disabled = false;
-    btn.textContent = t('login_btn');
-  }
-});
-
-['loginEmail', 'loginPassword'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') document.getElementById('loginBtn').click();
-  });
-});
-
-document.getElementById('passwordToggle').addEventListener('click', () => {
-  const pwInput = document.getElementById('loginPassword');
-  const eyeIcon = document.getElementById('eyeIcon');
-  if (pwInput.type === 'password') {
-    pwInput.type = 'text';
-    eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
-  } else {
-    pwInput.type = 'password';
-    eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    btn.textContent = '开始记录';
   }
 });
 
