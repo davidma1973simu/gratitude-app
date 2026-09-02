@@ -72,6 +72,24 @@
       this._notify('SIGNED_OUT', null);
     },
 
+    // 邮箱密码注册（CloudBase v2：注册成功后自动登录，session 即新账号）
+    async signUpWithEmail(email, password) {
+      this._init();
+      await this._auth.signUpWithEmailAndPassword(email, password);
+      const s = await this._loginState();
+      if (s) { this._tokens = s; this._notify('SIGNED_IN', s); }
+      return s;
+    },
+
+    // 邮箱密码登录
+    async signInWithEmail(email, password) {
+      this._init();
+      await this._auth.signInWithEmailAndPassword(email, password);
+      const s = await this._loginState();
+      if (s) { this._tokens = s; this._notify('SIGNED_IN', s); }
+      return s;
+    },
+
     // 读取某用户全部感恩记录（多文档模式，每天一条；按 _openid 查询，CloudBase SDK 自动注入并匹配 PRIVATE 规则）
     async getEntries(userId) {
       this._init();

@@ -546,6 +546,24 @@
       border-bottom: 1px solid var(--border-light); margin-bottom: 4px;
       word-break: break-all;
     }
+    .upgrade-panel {
+      padding: 8px 10px; border-top: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light); margin: 4px 0;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .upgrade-input {
+      width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+      color: var(--text-primary); box-sizing: border-box;
+    }
+    .upgrade-input:focus { outline: none; border-color: var(--brand, #0E6B50); }
+    .upgrade-submit {
+      width: 100%; padding: 9px; font-size: 13px; font-weight: 600; font-family: inherit;
+      border: none; border-radius: 8px; background: var(--brand, #0E6B50); color: #fff;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .upgrade-submit:disabled { opacity: 0.6; cursor: default; }
+    .upgrade-msg { font-size: 12px; color: #dc2626; line-height: 1.4; }
 
     /* ─── Sync Indicator ─── */
     .sync-badge {
@@ -976,6 +994,16 @@
   <!-- User Menu -->
   <div class="user-menu" id="userMenu">
     <div class="user-menu-email" id="userMenuEmail"></div>
+    <button class="user-menu-item" id="upgradeBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span id="upgradeBtnLabel">升级为账号</span>
+    </button>
+    <div class="upgrade-panel" id="upgradePanel" style="display:none;">
+      <input class="upgrade-input" id="upgradeEmail" type="email" placeholder="你的邮箱" autocomplete="off" />
+      <input class="upgrade-input" id="upgradePassword" type="password" placeholder="设置密码（至少6位）" autocomplete="new-password" />
+      <button class="upgrade-submit" id="upgradeSubmit">升级并同步数据</button>
+      <div class="upgrade-msg" id="upgradeMsg"></div>
+    </div>
     <button class="user-menu-item danger" id="logoutBtn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       <span data-i18n="logout">退出登录</span>
@@ -1574,6 +1602,54 @@ document.getElementById('userAvatar').addEventListener('click', (e) => {
 });
 document.addEventListener('click', () => { document.getElementById('userMenu').classList.remove('show'); });
 
+// ─── B 方案：升级为账号（匿名 → 邮箱密码，数据自动跟随） ───────────────────
+document.getElementById('upgradeBtn').addEventListener('click', () => {
+  const panel = document.getElementById('upgradePanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('upgradeSubmit').addEventListener('click', async () => {
+  const email = document.getElementById('upgradeEmail').value.trim();
+  const pwd = document.getElementById('upgradePassword').value;
+  const msg = document.getElementById('upgradeMsg');
+  const btn = document.getElementById('upgradeSubmit');
+  if (!email || !pwd) { msg.textContent = LANG === 'zh' ? '请填写邮箱和密码' : 'Enter email and password'; return; }
+  if (pwd.length < 6) { msg.textContent = LANG === 'zh' ? '密码至少 6 位' : 'Password min 6 chars'; return; }
+  if (!SB._tokens || !SB._tokens.user) { msg.textContent = LANG === 'zh' ? '登录状态异常' : 'Session error'; return; }
+  btn.disabled = true;
+  msg.textContent = LANG === 'zh' ? '处理中…' : 'Working…';
+  try {
+    const anonUid = SB._tokens.user.id;
+    let session;
+    try {
+      session = await SB.signUpWithEmail(email, pwd);   // 首次：匿名升级为邮箱账号
+    } catch (e) {
+      session = await SB.signInWithEmail(email, pwd);    // 已注册：直接登录
+    }
+    if (!session || !session.user) throw new Error('auth-failed');
+    // 数据迁移：若新 uid 下无数据，则把内存中的 allEntries 写入新账号
+    const existing = await SB.getEntries(session.user.id);
+    if (existing.length === 0 && Object.keys(allEntries).length > 0) {
+      for (const date of Object.keys(allEntries)) {
+        const arr = allEntries[date] || [];
+        await SB.upsertEntry(session.user.id, date, arr[0] || '', arr[1] || '', arr[2] || '');
+      }
+    }
+    currentUser = session.user;
+    SB._tokens = session;
+    updateUserUI();
+    document.getElementById('upgradePanel').style.display = 'none';
+    document.getElementById('upgradeEmail').value = '';
+    document.getElementById('upgradePassword').value = '';
+    msg.textContent = '';
+    showBanner(LANG === 'zh' ? '已升级为账号，数据已同步' : 'Upgraded. Data synced.');
+  } catch (e) {
+    console.error('[CB] upgrade failed:', e);
+    msg.textContent = (LANG === 'zh' ? '升级失败：' : 'Failed: ') + ((e && e.message) || e);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 function updateUserUI() {
   if (!currentUser) return;
   const email = currentUser.email || '';
@@ -1581,6 +1657,9 @@ function updateUserUI() {
   document.getElementById('userMenuEmail').textContent = email || (LANG === 'zh' ? '光之友' : 'Friend of Light');
   const avatar = document.getElementById('userAvatar');
   avatar.textContent = email ? email.charAt(0).toUpperCase() : '光';
+  // 已用邮箱登录则隐藏「升级为账号」入口
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  if (upgradeBtn) upgradeBtn.style.display = email ? 'none' : '';
 }
 
 // ─── Start App ──────────────────────────────────────────────────────────────
