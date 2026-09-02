@@ -11,7 +11,7 @@
  */
 (function () {
   // TODO: 部署前替换为你的 CloudBase 环境 ID（控制台「环境」页查看）
-  const CB_ENV = 'gratitude-app-d7grnbvpr91c2c1da';
+  const CB_ENV = 'eureka-8g0iymqr969c1b32';
 
   const CB = {
     _tokens: null,
@@ -73,20 +73,20 @@
     // 读取某用户全部感恩记录（按日期倒序）
     async getEntries(userId) {
       this._init();
-      const res = await this._db.collection('entries').where({ user_id: userId }).orderBy('date', 'desc').get();
+      const res = await this._db.collection('grat_entries').where({ user_id: userId }).orderBy('date', 'desc').get();
       return (res && res.data) || [];
     },
 
     // 写入/更新某天的感恩（CloudBase 文档库无原生 upsert，先查后写）
     async upsertEntry(userId, date, c1, c2, c3) {
       this._init();
-      const existing = await this._db.collection('entries').where({ user_id: userId, date }).get();
+      const existing = await this._db.collection('grat_entries').where({ user_id: userId, date }).get();
       const payload = { user_id: userId, date, content1: c1 || '', content2: c2 || '', content3: c3 || '' };
       if (existing && existing.data && existing.data.length) {
         const id = existing.data[0]._id;
-        await this._db.collection('entries').doc(id).update(payload);
+        await this._db.collection('grat_entries').doc(id).update(payload);
       } else {
-        await this._db.collection('entries').add(payload);
+        await this._db.collection('grat_entries').add(payload);
       }
     },
 
@@ -94,7 +94,7 @@
     async logEvent(event, properties) {
       if (!this._tokens || !this._tokens.user) return;
       try {
-        await this._db.collection('events').add({
+        await this._db.collection('grat_events').add({
           user_id: this._tokens.user.id,
           event: event,
           properties: properties || {},
