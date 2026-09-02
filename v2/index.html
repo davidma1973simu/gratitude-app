@@ -1521,20 +1521,33 @@ function showApp() {
   hideSplash();
 }
 
+// 统一进入应用入口：设置用户态 → 显示主界面 → 首次进入才跑 startApp（避免重复绑定）
+let appEnteredFor = null;
+async function enterApp(session) {
+  if (!session || !session.user) { showLogin(); return; }
+  currentUser = session.user;
+  SB._tokens = session;
+  showApp();
+  if (appEnteredFor === session.user.id) { updateUserUI(); return; }
+  appEnteredFor = session.user.id;
+  await startApp();
+  logEvent('session_start');
+}
+
 async function initAuth() {
   try {
-    // 匿名优先：自动匿名登录（5s 超时保护，避免卡死）
-    // onAuthStateChange 监听会在 SIGNED_IN 时驱动 showApp + startApp，这里不重复调用
+    // 仅恢复已有会话（localStorage），不自动匿名登录：
+    // 有会话（刷新/已登录）直接进；无会话（无痕窗口/新会话）显示开屏页，让用户选择。
     const session = await Promise.race([
-      SB.ensureSession(),
+      SB.restoreSession(),
       new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 5000))
     ]);
     if (session && session !== 'TIMEOUT' && session?.user) {
-      logEvent('session_start');
+      await enterApp(session);
       return;
     }
   } catch (e) { console.error('initAuth error:', e); }
-  showLogin(); // 离线/失败时显示「开始记录」重试入口
+  showLogin(); // 新会话/无痕窗口/离线：显示开屏登录页，等用户选择
 }
 
 setTimeout(function() {
@@ -1544,12 +1557,8 @@ setTimeout(function() {
 }, 3000);
 
 SB.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session?.user) {
-    currentUser = session.user;
-    showApp();
-    await startApp();
-    logEvent('session_start');
-  } else if (event === 'SIGNED_OUT') {
+  if (event === 'SIGNED_OUT') {
+    appEnteredFor = null;
     currentUser = null;
     allEntries = {};
     showLogin();
@@ -1562,14 +1571,8 @@ document.getElementById('enterBtn').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = LANG === 'zh' ? '正在进入…' : 'Entering…';
   try {
-    const session = await SB.ensureSession();
-    if (session && session.user) {
-      currentUser = session.user;
-      showApp();
-      await startApp();
-      logEvent('session_start');
-      return;
-    }
+    const session = await SB.anonymousLogin();
+    if (session && session.user) { await enterApp(session); return; }
     showBanner(LANG === 'zh' ? '暂时无法连接，请检查网络后重试' : 'Cannot connect, please check network');
   } catch (e) {
     console.error('Entry error:', e);
@@ -1638,7 +1641,7 @@ document.getElementById('accountBtn').addEventListener('click', async () => {
       const detail = '登录阶段：' + fmt(signInErr) + '\n注册阶段：' + fmt(signUpErr);
       throw new Error(detail);
     }
-    // 数据迁移：若新账号无云端数据，且本地/匿名内存有数据，则写入
+    // 数据迁移：若新账号无云端数据，且本地/匿名内存有数据，则先写入（须在 enterApp 读取前完成）
     const existing = await SB.getEntries(session.user.id);
     if (existing.length === 0 && Object.keys(allEntries).length > 0) {
       for (const date of Object.keys(allEntries)) {
@@ -1646,12 +1649,7 @@ document.getElementById('accountBtn').addEventListener('click', async () => {
         await SB.upsertEntry(session.user.id, date, arr[0] || '', arr[1] || '', arr[2] || '');
       }
     }
-    currentUser = session.user;
-    SB._tokens = session;
-    updateUserUI();
-    showApp();
-    await startApp();
-    logEvent('session_start');
+    await enterApp(session);
     showBanner(LANG === 'zh' ? '已登录，数据已同步' : 'Signed in. Data synced.');
   } catch (e) {
     console.error('[CB] account login failed:', e);

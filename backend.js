@@ -48,9 +48,7 @@
       return null;
     },
 
-    // 匿名优先：无会话则自动匿名登录；返回会话或 null
-    // 无论已有会话还是新匿名登录，只要最终拿到会话就通知 SIGNED_IN，
-    // 这样刷新后（getLoginState 直接返回旧会话、不重新登录）也能驱动 UI 显示。
+    // 匿名优先（保留接口兼容）：内部同 ensureSession，无会话自动匿名登录
     async ensureSession() {
       let s = await this._loginState();
       if (!s) {
@@ -58,6 +56,21 @@
         s = await this._loginState();
       }
       if (s) this._notify('SIGNED_IN', s);
+      return s;
+    },
+
+    // 仅恢复已有会话（localStorage / getLoginState），不自动创建匿名用户。
+    // 用于 initAuth：无痕窗口/新会话没有会话时返回 null，由开屏页让用户选择登录方式。
+    async restoreSession() { return this._loginState(); },
+
+    // 显式匿名登录（用户点击「匿名开始」时调用，而非自动）
+    async anonymousLogin() {
+      this._init();
+      try {
+        await this._auth.signInAnonymously();
+      } catch (e) { console.error('[CB] 匿名登录失败:', e); throw e; }
+      const s = await this._loginState();
+      if (s) this._tokens = s;
       return s;
     },
 
@@ -82,7 +95,7 @@
         throw e;
       }
       const s = await this._loginState();
-      if (s) { this._tokens = s; this._notify('SIGNED_IN', s); return s; }
+      if (s) { this._tokens = s; return s; }
       // 注册接口成功但拿不到登录态：多半是账号需邮箱验证（未点激活链接）
       throw new Error('REGISTERED_BUT_NEED_EMAIL_VERIFY');
     },
@@ -97,7 +110,7 @@
         throw e;
       }
       const s = await this._loginState();
-      if (s) { this._tokens = s; this._notify('SIGNED_IN', s); }
+      if (s) { this._tokens = s; }
       return s;
     },
 
