@@ -960,7 +960,7 @@
   <div class="login-form" id="loginForm">
     <button class="login-btn" id="enterBtn">匿名开始</button>
     <div class="login-or"><span>或</span></div>
-    <input class="login-input" id="loginEmail" type="email" placeholder="邮箱" autocomplete="off" />
+    <input class="login-input" id="loginUsername" type="text" placeholder="用户名（用于登录）" autocomplete="off" />
     <div class="login-password-wrap">
       <input class="login-input" id="loginPassword" type="password" placeholder="密码（至少6位）" autocomplete="new-password" />
       <button type="button" class="login-password-toggle" id="loginTogglePwd">👁</button>
@@ -1160,7 +1160,7 @@ const I18N = {
   zh: {
     login_title: '感恩日记',
     login_subtitle: '每天记录三件感恩的事<br>跨设备同步，随时随地回顾',
-    login_email_ph: '输入你的邮箱',
+    login_email_ph: '输入用户名',
     login_password_ph: '设置密码（首次使用将自动注册）',
     login_btn: '登 录',
     login_btn_loading: '登录中…',
@@ -1256,7 +1256,7 @@ const I18N = {
   en: {
     login_title: 'Gratitude',
     login_subtitle: 'Write 3 things you\'re grateful for daily<br>Sync across devices, reflect anytime',
-    login_email_ph: 'Enter your email',
+    login_email_ph: 'Enter username',
     login_password_ph: 'Set password (auto-register on first use)',
     login_btn: 'Sign In',
     login_btn_loading: 'Signing in…',
@@ -1610,11 +1610,11 @@ document.getElementById('loginTogglePwd').addEventListener('click', () => {
   btn.textContent = input.type === 'password' ? '👁' : '🙈';
 });
 document.getElementById('accountBtn').addEventListener('click', async () => {
-  const email = document.getElementById('loginEmail').value.trim();
+  const username = document.getElementById('loginUsername').value.trim();
   const pwd = document.getElementById('loginPassword').value;
   const msg = document.getElementById('loginMsg');
   const btn = document.getElementById('accountBtn');
-  if (!email || !pwd) { msg.textContent = LANG === 'zh' ? '请填写邮箱和密码' : 'Enter email and password'; return; }
+  if (!username || !pwd) { msg.textContent = LANG === 'zh' ? '请填写用户名和密码' : 'Enter username and password'; return; }
   if (pwd.length < 6) { msg.textContent = LANG === 'zh' ? '密码至少 6 位' : 'Password min 6 chars'; return; }
   btn.disabled = true;
   msg.textContent = LANG === 'zh' ? '处理中…' : 'Working…';
@@ -1622,12 +1622,12 @@ document.getElementById('accountBtn').addEventListener('click', async () => {
     let session;
     let signInErr = null, signUpErr = null;
     try {
-      session = await SB.signInWithEmail(email, pwd);   // 先尝试登录
+      session = await SB.signInWithUsername(username, pwd);   // 先尝试登录
     } catch (e1) {
       signInErr = e1;
       console.warn('[CB] signIn failed, try signUp:', e1);
       try {
-        session = await SB.signUpWithEmail(email, pwd); // 未注册则自动注册
+        session = await SB.signUpWithUsername(username, pwd); // 未注册则自动注册
       } catch (e2) {
         signUpErr = e2;
         console.error('[CB] signUp also failed:', e2);
@@ -1662,11 +1662,11 @@ document.getElementById('accountBtn').addEventListener('click', async () => {
 
 function updateUserUI() {
   if (!currentUser) return;
-  const email = currentUser.email || '';
-  // 匿名用户无邮箱：菜单显示「光之友」，头像显示「光」
-  document.getElementById('userMenuEmail').textContent = email || (LANG === 'zh' ? '光之友' : 'Friend of Light');
+  const name = currentUser.username || currentUser.email || '';
+  // 匿名用户无用户名/邮箱：菜单显示「光之友」，头像显示「光」
+  document.getElementById('userMenuEmail').textContent = name || (LANG === 'zh' ? '光之友' : 'Friend of Light');
   const avatar = document.getElementById('userAvatar');
-  avatar.textContent = email ? email.charAt(0).toUpperCase() : '光';
+  avatar.textContent = name ? name.charAt(0).toUpperCase() : '光';
 }
 
 // ─── Start App ──────────────────────────────────────────────────────────────

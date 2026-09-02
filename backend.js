@@ -39,7 +39,7 @@
         console.log('[CB] getLoginState:', JSON.stringify(state && { hasUser: !!state.user, uid: state && state.user && state.user.uid }));
         if (state && state.user) {
           const u = state.user;
-          this._tokens = { access_token: 'anon', user: { id: u.uid, email: u.email || '' } };
+          this._tokens = { access_token: 'anon', user: { id: u.uid, email: u.email || '', username: u.username || '' } };
           console.log('[CB] session OK, uid =', u.uid);
           return this._tokens;
         }
@@ -85,28 +85,27 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // 邮箱密码注册（走「用户名密码」登录方式，把邮箱作为 username）
-    async signUpWithEmail(email, password) {
+    // 用户名密码注册（走「用户名密码」登录方式，零额外配置，无需 SMTP/验证码）
+    async signUpWithUsername(username, password) {
       this._init();
       try {
-        await this._auth.signUpWithEmailAndPassword(email, password);
+        await this._auth.signUpWithUsernameAndPassword(username, password);
       } catch (e) {
-        console.error('[CB] signUpWithEmailAndPassword raw error:', e);
+        console.error('[CB] signUpWithUsernameAndPassword raw error:', e);
         throw e;
       }
       const s = await this._loginState();
       if (s) { this._tokens = s; return s; }
-      // 注册接口成功但拿不到登录态：多半是账号需邮箱验证（未点激活链接）
-      throw new Error('REGISTERED_BUT_NEED_EMAIL_VERIFY');
+      throw new Error('REGISTERED_BUT_NEED_VERIFY');
     },
 
-    // 邮箱密码登录（走「邮箱密码」登录方式）
-    async signInWithEmail(email, password) {
+    // 用户名密码登录
+    async signInWithUsername(username, password) {
       this._init();
       try {
-        await this._auth.signInWithEmailAndPassword(email, password);
+        await this._auth.signInWithUsernameAndPassword(username, password);
       } catch (e) {
-        console.error('[CB] signInWithEmailAndPassword raw error:', e);
+        console.error('[CB] signInWithUsernameAndPassword raw error:', e);
         throw e;
       }
       const s = await this._loginState();
