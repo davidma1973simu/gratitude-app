@@ -85,45 +85,35 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // 用户名密码注册（CloudBase JS SDK v2 未暴露 signUpWithUsernameAndPassword，
-    // 底层 authApi.signUp 直接支持 { username, password }，走「用户名密码」登录方式）
+    // 取底层 authApi（n3.oauthInstance.authApi，含 signUp / signInWithUsernameAndPassword 等真实方法）
+    _authApi() {
+      const api = this._auth && this._auth.oauthInstance && this._auth.oauthInstance.authApi;
+      if (!api) throw new Error('SDK 未暴露底层 authApi');
+      return api;
+    },
+
+    // 用户名密码注册（走 CloudBase「用户名密码」登录方式，零 SMTP/验证码）
+    // 公开 signUp 仅支持 email/phone，用户名须直接调底层 authApi.signUp({ username, password })
     async signUpWithUsername(username, password) {
       this._init();
-      try {
-        // 直接调底层 v1 authApi.signUp，无需 SMTP/验证码
-        if (this._auth && this._auth.oauthInstance && this._auth.oauthInstance.authApi && this._auth.oauthInstance.authApi.signUp) {
-          await this._auth.oauthInstance.authApi.signUp({ username, password });
-        } else {
-          throw new Error('SDK 不支持底层注册');
-        }
-      } catch (e) {
-        console.error('[CB] authApi.signUp raw error:', e);
-        throw e;
-      }
-      // 注册成功后显式登录以建立登录态
-      try {
-        await this._auth.signInWithUsernameAndPassword(username, password);
-      } catch (e) {
-        console.error('[CB] signIn after signup error:', e);
-        throw e;
-      }
+      const api = this._authApi();
+      const res = await api.signUp({ username, password });
+      console.log('[CB] signUp raw response:', JSON.stringify(res && res.data ? res.data : res));
+      // 注册成功后 SDK 自动写入登录态（authApi.signUp 内部 setCredentials）
       const s = await this._loginState();
       if (s) { this._tokens = s; return s; }
       throw new Error('REGISTERED_BUT_NO_SESSION');
     },
 
-    // 用户名密码登录
+    // 用户名密码登录（底层 authApi.signInWithUsernameAndPassword 真实存在，调 signIn + createLoginState）
     async signInWithUsername(username, password) {
       this._init();
-      try {
-        await this._auth.signInWithUsernameAndPassword(username, password);
-      } catch (e) {
-        console.error('[CB] signInWithUsernameAndPassword raw error:', e);
-        throw e;
-      }
+      const api = this._authApi();
+      const res = await api.signInWithUsernameAndPassword(username, password);
+      console.log('[CB] signIn raw response:', JSON.stringify(res && res.data ? res.data : res));
       const s = await this._loginState();
-      if (s) { this._tokens = s; }
-      return s;
+      if (s) { this._tokens = s; return s; }
+      throw new Error('LOGGED_IN_BUT_NO_SESSION');
     },
 
     // 读取某用户全部感恩记录（多文档模式，每天一条；按 _openid 查询，CloudBase SDK 自动注入并匹配 PRIVATE 规则）
