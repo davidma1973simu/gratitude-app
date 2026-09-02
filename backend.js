@@ -72,13 +72,13 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // 邮箱密码注册（CloudBase v2：注册成功后自动登录，session 即新账号）
+    // 邮箱密码注册（走「用户名密码」登录方式，把邮箱作为 username）
     async signUpWithEmail(email, password) {
       this._init();
       try {
-        await this._auth.signUpWithEmailAndPassword(email, password);
+        await this._auth.signUp({ username: email, password });
       } catch (e) {
-        console.error('[CB] signUpWithEmailAndPassword raw error:', e);
+        console.error('[CB] signUp raw error:', e);
         throw e;
       }
       const s = await this._loginState();
@@ -86,13 +86,13 @@
       return s;
     },
 
-    // 邮箱密码登录
+    // 邮箱密码登录（走「用户名密码」登录方式，把邮箱作为 username）
     async signInWithEmail(email, password) {
       this._init();
       try {
-        await this._auth.signInWithEmailAndPassword(email, password);
+        await this._auth.signInWithUsernameAndPassword(email, password);
       } catch (e) {
-        console.error('[CB] signInWithEmailAndPassword raw error:', e);
+        console.error('[CB] signInWithUsernameAndPassword raw error:', e);
         throw e;
       }
       const s = await this._loginState();
