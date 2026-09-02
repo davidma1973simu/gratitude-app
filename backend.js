@@ -85,18 +85,31 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // 用户名密码注册（走「用户名密码」登录方式，零额外配置，无需 SMTP/验证码）
+    // 用户名密码注册（CloudBase JS SDK v2 未暴露 signUpWithUsernameAndPassword，
+    // 底层 authApi.signUp 直接支持 { username, password }，走「用户名密码」登录方式）
     async signUpWithUsername(username, password) {
       this._init();
       try {
-        await this._auth.signUpWithUsernameAndPassword(username, password);
+        // 直接调底层 v1 authApi.signUp，无需 SMTP/验证码
+        if (this._auth && this._auth.oauthInstance && this._auth.oauthInstance.authApi && this._auth.oauthInstance.authApi.signUp) {
+          await this._auth.oauthInstance.authApi.signUp({ username, password });
+        } else {
+          throw new Error('SDK 不支持底层注册');
+        }
       } catch (e) {
-        console.error('[CB] signUpWithUsernameAndPassword raw error:', e);
+        console.error('[CB] authApi.signUp raw error:', e);
+        throw e;
+      }
+      // 注册成功后显式登录以建立登录态
+      try {
+        await this._auth.signInWithUsernameAndPassword(username, password);
+      } catch (e) {
+        console.error('[CB] signIn after signup error:', e);
         throw e;
       }
       const s = await this._loginState();
       if (s) { this._tokens = s; return s; }
-      throw new Error('REGISTERED_BUT_NEED_VERIFY');
+      throw new Error('REGISTERED_BUT_NO_SESSION');
     },
 
     // 用户名密码登录
