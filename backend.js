@@ -70,24 +70,35 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // 读取某用户全部感恩记录（按日期倒序）
+    // 读取某用户全部感恩记录（单文档模式：按 user_id 取 doc，entries 字段存日期映射）
     async getEntries(userId) {
       this._init();
-      const res = await this._db.collection('grat_entries').where({ user_id: userId }).orderBy('date', 'desc').get();
-      return (res && res.data) || [];
+      try {
+        const res = await this._db.collection('grat_entries').doc(userId).get();
+        if (res && res.data && res.data.entries) {
+          const entries = res.data.entries;
+          return Object.keys(entries)
+            .sort((a, b) => b.localeCompare(a))
+            .map(date => {
+              const arr = entries[date] || [];
+              return { date, content1: arr[0] || '', content2: arr[1] || '', content3: arr[2] || '' };
+            });
+        }
+      } catch (e) { console.warn('getEntries error:', e); }
+      return [];
     },
 
-    // 写入/更新某天的感恩（CloudBase 文档库无原生 upsert，先查后写）
+    // 写入/更新某天的感恩（单文档模式，避免复合索引与匿名 _openid 问题）
     async upsertEntry(userId, date, c1, c2, c3) {
       this._init();
-      const existing = await this._db.collection('grat_entries').where({ user_id: userId, date }).get();
-      const payload = { user_id: userId, date, content1: c1 || '', content2: c2 || '', content3: c3 || '' };
-      if (existing && existing.data && existing.data.length) {
-        const id = existing.data[0]._id;
-        await this._db.collection('grat_entries').doc(id).update(payload);
-      } else {
-        await this._db.collection('grat_entries').add(payload);
-      }
+      const ref = this._db.collection('grat_entries').doc(userId);
+      let entries = {};
+      try {
+        const res = await ref.get();
+        if (res && res.data && res.data.entries) entries = res.data.entries;
+      } catch (e) {}
+      entries[date] = [c1 || '', c2 || '', c3 || ''];
+      await ref.set({ user_id: userId, entries });
     },
 
     // 行为埋点（无会话则静默跳过）
