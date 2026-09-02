@@ -36,9 +36,11 @@
       try { this._init(); } catch (e) { return null; }
       try {
         const state = await this._auth.getLoginState();
+        console.log('[CB] getLoginState:', JSON.stringify(state && { hasUser: !!state.user, uid: state && state.user && state.user.uid }));
         if (state && state.user) {
           const u = state.user;
           this._tokens = { access_token: 'anon', user: { id: u.uid, email: u.email || '' } };
+          console.log('[CB] session OK, uid =', u.uid);
           return this._tokens;
         }
       } catch (e) { console.warn('getLoginState error:', e); }
@@ -96,9 +98,15 @@
       try {
         const res = await ref.get();
         if (res && res.data && res.data.entries) entries = res.data.entries;
-      } catch (e) {}
+      } catch (e) { console.warn('[CB] upsert pre-get error:', e); }
       entries[date] = [c1 || '', c2 || '', c3 || ''];
-      await ref.set({ user_id: userId, entries });
+      try {
+        await ref.set({ user_id: userId, entries });
+        console.log('[CB] upsertEntry OK:', userId, date);
+      } catch (e) {
+        console.error('[CB] upsertEntry FAILED:', (e && e.message) || e, e);
+        throw e;
+      }
     },
 
     // 行为埋点（无会话则静默跳过）

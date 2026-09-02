@@ -1422,13 +1422,17 @@ async function loadCloud() {
 }
 
 async function saveCloud(dateKey, contents) {
-  if (!SB._tokens) return;
+  if (!SB._tokens) { showBanner('未登录：无法云端保存（SB._tokens 为空）'); return; }
   try {
     setSyncStatus('syncing');
     const user = SB._tokens.user;
     await SB.upsertEntry(user.id, dateKey, contents[0] || '', contents[1] || '', contents[2] || '');
     setSyncStatus('online');
-  } catch (e) { console.error('Cloud save error:', e); setSyncStatus('offline'); }
+  } catch (e) {
+    setSyncStatus('offline');
+    console.error('Cloud save error:', e);
+    showBanner('云端保存失败：' + ((e && e.message) ? e.message : ('' + e)));
+  }
 }
 
 async function migrateLocalToCloud() {
