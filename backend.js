@@ -72,36 +72,45 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // 读取某用户全部感恩记录（单文档模式：按 user_id 取 doc，entries 字段存日期映射）
+    // 读取某用户全部感恩记录（多文档模式，每天一条；按 _openid 查询，CloudBase SDK 自动注入并匹配 PRIVATE 规则）
     async getEntries(userId) {
       this._init();
       try {
-        const res = await this._db.collection('grat_entries').doc(userId).get();
-        if (res && res.data && res.data.entries) {
-          const entries = res.data.entries;
-          return Object.keys(entries)
+        const res = await this._db.collection('grat_entries').where({ _openid: userId }).get();
+        console.log('[CB] getEntries raw count:', res && res.data && res.data.length);
+        if (res && res.data) {
+          const latestByDate = {};
+          res.data.forEach(doc => {
+            const d = doc.date;
+            if (!d) return;
+            if (!latestByDate[d] || (doc.createdAt || 0) > (latestByDate[d].createdAt || 0)) {
+              latestByDate[d] = doc;
+            }
+          });
+          return Object.keys(latestByDate)
             .sort((a, b) => b.localeCompare(a))
             .map(date => {
-              const arr = entries[date] || [];
-              return { date, content1: arr[0] || '', content2: arr[1] || '', content3: arr[2] || '' };
+              const doc = latestByDate[date];
+              return { date, content1: doc.content1 || '', content2: doc.content2 || '', content3: doc.content3 || '' };
             });
         }
-      } catch (e) { console.warn('getEntries error:', e); }
+      } catch (e) { console.error('[CB] getEntries error:', e); }
       return [];
     },
 
-    // 写入/更新某天的感恩（单文档模式，避免复合索引与匿名 _openid 问题）
+    // 写入/更新某天的感恩（add 新文档，让 CloudBase SDK 自动注入 _openid，满足 PRIVATE 安全规则）
     async upsertEntry(userId, date, c1, c2, c3) {
       this._init();
-      const ref = this._db.collection('grat_entries').doc(userId);
-      let entries = {};
       try {
-        const res = await ref.get();
-        if (res && res.data && res.data.entries) entries = res.data.entries;
-      } catch (e) { console.warn('[CB] upsert pre-get error:', e); }
-      entries[date] = [c1 || '', c2 || '', c3 || ''];
-      try {
-        await ref.set({ user_id: userId, entries });
+        await this._db.collection('grat_entries').add({
+          _openid: userId,
+          user_id: userId,
+          date,
+          content1: c1 || '',
+          content2: c2 || '',
+          content3: c3 || '',
+          createdAt: Date.now()
+        });
         console.log('[CB] upsertEntry OK:', userId, date);
       } catch (e) {
         console.error('[CB] upsertEntry FAILED:', (e && e.message) || e, e);
@@ -114,6 +123,7 @@
       if (!this._tokens || !this._tokens.user) return;
       try {
         await this._db.collection('grat_events').add({
+          _openid: this._tokens.user.id,
           user_id: this._tokens.user.id,
           event: event,
           properties: properties || {},
