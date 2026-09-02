@@ -11,7 +11,7 @@
  */
 (function () {
   // TODO: 部署前替换为你的 CloudBase 环境 ID（控制台「环境」页查看）
-  const CB_ENV = 'REPLACE_WITH_ENV_ID';
+  const CB_ENV = 'gratitude-app-d7grnbvpr91c2c1da';
 
   const CB = {
     _tokens: null,
