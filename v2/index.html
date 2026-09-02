@@ -1617,12 +1617,23 @@ document.getElementById('accountBtn').addEventListener('click', async () => {
   msg.textContent = LANG === 'zh' ? '处理中…' : 'Working…';
   try {
     let session;
+    let lastError;
     try {
-      session = await SB.signUpWithEmail(email, pwd);   // 新账号：注册并登录
-    } catch (e) {
-      session = await SB.signInWithEmail(email, pwd);    // 已有账号：直接登录
+      session = await SB.signInWithEmail(email, pwd);   // 先尝试登录
+    } catch (signInErr) {
+      lastError = signInErr;
+      console.warn('[CB] signIn failed, try signUp:', signInErr);
+      try {
+        session = await SB.signUpWithEmail(email, pwd); // 未注册则自动注册
+      } catch (signUpErr) {
+        lastError = signUpErr;
+        console.error('[CB] signUp also failed:', signUpErr);
+      }
     }
-    if (!session || !session.user) throw new Error('auth-failed');
+    if (!session || !session.user) {
+      const errText = (lastError && (lastError.message || lastError.code || lastError.toString())) || 'unknown';
+      throw new Error(errText);
+    }
     // 数据迁移：若新账号无云端数据，且本地/匿名内存有数据，则写入
     const existing = await SB.getEntries(session.user.id);
     if (existing.length === 0 && Object.keys(allEntries).length > 0) {

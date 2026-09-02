@@ -75,7 +75,12 @@
     // 邮箱密码注册（CloudBase v2：注册成功后自动登录，session 即新账号）
     async signUpWithEmail(email, password) {
       this._init();
-      await this._auth.signUpWithEmailAndPassword(email, password);
+      try {
+        await this._auth.signUpWithEmailAndPassword(email, password);
+      } catch (e) {
+        console.error('[CB] signUpWithEmailAndPassword raw error:', e);
+        throw e;
+      }
       const s = await this._loginState();
       if (s) { this._tokens = s; this._notify('SIGNED_IN', s); }
       return s;
@@ -84,7 +89,12 @@
     // 邮箱密码登录
     async signInWithEmail(email, password) {
       this._init();
-      await this._auth.signInWithEmailAndPassword(email, password);
+      try {
+        await this._auth.signInWithEmailAndPassword(email, password);
+      } catch (e) {
+        console.error('[CB] signInWithEmailAndPassword raw error:', e);
+        throw e;
+      }
       const s = await this._loginState();
       if (s) { this._tokens = s; this._notify('SIGNED_IN', s); }
       return s;
