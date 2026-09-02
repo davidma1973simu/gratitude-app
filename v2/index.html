@@ -1617,22 +1617,26 @@ document.getElementById('accountBtn').addEventListener('click', async () => {
   msg.textContent = LANG === 'zh' ? '处理中…' : 'Working…';
   try {
     let session;
-    let lastError;
+    let signInErr = null, signUpErr = null;
     try {
       session = await SB.signInWithEmail(email, pwd);   // 先尝试登录
-    } catch (signInErr) {
-      lastError = signInErr;
-      console.warn('[CB] signIn failed, try signUp:', signInErr);
+    } catch (e1) {
+      signInErr = e1;
+      console.warn('[CB] signIn failed, try signUp:', e1);
       try {
         session = await SB.signUpWithEmail(email, pwd); // 未注册则自动注册
-      } catch (signUpErr) {
-        lastError = signUpErr;
-        console.error('[CB] signUp also failed:', signUpErr);
+      } catch (e2) {
+        signUpErr = e2;
+        console.error('[CB] signUp also failed:', e2);
       }
     }
     if (!session || !session.user) {
-      const errText = (lastError && (lastError.message || lastError.code || lastError.toString())) || 'unknown';
-      throw new Error(errText);
+      const fmt = (e) => {
+        if (!e) return '（无）';
+        return [e.code, e.message, e.errMsg, (e.toString && e.toString())].filter(Boolean).join(' / ');
+      };
+      const detail = '登录阶段：' + fmt(signInErr) + '\n注册阶段：' + fmt(signUpErr);
+      throw new Error(detail);
     }
     // 数据迁移：若新账号无云端数据，且本地/匿名内存有数据，则写入
     const existing = await SB.getEntries(session.user.id);
@@ -1651,7 +1655,8 @@ document.getElementById('accountBtn').addEventListener('click', async () => {
     showBanner(LANG === 'zh' ? '已登录，数据已同步' : 'Signed in. Data synced.');
   } catch (e) {
     console.error('[CB] account login failed:', e);
-    msg.textContent = (LANG === 'zh' ? '登录失败：' : 'Failed: ') + ((e && e.message) || e);
+    const detail = (e && e.message) ? e.message.replace(/\n/g, ' ｜ ') : (e || 'unknown');
+    msg.textContent = (LANG === 'zh' ? '登录失败：' : 'Failed: ') + detail;
   } finally {
     btn.disabled = false;
   }

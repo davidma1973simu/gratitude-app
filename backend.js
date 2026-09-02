@@ -82,8 +82,9 @@
         throw e;
       }
       const s = await this._loginState();
-      if (s) { this._tokens = s; this._notify('SIGNED_IN', s); }
-      return s;
+      if (s) { this._tokens = s; this._notify('SIGNED_IN', s); return s; }
+      // 注册接口成功但拿不到登录态：多半是账号需邮箱验证（未点激活链接）
+      throw new Error('REGISTERED_BUT_NEED_EMAIL_VERIFY');
     },
 
     // 邮箱密码登录（走「用户名密码」登录方式，把邮箱作为 username）
