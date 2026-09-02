@@ -76,9 +76,9 @@
     async signUpWithEmail(email, password) {
       this._init();
       try {
-        await this._auth.signUp({ username: email, password });
+        await this._auth.signUpWithEmailAndPassword(email, password);
       } catch (e) {
-        console.error('[CB] signUp raw error:', e);
+        console.error('[CB] signUpWithEmailAndPassword raw error:', e);
         throw e;
       }
       const s = await this._loginState();
@@ -87,13 +87,13 @@
       throw new Error('REGISTERED_BUT_NEED_EMAIL_VERIFY');
     },
 
-    // 邮箱密码登录（走「用户名密码」登录方式，把邮箱作为 username）
+    // 邮箱密码登录（走「邮箱密码」登录方式）
     async signInWithEmail(email, password) {
       this._init();
       try {
-        await this._auth.signInWithUsernameAndPassword(email, password);
+        await this._auth.signInWithEmailAndPassword(email, password);
       } catch (e) {
-        console.error('[CB] signInWithUsernameAndPassword raw error:', e);
+        console.error('[CB] signInWithEmailAndPassword raw error:', e);
         throw e;
       }
       const s = await this._loginState();
