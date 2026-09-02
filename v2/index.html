@@ -455,16 +455,29 @@
     .login-input::placeholder { color: var(--text-tertiary); }
     .login-btn {
       width: 100%; padding: 15px;
-      background: var(--text-primary); color: #fafaf9;
+      background: #0E6B50; color: #fafaf9;
       border: none; border-radius: var(--radius);
-      font-size: 15px; font-weight: 600; cursor: pointer;
+      font-size: 16px; font-weight: 600; cursor: pointer;
       transition: all 0.18s ease; font-family: inherit;
       pointer-events: auto;
     }
-    .login-btn:hover { opacity: 0.88; }
+    .login-btn:hover { opacity: 0.9; }
     .login-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .login-btn.secondary {
+      background: #fafaf9; color: #0E6B50;
+      border: 1.5px solid #0E6B50;
+    }
     .login-hint {
       font-size: 13px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6;
+      min-height: 1.6em;
+    }
+    .login-or {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--text-tertiary); font-size: 13px;
+      margin: 16px 0;
+    }
+    .login-or::before, .login-or::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
     }
     .login-password-wrap { position: relative; }
     .login-password-toggle {
@@ -546,25 +559,6 @@
       border-bottom: 1px solid var(--border-light); margin-bottom: 4px;
       word-break: break-all;
     }
-    .upgrade-panel {
-      padding: 8px 10px; border-top: 1px solid var(--border-light);
-      border-bottom: 1px solid var(--border-light); margin: 4px 0;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .upgrade-input {
-      width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit;
-      border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
-      color: var(--text-primary); box-sizing: border-box;
-    }
-    .upgrade-input:focus { outline: none; border-color: var(--brand, #0E6B50); }
-    .upgrade-submit {
-      width: 100%; padding: 9px; font-size: 13px; font-weight: 600; font-family: inherit;
-      border: none; border-radius: 8px; background: var(--brand, #0E6B50); color: #fff;
-      cursor: pointer; transition: opacity 0.15s;
-    }
-    .upgrade-submit:disabled { opacity: 0.6; cursor: default; }
-    .upgrade-msg { font-size: 12px; color: #dc2626; line-height: 1.4; }
-
     /* ─── Sync Indicator ─── */
     .sync-badge {
       font-size: 11px; color: var(--text-tertiary);
@@ -962,10 +956,17 @@
   <div class="login-title" data-i18n="login_title">感恩日记</div>
   <div class="login-subtitle" data-i18n="login_subtitle">每天记录三件感恩的事<br>跨设备同步，随时随地回顾</div>
 
-  <!-- Anonymous-first entry (no password required) -->
+  <!-- Anonymous-first entry + Account login -->
   <div class="login-form" id="loginForm">
-    <button class="login-btn" id="enterBtn">开始记录</button>
-    <div class="login-hint">你的感恩会安全保存在云端，随时都能回来翻看</div>
+    <button class="login-btn" id="enterBtn">匿名开始</button>
+    <div class="login-or"><span>或</span></div>
+    <input class="login-input" id="loginEmail" type="email" placeholder="邮箱" autocomplete="off" />
+    <div class="login-password-wrap">
+      <input class="login-input" id="loginPassword" type="password" placeholder="密码（至少6位）" autocomplete="new-password" />
+      <button type="button" class="login-password-toggle" id="loginTogglePwd">👁</button>
+    </div>
+    <button class="login-btn secondary" id="accountBtn">登录 / 注册</button>
+    <div class="login-hint" id="loginMsg">已有账号直接登录，新账号自动注册</div>
   </div>
 </div>
 
@@ -994,16 +995,6 @@
   <!-- User Menu -->
   <div class="user-menu" id="userMenu">
     <div class="user-menu-email" id="userMenuEmail"></div>
-    <button class="user-menu-item" id="upgradeBtn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span id="upgradeBtnLabel">升级为账号</span>
-    </button>
-    <div class="upgrade-panel" id="upgradePanel" style="display:none;">
-      <input class="upgrade-input" id="upgradeEmail" type="email" placeholder="你的邮箱" autocomplete="off" />
-      <input class="upgrade-input" id="upgradePassword" type="password" placeholder="设置密码（至少6位）" autocomplete="new-password" />
-      <button class="upgrade-submit" id="upgradeSubmit">升级并同步数据</button>
-      <div class="upgrade-msg" id="upgradeMsg"></div>
-    </div>
     <button class="user-menu-item danger" id="logoutBtn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       <span data-i18n="logout">退出登录</span>
@@ -1569,7 +1560,7 @@ SB.onAuthStateChange(async (event, session) => {
 document.getElementById('enterBtn').addEventListener('click', async () => {
   const btn = document.getElementById('enterBtn');
   btn.disabled = true;
-  btn.textContent = '正在进入…';
+  btn.textContent = LANG === 'zh' ? '正在进入…' : 'Entering…';
   try {
     const session = await SB.ensureSession();
     if (session && session.user) {
@@ -1585,7 +1576,7 @@ document.getElementById('enterBtn').addEventListener('click', async () => {
     showBanner(LANG === 'zh' ? '暂时无法连接，请检查网络后重试' : 'Cannot connect, please check network');
   } finally {
     btn.disabled = false;
-    btn.textContent = '开始记录';
+    btn.textContent = LANG === 'zh' ? '匿名开始' : 'Start anonymously';
   }
 });
 document.getElementById('logoutBtn').addEventListener('click', async () => {
@@ -1600,33 +1591,39 @@ document.getElementById('userAvatar').addEventListener('click', (e) => {
   e.stopPropagation();
   document.getElementById('userMenu').classList.toggle('show');
 });
-document.addEventListener('click', () => { document.getElementById('userMenu').classList.remove('show'); });
-
-// ─── B 方案：升级为账号（匿名 → 邮箱密码，数据自动跟随） ───────────────────
-document.getElementById('upgradeBtn').addEventListener('click', () => {
-  const panel = document.getElementById('upgradePanel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('userMenu');
+  const avatar = document.getElementById('userAvatar');
+  if (menu.classList.contains('show') && !menu.contains(e.target) && e.target !== avatar && !avatar.contains(e.target)) {
+    menu.classList.remove('show');
+  }
 });
-document.getElementById('upgradeSubmit').addEventListener('click', async () => {
-  const email = document.getElementById('upgradeEmail').value.trim();
-  const pwd = document.getElementById('upgradePassword').value;
-  const msg = document.getElementById('upgradeMsg');
-  const btn = document.getElementById('upgradeSubmit');
+
+// ─── Account login / sign up on the splash screen ─────────────────────────────
+document.getElementById('loginTogglePwd').addEventListener('click', () => {
+  const input = document.getElementById('loginPassword');
+  const btn = document.getElementById('loginTogglePwd');
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.textContent = input.type === 'password' ? '👁' : '🙈';
+});
+document.getElementById('accountBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pwd = document.getElementById('loginPassword').value;
+  const msg = document.getElementById('loginMsg');
+  const btn = document.getElementById('accountBtn');
   if (!email || !pwd) { msg.textContent = LANG === 'zh' ? '请填写邮箱和密码' : 'Enter email and password'; return; }
   if (pwd.length < 6) { msg.textContent = LANG === 'zh' ? '密码至少 6 位' : 'Password min 6 chars'; return; }
-  if (!SB._tokens || !SB._tokens.user) { msg.textContent = LANG === 'zh' ? '登录状态异常' : 'Session error'; return; }
   btn.disabled = true;
   msg.textContent = LANG === 'zh' ? '处理中…' : 'Working…';
   try {
-    const anonUid = SB._tokens.user.id;
     let session;
     try {
-      session = await SB.signUpWithEmail(email, pwd);   // 首次：匿名升级为邮箱账号
+      session = await SB.signUpWithEmail(email, pwd);   // 新账号：注册并登录
     } catch (e) {
-      session = await SB.signInWithEmail(email, pwd);    // 已注册：直接登录
+      session = await SB.signInWithEmail(email, pwd);    // 已有账号：直接登录
     }
     if (!session || !session.user) throw new Error('auth-failed');
-    // 数据迁移：若新 uid 下无数据，则把内存中的 allEntries 写入新账号
+    // 数据迁移：若新账号无云端数据，且本地/匿名内存有数据，则写入
     const existing = await SB.getEntries(session.user.id);
     if (existing.length === 0 && Object.keys(allEntries).length > 0) {
       for (const date of Object.keys(allEntries)) {
@@ -1637,14 +1634,13 @@ document.getElementById('upgradeSubmit').addEventListener('click', async () => {
     currentUser = session.user;
     SB._tokens = session;
     updateUserUI();
-    document.getElementById('upgradePanel').style.display = 'none';
-    document.getElementById('upgradeEmail').value = '';
-    document.getElementById('upgradePassword').value = '';
-    msg.textContent = '';
-    showBanner(LANG === 'zh' ? '已升级为账号，数据已同步' : 'Upgraded. Data synced.');
+    showApp();
+    await startApp();
+    logEvent('session_start');
+    showBanner(LANG === 'zh' ? '已登录，数据已同步' : 'Signed in. Data synced.');
   } catch (e) {
-    console.error('[CB] upgrade failed:', e);
-    msg.textContent = (LANG === 'zh' ? '升级失败：' : 'Failed: ') + ((e && e.message) || e);
+    console.error('[CB] account login failed:', e);
+    msg.textContent = (LANG === 'zh' ? '登录失败：' : 'Failed: ') + ((e && e.message) || e);
   } finally {
     btn.disabled = false;
   }
@@ -1657,9 +1653,6 @@ function updateUserUI() {
   document.getElementById('userMenuEmail').textContent = email || (LANG === 'zh' ? '光之友' : 'Friend of Light');
   const avatar = document.getElementById('userAvatar');
   avatar.textContent = email ? email.charAt(0).toUpperCase() : '光';
-  // 已用邮箱登录则隐藏「升级为账号」入口
-  const upgradeBtn = document.getElementById('upgradeBtn');
-  if (upgradeBtn) upgradeBtn.style.display = email ? 'none' : '';
 }
 
 // ─── Start App ──────────────────────────────────────────────────────────────
