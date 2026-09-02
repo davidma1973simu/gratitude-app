@@ -24,7 +24,9 @@
       if (this._app) return;
       if (!window.cloudbase) throw new Error('CloudBase SDK 未加载（请先引入 vendor/cloudbase.js）');
       this._app = window.cloudbase.init({ env: CB_ENV });
-      const auth = (typeof this._app.auth === 'function') ? this._app.auth() : this._app.auth;
+      // 显式 local 持久化：匿名登录态写 localStorage，刷新后仍是同一匿名用户，
+      // 否则每次刷新都新建匿名用户，云端旧记录就读不到了。
+      const auth = (typeof this._app.auth === 'function') ? this._app.auth({ persistence: 'local' }) : this._app.auth;
       this._auth = auth;
       this._db = (typeof this._app.database === 'function') ? this._app.database() : this._app.database;
     },
