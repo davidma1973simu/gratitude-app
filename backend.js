@@ -85,42 +85,56 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // ── 邮箱 + 密码 注册/登录（CloudBase 邮箱密码登录方式，自设密码、无需每次验证码）──
-    // CloudBase 原生支持 email+password 自注册（与 Supabase 一致），对应控制台「邮箱登录 / 邮箱+密码」方式。
-    // signUpWithEmailAndPassword / signInWithEmailAndPassword 在底层 authApi（t4）上已验证存在（vendor/cloudbase.js 15290 / 15301）。
+    // ── 邮箱 + 密码 登录（CloudBase 控制台只有「邮箱验证码」+「用户名密码」，无独立「邮箱+密码」卡）──
+    // 所以采用折中方案：
+    //   1. 首次注册：邮箱验证码验证一次，同时用该次验证把「邮箱 + 自设密码」写进账号（signUp({email, password}) → verifyOtp）
+    //   2. 之后登录：直接 email + password，不再需要验证码（signInWithEmailAndPassword）
+    // 底层 authApi（t4）上 signUpWithEmailAndPassword / signInWithEmailAndPassword 真实存在（15290/15301），
+    // 但 signUpWithEmailAndPassword 是 v1 激活链/平台代发风格；本环境 v2 邮箱验证码更稳，故混合使用。
 
-    // 取底层 authApi（this._auth.oauthInstance.authApi），含 signUpWithEmailAndPassword 等真实方法
-    _authApi() {
-      const api = this._auth && this._auth.oauthInstance && this._auth.oauthInstance.authApi;
-      if (!api) throw new Error('SDK 未暴露底层 authApi');
-      return api;
+    _pendingVerify: null,
+
+    // 发送验证码到邮箱，并把用户要设的 password 一起绑定到本次验证闭包
+    // 调用时用户已填好 email + password；下一步输入验证码后，用同一个 verifyOtp 完成注册并写入密码
+    async sendEmailCode(email, password) {
+      this._init();
+      const res = await this._auth.signUp({ email, password });
+      const verifyOtp = res && res.data && res.data.verifyOtp;
+      if (typeof verifyOtp !== 'function') {
+        console.error('[CB] sendEmailCode: 未返回 verifyOtp', JSON.stringify(res));
+        throw new Error('EMAIL_CODE_SEND_FAILED');
+      }
+      this._pendingVerify = verifyOtp;
+      console.log('[CB] sendEmailCode OK, 等待用户输入验证码');
+      return res;
     },
 
-    // 邮箱 + 密码 注册（注册即登录；控制台需关闭「邮箱验证」以实现免激活直接登录）
-    async signUpWithEmail(email, password) {
+    // 输入验证码，完成「邮箱 + 密码」注册并建立登录态
+    async verifyEmailCode(code) {
       this._init();
-      try {
-        await this._authApi().signUpWithEmailAndPassword(email, password);
-      } catch (e) {
-        console.error('[CB] signUpWithEmailAndPassword raw error:', e);
-        throw e;
-      }
-      console.log('[CB] signUpWithEmailAndPassword OK');
+      const verifyOtp = this._pendingVerify;
+      this._pendingVerify = null;
+      if (typeof verifyOtp !== 'function') throw new Error('EMAIL_CODE_EXPIRED');
+      await verifyOtp({ token: String(code) });
       const s = await this._loginState();
       if (s) { this._tokens = s; return s; }
-      throw new Error('REGISTERED_BUT_NO_SESSION');
+      throw new Error('EMAIL_VERIFIED_NO_SESSION');
     },
 
-    // 邮箱 + 密码 登录
-    async signInWithEmail(email, password) {
+    // 已注册用户用邮箱 + 密码直接登录（无需验证码）
+    // signInWithEmailAndPassword 内部调用 signIn({ username: email, password })，服务端会按邮箱匹配
+    async signInWithEmailAndPassword(email, password) {
       this._init();
+      const api = this._auth && this._auth.oauthInstance && this._auth.oauthInstance.authApi;
+      if (!api || typeof api.signInWithEmailAndPassword !== 'function') {
+        throw new Error('SDK 未暴露 signInWithEmailAndPassword');
+      }
       try {
-        await this._authApi().signInWithEmailAndPassword(email, password);
+        await api.signInWithEmailAndPassword(email, password);
       } catch (e) {
         console.error('[CB] signInWithEmailAndPassword raw error:', e);
         throw e;
       }
-      console.log('[CB] signInWithEmailAndPassword OK');
       const s = await this._loginState();
       if (s) { this._tokens = s; return s; }
       throw new Error('LOGGED_IN_BUT_NO_SESSION');
