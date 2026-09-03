@@ -85,40 +85,45 @@
       this._notify('SIGNED_OUT', null);
     },
 
-    // ── 邮箱验证码注册/登录（CloudBase v2 邮件验证码流程，平台邮件代发，零 SMTP）──
-    // 关键事实：CloudBase 原生不支持「用户名 + 密码」自注册；邮箱走验证码，
-    // 公开 auth.signUp({email}) 发码并返回 verifyOtp 闭包，闭包内按 is_user 自动区分新用户注册 / 老用户登录。
-    _pendingVerify: null,
+    // ── 邮箱 + 密码 注册/登录（CloudBase 邮箱密码登录方式，自设密码、无需每次验证码）──
+    // CloudBase 原生支持 email+password 自注册（与 Supabase 一致），对应控制台「邮箱登录 / 邮箱+密码」方式。
+    // signUpWithEmailAndPassword / signInWithEmailAndPassword 在底层 authApi（t4）上已验证存在（vendor/cloudbase.js 15290 / 15301）。
 
-    // 发送验证码到邮箱（新 / 老邮箱均可发送）
-    async sendEmailCode(email) {
-      this._init();
-      const res = await this._auth.signUp({ email });
-      const verifyOtp = res && res.data && res.data.verifyOtp;
-      if (typeof verifyOtp !== 'function') {
-        console.error('[CB] sendEmailCode: 未返回 verifyOtp', JSON.stringify(res));
-        throw new Error('EMAIL_CODE_SEND_FAILED');
-      }
-      this._pendingVerify = verifyOtp; // 闭包已绑定本次 verification_id
-      console.log('[CB] sendEmailCode OK, 等待用户输入验证码');
-      return res;
+    // 取底层 authApi（this._auth.oauthInstance.authApi），含 signUpWithEmailAndPassword 等真实方法
+    _authApi() {
+      const api = this._auth && this._auth.oauthInstance && this._auth.oauthInstance.authApi;
+      if (!api) throw new Error('SDK 未暴露底层 authApi');
+      return api;
     },
 
-    // 用验证码完成注册 / 登录，建立登录态
-    async verifyEmailCode(code) {
+    // 邮箱 + 密码 注册（注册即登录；控制台需关闭「邮箱验证」以实现免激活直接登录）
+    async signUpWithEmail(email, password) {
       this._init();
-      const verifyOtp = this._pendingVerify;
-      this._pendingVerify = null;
-      if (typeof verifyOtp !== 'function') throw new Error('EMAIL_CODE_EXPIRED');
-      await verifyOtp({ token: String(code) });
-      // 刷新一次登录态，确保 email 已写入
-      const fresh = await this._auth.getLoginState();
-      if (fresh && fresh.user && !fresh.user.email) {
-        try { const cu = await this._auth.getCurrentUser(); if (cu && cu.email) fresh.user.email = cu.email; } catch (e) {}
+      try {
+        await this._authApi().signUpWithEmailAndPassword(email, password);
+      } catch (e) {
+        console.error('[CB] signUpWithEmailAndPassword raw error:', e);
+        throw e;
       }
+      console.log('[CB] signUpWithEmailAndPassword OK');
       const s = await this._loginState();
       if (s) { this._tokens = s; return s; }
-      throw new Error('EMAIL_VERIFIED_NO_SESSION');
+      throw new Error('REGISTERED_BUT_NO_SESSION');
+    },
+
+    // 邮箱 + 密码 登录
+    async signInWithEmail(email, password) {
+      this._init();
+      try {
+        await this._authApi().signInWithEmailAndPassword(email, password);
+      } catch (e) {
+        console.error('[CB] signInWithEmailAndPassword raw error:', e);
+        throw e;
+      }
+      console.log('[CB] signInWithEmailAndPassword OK');
+      const s = await this._loginState();
+      if (s) { this._tokens = s; return s; }
+      throw new Error('LOGGED_IN_BUT_NO_SESSION');
     },
 
     // 读取某用户全部感恩记录（多文档模式，每天一条；按 _openid 查询，CloudBase SDK 自动注入并匹配 PRIVATE 规则）

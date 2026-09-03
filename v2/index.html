@@ -956,15 +956,17 @@
   <div class="login-title" data-i18n="login_title">感恩日记</div>
   <div class="login-subtitle" data-i18n="login_subtitle">每天记录三件感恩的事<br>跨设备同步，随时随地回顾</div>
 
-  <!-- Anonymous-first entry + Account login (email verification code) -->
+  <!-- Anonymous-first entry + Account login (email + password, no verification code) -->
   <div class="login-form" id="loginForm">
     <button class="login-btn" id="enterBtn">匿名开始</button>
     <div class="login-or"><span>或</span></div>
     <input class="login-input" id="loginEmail" type="email" placeholder="邮箱（用于登录）" autocomplete="off" />
-    <button class="login-btn secondary" id="sendCodeBtn">发送验证码</button>
-    <input class="login-input" id="loginCode" type="text" inputmode="numeric" placeholder="输入邮箱收到的 6 位验证码" autocomplete="off" style="display:none;" />
-    <button class="login-btn secondary" id="accountBtn" style="display:none;">登录 / 注册</button>
-    <div class="login-hint" id="loginMsg">已有账号直接登录，新账号自动注册</div>
+    <div class="login-password-wrap">
+      <input class="login-input" id="loginPassword" type="password" placeholder="密码（8-32位，含字母和数字）" autocomplete="new-password" />
+      <button type="button" class="login-password-toggle" id="loginTogglePwd">👁</button>
+    </div>
+    <button class="login-btn secondary" id="accountBtn">登录 / 注册</button>
+    <div class="login-hint" id="loginMsg">已有账号直接登录，新账号自动注册（自设密码）</div>
   </div>
 </div>
 
@@ -1600,45 +1602,58 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ─── Account login / sign up (email verification code) on the splash screen ───
+// ─── Account login / sign up (email + password, no verification code) ───
 const loginEmailEl = document.getElementById('loginEmail');
-const loginCodeEl = document.getElementById('loginCode');
-const sendCodeBtn = document.getElementById('sendCodeBtn');
+const loginPasswordEl = document.getElementById('loginPassword');
+const loginTogglePwd = document.getElementById('loginTogglePwd');
 const accountBtn = document.getElementById('accountBtn');
 const loginMsg = document.getElementById('loginMsg');
 
-// 第一步：发送验证码到邮箱（新 / 老邮箱都可）
-sendCodeBtn.addEventListener('click', async () => {
+// 密码显隐切换
+loginTogglePwd.addEventListener('click', () => {
+  const inp = loginPasswordEl;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  loginTogglePwd.textContent = inp.type === 'password' ? '👁' : '🙈';
+});
+
+// 邮箱 + 自设密码：先尝试登录，失败再自动注册（新账号）
+accountBtn.addEventListener('click', async () => {
   const email = (loginEmailEl.value || '').trim();
+  const pwd = loginPasswordEl.value || '';
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     loginMsg.textContent = LANG === 'zh' ? '请输入有效邮箱' : 'Enter a valid email';
     return;
   }
-  sendCodeBtn.disabled = true;
-  loginMsg.textContent = LANG === 'zh' ? '验证码发送中…' : 'Sending code…';
-  try {
-    await SB.sendEmailCode(email);
-    loginCodeEl.style.display = '';
-    accountBtn.style.display = '';
-    loginMsg.textContent = LANG === 'zh' ? '验证码已发送，请查收邮箱（含垃圾箱）' : 'Code sent, check your inbox (incl. spam)';
-  } catch (e) {
-    console.error('[CB] sendEmailCode failed:', e);
-    const detail = (e && e.message) ? e.message : (e || 'unknown');
-    loginMsg.textContent = (LANG === 'zh' ? '发送失败：' : 'Send failed: ') + detail;
-  } finally {
-    sendCodeBtn.disabled = false;
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,32}$/.test(pwd)) {
+    loginMsg.textContent = LANG === 'zh' ? '密码需 8–32 位，且同时含字母和数字' : 'Password 8–32 chars, letters + numbers';
+    return;
   }
-});
-
-// 第二步：输入验证码，完成注册 / 登录
-accountBtn.addEventListener('click', async () => {
-  const code = (loginCodeEl.value || '').trim();
-  if (!code) { loginMsg.textContent = LANG === 'zh' ? '请输入验证码' : 'Enter the code'; return; }
   accountBtn.disabled = true;
-  loginMsg.textContent = LANG === 'zh' ? '验证中…' : 'Verifying…';
+  loginMsg.textContent = LANG === 'zh' ? '处理中…' : 'Working…';
   try {
-    const session = await SB.verifyEmailCode(code);
-    if (!session || !session.user) throw new Error('EMAIL_VERIFIED_NO_SESSION');
+    let session;
+    let signInErr = null, signUpErr = null;
+    try {
+      session = await SB.signInWithEmail(email, pwd);      // 先尝试登录
+    } catch (e1) {
+      signInErr = e1;
+      console.warn('[CB] signIn failed, try signUp:', e1);
+      try {
+        session = await SB.signUpWithEmail(email, pwd);    // 未注册则自动注册
+      } catch (e2) {
+        signUpErr = e2;
+        console.error('[CB] signUp also failed:', e2);
+      }
+    }
+    if (!session || !session.user) {
+      const fmt = (e) => {
+        if (!e) return '（无）';
+        return [e.code, e.message, e.errMsg, (e.toString && e.toString())].filter(Boolean).join(' / ');
+      };
+      const detail = (LANG === 'zh' ? '登录阶段：' : 'sign-in: ') + fmt(signInErr)
+        + (LANG === 'zh' ? ' ｜ 注册阶段：' : ' | sign-up: ') + fmt(signUpErr);
+      throw new Error(detail);
+    }
     // 数据迁移：若新账号无云端数据，且本地/匿名内存有数据，则先写入（须在 enterApp 读取前完成）
     const existing = await SB.getEntries(session.user.id);
     if (existing.length === 0 && Object.keys(allEntries).length > 0) {
@@ -1650,9 +1665,9 @@ accountBtn.addEventListener('click', async () => {
     await enterApp(session);
     showBanner(LANG === 'zh' ? '已登录，数据已同步' : 'Signed in. Data synced.');
   } catch (e) {
-    console.error('[CB] email verify failed:', e);
-    const detail = (e && e.message) ? e.message : (e || 'unknown');
-    loginMsg.textContent = (LANG === 'zh' ? '验证失败：' : 'Failed: ') + detail;
+    console.error('[CB] account login failed:', e);
+    const detail = (e && e.message) ? e.message.replace(/\n/g, ' ｜ ') : (e || 'unknown');
+    loginMsg.textContent = (LANG === 'zh' ? '登录失败：' : 'Failed: ') + detail;
   } finally {
     accountBtn.disabled = false;
   }
