@@ -13,6 +13,16 @@
   // TODO: 部署前替换为你的 CloudBase 环境 ID（控制台「环境」页查看）
   const CB_ENV = 'eureka-8g0iymqr969c1b32';
 
+  // ── 第三方 OAuth 身份源（微信 / 谷歌）──
+  // 这两项 ID 来自控制台「身份认证 → 身份源」里你创建的微信/谷歌身份源（providerId）。
+  // 创建后把对应字符串填进来；留空则登录按钮点击会提示未配置。
+  // 前置：控制台需分别配置微信网页授权（微信开放平台网站应用 appid/secret）
+  //       或谷歌 OAuth（Google Cloud client id/secret，回调域名含你的部署域名）。
+  const OAUTH = {
+    wechatProviderId: '',   // 例：'wechat-web' 或控制台给出的 providerId
+    googleProviderId: '',   // 例：'google-web'
+  };
+
   const CB = {
     _tokens: null,
     _listeners: [],
@@ -138,6 +148,40 @@
       const s = await this._loginState();
       if (s) { this._tokens = s; return s; }
       throw new Error('LOGGED_IN_BUT_NO_SESSION');
+    },
+
+    // ── 第三方 OAuth 登录（微信 / 谷歌，CloudBase v2 官方流程）──
+    // 流程：signInWithOAuth({provider}) 跳转授权页 → 授权后跳回本页并带 ?code=&state=
+    //       → 在本页 initAuth 检测到 code+state 时调用 verifyOAuth({code,state,provider}) 建立登录态
+    // provider 即上方 OAUTH.wechatProviderId / googleProviderId（控制台身份源的 providerId）
+    // 注意：这是「整页跳转」流程（非弹窗），GitHub Pages 静态站完全支持。
+    async signInWithOAuth(providerId, options) {
+      this._init();
+      if (!providerId) throw new Error('OAUTH_PROVIDER_NOT_CONFIGURED');
+      const res = await this._auth.signInWithOAuth({ provider: providerId, options: options || {} });
+      // 该方法内部会 window.location.assign 跳转到授权页；返回 { data:{url,provider} }
+      if (res && res.error) throw res.error;
+      return res;
+    },
+
+    // 授权回调：用 URL 中的 code+state 换取登录态。可在 initAuth 自动调用（检测到 code/state 时）。
+    async verifyOAuth(params) {
+      this._init();
+      const res = await this._auth.verifyOAuth(params || {});
+      if (res && res.error) throw res.error;
+      const data = (res && res.data) || null;
+      if (data && data.user) {
+        const s = await this._loginState();
+        if (s) { this._tokens = s; return s; }
+      }
+      return data;
+    },
+
+    // 把第三方账号绑定到当前已登录账号（可选增强：一个账号多种登录方式）
+    async linkIdentity(providerId) {
+      this._init();
+      if (!providerId) throw new Error('OAUTH_PROVIDER_NOT_CONFIGURED');
+      return await this._auth.linkIdentity({ provider: providerId });
     },
 
     // 读取某用户全部感恩记录（多文档模式，每天一条；按 _openid 查询，CloudBase SDK 自动注入并匹配 PRIVATE 规则）
