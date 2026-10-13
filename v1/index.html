@@ -1145,7 +1145,10 @@ function renderHistory(query = '') {
 
     const group = document.createElement('div');
     group.className = 'history-group';
-    group.innerHTML = `<div class="history-group-date">${label}</div>`;
+    group.innerHTML = `<div class="history-group-date" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>${label}</span>
+      <button class="history-del-btn" data-key="${key}" style="background:none;border:none;color:#a8a29e;font-size:12px;cursor:pointer;padding:0;font-family:inherit;">删除</button>
+    </div>`;
 
     const card = document.createElement('div');
     card.className = 'history-card';
@@ -1173,6 +1176,23 @@ function renderHistory(query = '') {
   }
 }
 
+function deleteEntry(dateKey) {
+  if (!allEntries[dateKey]) return;
+  delete allEntries[dateKey];
+  saveLocal(allEntries);
+  try {
+    const raw = localStorage.getItem(SUBMITTED_KEY);
+    if (raw) {
+      const dates = JSON.parse(raw).filter(d => d !== dateKey);
+      localStorage.setItem(SUBMITTED_KEY, JSON.stringify(dates));
+    }
+  } catch {}
+  if (dateKey === todayKey()) { todayDone = false; entries = ['', '', '']; }
+  const q = document.getElementById('searchInput')?.value?.trim() || '';
+  renderHistory(q);
+  if (typeof renderToday === 'function') renderToday();
+}
+
 function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function highlight(text, query) {
   const escaped = escapeHtml(text);
@@ -1184,6 +1204,14 @@ let searchTimer;
 document.getElementById('searchInput').addEventListener('input', (e) => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => renderHistory(e.target.value.trim()), 200);
+});
+
+// 删除「过去的光」中的某一天
+document.getElementById('historyList').addEventListener('click', (e) => {
+  const btn = e.target.closest('.history-del-btn');
+  if (!btn) return;
+  const key = btn.dataset.key;
+  if (confirm('确定删除这一天的记录吗？此操作不可撤销。')) deleteEntry(key);
 });
 
 // ─── Tabs ──────────────────────────────────────────────────────────────────

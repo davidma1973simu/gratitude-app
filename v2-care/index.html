@@ -1412,6 +1412,11 @@ async function logEvent(event, properties = {}) { await SB.logEvent(event, prope
 var allEntries = {};
 window.allEntries = allEntries;
 
+const STORAGE_KEY = 'gratitude_entries_v1';
+function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
+function saveLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
 async function loadCloud() {
   if (!SB._tokens) return {};
   try {
@@ -2906,6 +2911,7 @@ function scheduleReminder() {
     const key = todayKey();
     if (allEntries[key] && allEntries[key].length === 3 && allEntries[key].some(e => e.trim())) return;
     const now = new Date();
+    const h = now.getHours(), m = now.getMinutes();
     if (h === 23 && m === 0 && !reminderBannerShown) {
       reminderBannerShown = true;
       showBanner(t('reminder_banner'));

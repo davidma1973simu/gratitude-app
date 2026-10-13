@@ -954,6 +954,11 @@ async function logEvent(event, properties = {}) { await SB.logEvent(event, prope
 // ─── Cloud Data ────────────────────────────────────────────────────────────
 let allEntries = {};
 
+const STORAGE_KEY = 'gratitude_entries_v1';
+function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
+function saveLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
 async function loadCloud() {
   if (!SB._tokens) return {};
   try {
