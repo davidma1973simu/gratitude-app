@@ -79,6 +79,13 @@
       transition: all 0.18s ease;
     }
     .nav-tab.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+    .nav-diary-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: 10px; font-size: 13px; font-weight: 500;
+      background: var(--surface); color: var(--accent); border: 1px solid var(--border-light);
+      text-decoration: none; transition: all 0.18s ease; white-space: nowrap;
+    }
+    .nav-diary-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
 
     /* ─── User Avatar ─── */
     .user-avatar {
@@ -957,9 +964,10 @@
     </div>
     <div class="nav-tabs">
       <button class="nav-tab active" data-tab="today" data-i18n="tab_today">今天</button>
-      <button class="nav-tab" data-tab="history" data-i18n="tab_history">历史</button>
-    </div>
-    <div class="user-avatar" id="userAvatar"></div>
+        <button class="nav-tab" data-tab="history" data-i18n="tab_history">历史</button>
+      </div>
+      <a class="nav-diary-btn" href="diary.html" data-i18n="nav_diary">光之日记</a>
+      <div class="user-avatar" id="userAvatar"></div>
   </div>
   <!-- User Menu -->
   <div class="user-menu" id="userMenu">
@@ -1155,6 +1163,7 @@ const I18N = {
     login_btn_loading: '登录中…',
     login_hint: '无需注册，写下即开始（记录只属于你）',
     nav_title: '感恩日记',
+    nav_diary: '光之日记',
     tab_today: '今天',
     tab_history: '历史',
     logout: '退出登录',
@@ -1251,6 +1260,7 @@ const I18N = {
     login_btn_loading: 'Signing in…',
     login_hint: 'No sign-up needed — just start writing. Your entries stay yours.',
     nav_title: 'Gratitude',
+    nav_diary: 'Light Diary',
     tab_today: 'Today',
     tab_history: 'History',
     logout: 'Sign Out',
