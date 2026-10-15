@@ -12,6 +12,8 @@
   <meta name="apple-mobile-web-app-title" content="光之日记">
   <!-- html2canvas for card export -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
+  <script src="backend.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
 
@@ -749,6 +751,21 @@ document.addEventListener('DOMContentLoaded', function() {
   }, 50);
 });
 
+// ── 云端模式登录门禁：未登录跳回登录页；已登录则拉取云端感恩条目 ──
+if (SB.isCloud) {
+  var _diaryMain = document.querySelector('main');
+  if (_diaryMain) _diaryMain.style.visibility = 'hidden';
+  SB.ensureSession().then(function(session){
+    if (session && session.user) {
+      if (_diaryMain) _diaryMain.style.visibility = '';
+      var gb = document.getElementById('settingsBtn'); if (gb) gb.style.display = 'none'; // 云端无 Key，无需 DeepSeek Key
+      loadCloudEntriesForDiary().then(updateImportButton);
+    } else {
+      window.location.replace('index.html');
+    }
+  }).catch(function(){ window.location.replace('index.html'); });
+}
+
 // ══════════════════════════════════════
 // Import Today's Gratitude
 // ══════════════════════════════════════
@@ -766,7 +783,9 @@ function updateImportButton() {
 }
 
 function loadV1Entries() {
-  // V2-Care 在 LOCAL_MODE 下把感恩条目写进 grat_entries_local（按日期存 content1/2/3）
+  // 云端模式：直接返回已加载的云端条目缓存
+  if (SB.isCloud) return cloudEntriesCache;
+  // LOCAL_MODE 下把感恩条目写进 grat_entries_local（按日期存 content1/2/3）
   try {
     var raw = localStorage.getItem('grat_entries_local');
     if (!raw) return {};
@@ -779,6 +798,20 @@ function loadV1Entries() {
     });
     return map;
   } catch(e) { return {}; }
+}
+
+// 云端模式：从 WB Cloud 拉取感恩条目，写入缓存（供「导入今日感恩」使用）
+var cloudEntriesCache = {};
+async function loadCloudEntriesForDiary() {
+  if (!SB.isCloud) return;
+  try {
+    var rows = await SB.getEntries();
+    cloudEntriesCache = {};
+    (rows || []).forEach(function(r){
+      var arr = [r.content1, r.content2, r.content3].filter(function(x){ return x && x.trim(); });
+      if (arr.length) cloudEntriesCache[r.date] = arr;
+    });
+  } catch(e) { cloudEntriesCache = {}; }
 }
 
 function getTodayKey() {
@@ -872,6 +905,17 @@ function generateDiary(){
   document.getElementById('loadingSection').classList.add('active');
   document.getElementById('outputSection').classList.remove('active');
 
+  // 云端模式：无 Key LLM（自动选模型，流式）
+  if (SB.isCloud) {
+    callCloudLLM(inp).then(function(ai){
+      renderFromAI(inp,ai);
+    }).catch(function(err){
+      console.warn('云端 AI 调用失败，使用模拟数据:',err);
+      generateMock(inp);
+    });
+    return;
+  }
+
   var apiKey=(localStorage.getItem('diary_ai_key')||'').trim();
 
   if(apiKey&&apiKey.startsWith('sk-')){
@@ -887,13 +931,29 @@ function generateDiary(){
 }
 
 // ══════════════════════════════════════
-// DeepSeek API Call
+// AI 日记生成（DeepSeek / 云端无 Key）
 // ══════════════════════════════════════
+function diarySystemPrompt(){
+  return '你是一个温暖的感恩日记助手。用户会写下今天感恩的片段，请生成以下内容并以纯JSON格式返回（不要有任何JSON以外的文字，不要加```标记）：\n1. "wrapper": 一段温暖的引导文字（35-65字），放在用户原始输入下方，语气温柔，与用户输入的具体细节相关，不要重复用户原话，而是延伸出一种感受\n2. "emotions": 情绪评分对象，四个维度各0-100的整数：{"warm":80,"calm":60,"hopeful":40,"gentle":70}\n3. "insight": 情绪洞察（30-50字），从用户输入中提取具体的人/事/物名，编织成一句温暖的鼓励，不要模板化通用话\n4. "tome": 致此刻的你（12-22字），一句话，与用户输入内容相关，温暖有力量\n只返回JSON。';
+}
+
+// 云端模式：调用 WB Cloud 无 Key LLM（流式，自动选模型）
+function callCloudLLM(inputText){
+  return new Promise(function(resolve,reject){
+    var sysTxt=diarySystemPrompt();
+    var usrTxt='用户写下：\n'+inputText+'\n\n请返回JSON：';
+    SB.callLLM(sysTxt, usrTxt, {temperature:0.82, max_tokens:600}).then(function(text){
+      text=(text||'').trim().replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'');
+      resolve(JSON.parse(text.trim()));
+    }).catch(function(e){reject(e);});
+  });
+}
+
 function callDeepSeek(inputText,apiKey){
   return new Promise(function(resolve,reject){
     var ac=new AbortController();
     var tid=setTimeout(function(){ac.abort();},19000);
-    var sysTxt='你是一个温暖的感恩日记助手。用户会写下今天感恩的片段，请生成以下内容并以纯JSON格式返回（不要有任何JSON以外的文字，不要加```标记）：\n1. "wrapper": 一段温暖的引导文字（35-65字），放在用户原始输入下方，语气温柔，与用户输入的具体细节相关，不要重复用户原话，而是延伸出一种感受\n2. "emotions": 情绪评分对象，四个维度各0-100的整数：{"warm":80,"calm":60,"hopeful":40,"gentle":70}\n3. "insight": 情绪洞察（30-50字），从用户输入中提取具体的人/事/物名，编织成一句温暖的鼓励，不要模板化通用话\n4. "tome": 致此刻的你（12-22字），一句话，与用户输入内容相关，温暖有力量\n只返回JSON。';
+    var sysTxt=diarySystemPrompt();
     var usrTxt='用户写下：\n'+inputText+'\n\n请返回JSON：';
     fetch('https://api.deepseek.com/chat/completions',{
       method:'POST',
