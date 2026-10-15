@@ -972,14 +972,48 @@ function diarySystemPrompt(){
   return '你是一个温暖的感恩日记助手。用户会写下今天感恩的片段，请生成以下内容并以纯JSON格式返回（不要有任何JSON以外的文字，不要加```标记）：\n1. "wrapper": 一段温暖的引导文字（35-65字），放在用户原始输入下方，语气温柔，与用户输入的具体细节相关，不要重复用户原话，而是延伸出一种感受\n2. "emotions": 情绪评分对象，四个维度各0-100的整数：{"warm":80,"calm":60,"hopeful":40,"gentle":70}\n3. "insight": 情绪洞察（30-50字），从用户输入中提取具体的人/事/物名，编织成一句温暖的鼓励，不要模板化通用话\n4. "tome": 致此刻的你（12-22字），一句话，与用户输入内容相关，温暖有力量\n只返回JSON。';
 }
 
+// ── 稳健解析模型输出 ──
+// ⚠️ 不能只依赖 JSON.parse：真实模型经常带 markdown 围栏、前后说明文字、
+//    中文引号或尾随逗号。任何一处失败都会把整段高质量产出丢掉、静默降级成模板，
+//    用户看到的就是「功能没实现」。这里逐级降级，能救多少救多少。
+function parseAIJson(raw){
+  if(!raw) throw new Error('EMPTY_AI');
+  var text=String(raw).trim();
+  // 1) 去 markdown 围栏
+  text=text.replace(/^```[a-zA-Z]*\s*/,'').replace(/```\s*$/,'').trim();
+  // 2) 直接解析
+  try { return JSON.parse(text); } catch(e){}
+  // 3) 截取第一个 { 到最后一个 }（前后夹了说明文字）
+  var s=text.indexOf('{'), t=text.lastIndexOf('}');
+  if(s>=0 && t>s){
+    var slice=text.slice(s,t+1);
+    try { return JSON.parse(slice); } catch(e){}
+    // 4) 常见脏数据：尾随逗号、中文引号
+    try {
+      return JSON.parse(slice
+        .replace(/,\s*([}\]])/g,'$1')
+        .replace(/[\u201c\u201d]/g,'"'));
+    } catch(e){}
+  }
+  // 5) 兜底：逐字段抽取
+  function field(name){
+    var m=text.match(new RegExp('"'+name+'"\\s*:\\s*"([^"]*)"'));
+    return m?m[1]:'';
+  }
+  var out={ wrapper:field('wrapper'), insight:field('insight'), tome:field('tome') };
+  if(!out.wrapper && !out.insight && !out.tome) throw new Error('AI_PARSE_FAILED');
+  var em=text.match(/"emotions"\s*:\s*(\{[^}]*\})/);
+  if(em){ try { out.emotions=JSON.parse(em[1]); } catch(e){} }
+  return out;
+}
+
 // 云端模式：调用 WB Cloud 无 Key LLM（流式，自动选模型）
 function callCloudLLM(inputText){
   return new Promise(function(resolve,reject){
     var sysTxt=diarySystemPrompt();
     var usrTxt='用户写下：\n'+inputText+'\n\n请返回JSON：';
     SB.callLLM(sysTxt, usrTxt, {temperature:0.82, max_tokens:600}).then(function(text){
-      text=(text||'').trim().replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'');
-      resolve(JSON.parse(text.trim()));
+      resolve(parseAIJson(text));
     }).catch(function(e){reject(e);});
   });
 }
@@ -1002,8 +1036,7 @@ function callDeepSeek(inputText,apiKey){
     }).then(function(data){
       clearTimeout(tid);
       var text=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
-      text=text.trim().replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'');
-      resolve(JSON.parse(text.trim()));
+      resolve(parseAIJson(text));
     }).catch(function(e){clearTimeout(tid);reject(e);});
   });
 }

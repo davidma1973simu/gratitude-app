@@ -280,37 +280,62 @@
     }
     .edit-btn:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--text-tertiary); }
 
-    /* ─── v2: Past Light entry in completed state ─── */
+    /* ─── v2: Past Light —— 宝利来相片（照片 + 手写体文字）─── */
     .past-light {
-      margin-top: 28px;
+      margin-top: 34px;
       opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.8s ease, transform 0.8s ease;
+      transform: translateY(10px) rotate(-1.4deg);
+      transition: opacity 0.9s ease, transform 0.9s ease;
       cursor: pointer;
       display: flex;
-      align-items: center;
       justify-content: center;
-      gap: 6px;
     }
-    .past-light.visible {
-      opacity: 1;
-      transform: translateY(0);
+    .past-light.visible { opacity: 1; transform: translateY(0) rotate(-1.4deg); }
+    .past-light:hover { transform: translateY(-3px) rotate(-1.4deg); }
+    .polaroid {
+      width: 172px;
+      padding: 9px 9px 0;
+      background: #fffdfa;
+      border-radius: 2px;
+      box-shadow: 0 5px 16px rgba(28,25,23,0.11), 0 1px 3px rgba(28,25,23,0.07);
     }
-    .past-light:hover { opacity: 0.85; }
-    .past-light-text {
-      font-size: 14px;
-      color: var(--text-tertiary);
-      font-weight: 400;
-      font-style: italic;
-      transition: color 0.3s;
+    .polaroid-photo {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background-color: #e8e2d8;
+      background-size: cover;
+      background-position: center;
+      border-radius: 1px;
+      /* 宝利来特有的暖调、略降反差 */
+      filter: saturate(0.94) contrast(1.02) brightness(1.02);
+      position: relative;
     }
-    .past-light:hover .past-light-text { color: var(--text-secondary); }
-    .past-light-arrow {
-      font-size: 12px;
-      color: var(--text-tertiary);
-      transition: color 0.3s, transform 0.3s;
+    /* 感光乳剂的暖粉色调 + 暗角，贴住宝利来的质感 */
+    .polaroid-photo::after {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(60% 55% at 48% 40%, rgba(255,255,255,0) 0%, rgba(58,38,24,0.20) 100%),
+        linear-gradient(180deg, rgba(255,236,222,0.10) 0%, rgba(226,200,208,0.10) 100%);
+      border-radius: 1px;
     }
-    .past-light:hover .past-light-arrow { color: var(--text-secondary); transform: translateX(2px); }
+    /* 还没有过去 —— 像一张尚未曝光的相纸：柔和的暖白，中央一点柔光 */
+    .polaroid-photo.empty {
+      background-image:
+        radial-gradient(72% 62% at 50% 42%, rgba(255,255,253,0.95) 0%, rgba(255,255,253,0) 72%),
+        linear-gradient(135deg, #f6f1e8 0%, #efe8da 48%, #e6dccb 100%);
+    }
+    .polaroid-caption {
+      font-family: 'Ma Shan Zheng', 'Zhi Mang Xing', 'Satisfy', cursive;
+      font-size: 16px;
+      line-height: 1.45;
+      color: #8d8377;
+      padding: 12px 4px 15px;
+      text-align: center;
+      min-height: 46px;
+      word-break: break-word;
+      text-wrap: balance;
+    }
 
     /* ─── History View ─── */
     .history-header { margin-bottom: 24px; }
@@ -480,16 +505,33 @@
       border: 1px solid var(--accent); margin-top: 8px;
     }
     .login-btn-ghost:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent-hover); }
-    /* 免登录入口：比主按钮更轻，安静地存在于底部 */
-    .login-btn-plain {
-      background: transparent; color: var(--text-secondary);
-      border: none; margin-top: 10px; font-weight: 500;
-      font-size: 14px; text-decoration: underline;
-      text-underline-offset: 3px;
+    /* 匿名使用按钮下方的小字说明 */
+    .anon-note {
+      font-size: 12.5px; color: var(--text-tertiary);
+      margin-top: 9px; text-align: center; letter-spacing: 0.2px;
     }
-    .login-btn-plain:hover:not(:disabled) { color: var(--accent); background: transparent; }
+    /* 匿名 与 登录 之间的虚线：表示两条并列的路，不是主次 */
+    .login-or {
+      border-top: 1px dashed var(--border);
+      margin: 24px 0 22px;
+    }
     .login-hint {
       font-size: 13px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6;
+    }
+    /* 「忘记密码？」等次级链接：不要浏览器默认的蓝色下划线 */
+    .login-hint a {
+      color: var(--text-tertiary); text-decoration: none;
+      border-bottom: 1px solid var(--border); padding-bottom: 1px;
+      transition: color 0.18s ease, border-color 0.18s ease;
+    }
+    .login-hint a:hover { color: var(--accent); border-color: var(--accent); }
+    /* 浏览器自动填充默认是淡蓝底，与品牌色冲突，统一成品牌浅绿 */
+    .login-input:-webkit-autofill,
+    .login-input:-webkit-autofill:hover,
+    .login-input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 1000px var(--accent-soft) inset;
+      -webkit-text-fill-color: var(--text-primary);
+      caret-color: var(--text-primary);
     }
     .login-password-wrap { position: relative; }
     .login-password-toggle {
@@ -1020,8 +1062,13 @@
     <div class="login-hint" data-i18n="login_hint">无需注册，写下即开始（记录只属于你）</div>
   </div>
 
-  <!-- 云端模式（WB 托管）：邮箱 + 密码登录 / 注册 -->
+  <!-- 云端模式（WB 托管）：匿名使用 / 邮箱 + 密码登录 -->
   <div id="loginCloudForm" style="display:none; width:100%; max-width:360px;">
+    <!-- 匿名使用：门槛最低的路，放最上；与登录之间用虚线分开，表示二者并列 -->
+    <button class="login-btn" id="anonBtn" data-i18n="anon_btn">匿名使用</button>
+    <div class="anon-note" data-i18n="anon_note">只存这台设备</div>
+    <div class="login-or"></div>
+
     <input class="login-input" id="loginEmail" type="email" autocomplete="email" placeholder="输入你的邮箱" data-i18n-placeholder="login_email_ph">
     <div class="login-password-wrap">
       <input class="login-input" id="loginPassword" type="password" autocomplete="current-password" placeholder="设置密码（首次将自动注册）" data-i18n-placeholder="login_password_ph">
@@ -1031,7 +1078,6 @@
     <button class="login-btn" id="loginBtn" data-i18n="login_btn">登 录</button>
     <button class="login-btn login-btn-ghost" id="signupBtn" data-i18n="signup_btn">注册新账号</button>
     <div class="login-hint"><a href="#" id="forgotPw" data-i18n="forgot_pw">忘记密码？</a></div>
-    <button class="login-btn login-btn-plain" id="anonBtn" data-i18n="login_anon">先记下来，不登录（只存这台设备）</button>
     <div class="login-error" id="loginError" style="display:none;"></div>
   </div>
 </div>
@@ -1152,10 +1198,12 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         <span data-i18n="edit_btn">修改今天的记录</span>
       </button>
-      <!-- v2: Completed-state entry to past light — subtle, poetic -->
+      <!-- v2: 曾经的微光 —— 一张宝利来相片（照片 + 手写体文字），点击走进重逢 -->
       <div class="past-light" id="pastLight" style="display:none;">
-        <span class="past-light-text" id="pastLightText"></span>
-        <span class="past-light-arrow">→</span>
+        <div class="polaroid">
+          <div class="polaroid-photo" id="pastLightPhoto"></div>
+          <div class="polaroid-caption" id="pastLightText"></div>
+        </div>
       </div>
     </div>
 
@@ -1264,14 +1312,15 @@ const I18N = {
     history_hide: '隐藏这条',
     history_hidden: '已隐藏',
     undo: '撤销',
-    history_diary_link: '✦ 把今天的感恩写成一封信',
+    history_diary_link: '✦ 光之日记',
     account_saved_days: '云端已存 {n} 天',
     account_local_mode: '本机模式 · 数据存在这台设备',
     local_cloud_hint: '数据存在这台设备上 · 要跨设备同步请用云端版',
     local_cloud_go: '前往云端版',
     local_cloud_login: '登录以跨设备同步',
     ai_settings: 'AI 设置',
-    login_anon: '先记下来，不登录（只存这台设备）',
+    anon_btn: '匿名使用',
+    anon_note: '只存这台设备',
     enter_btn: '开始记录',
     cancel: '取消',
     save: '保存',
@@ -1383,14 +1432,15 @@ const I18N = {
     history_hide: 'Hide this entry',
     history_hidden: 'Hidden',
     undo: 'Undo',
-    history_diary_link: '✦ Turn gratitude into a letter',
+    history_diary_link: '✦ Light Diary',
     account_saved_days: '{n} days saved in cloud',
     account_local_mode: 'Local mode · stored on this device',
     local_cloud_hint: 'Stored on this device only · use the cloud version to sync across devices',
     local_cloud_go: 'Open cloud version',
     local_cloud_login: 'Sign in to sync across devices',
     ai_settings: 'AI Settings',
-    login_anon: 'Just start writing — no sign-in (this device only)',
+    anon_btn: 'Use anonymously',
+    anon_note: 'This device only',
     enter_btn: 'Start Writing',
     cancel: 'Cancel',
     save: 'Save',
@@ -2692,38 +2742,57 @@ document.getElementById('watermark').addEventListener('click', () => {
   if (currentMemoryData) openReunion(currentMemoryData);
 });
 
-// ─── v2: Past Light (completed-state entry to Reunion) ──────────────────────
+// ─── v2: 曾经的微光 —— 宝利来相片（照片 + 手写体文字）─────────────────────
+// 相片池只收氛围/风景图，不用人像（人脸配一句无关的感恩文字会很违和）；
+// 全部是仓库内置图片，不依赖海外图床，国内可访问。
+const PAST_PHOTO_POOL = [
+  'images/warm/warm-01.jpg', 'images/warm/warm-02.jpg',
+  'images/warm/warm-04.jpg', 'images/warm/warm-05.jpg',
+  'images/hopeful/hopeful-01.jpg', 'images/hopeful/hopeful-02.jpg',
+  'images/hopeful/hopeful-03.jpg', 'images/hopeful/hopeful-04.jpg',
+  'images/hopeful/hopeful-05.jpg', 'images/hopeful/hopeful-06.jpg',
+  'images/calm/calm-02.jpg', 'images/calm/calm-03.jpg',
+  'images/calm/calm-04.jpg', 'images/calm/calm-05.jpg', 'images/calm/calm-06.jpg',
+  'images/gentle/gentle-02.jpg', 'images/gentle/gentle-03.jpg',
+  'images/gentle/gentle-04.jpg', 'images/gentle/gentle-05.jpg'
+];
+// 同一日期固定同一张相片（按日期做稳定散列），刷新不会跳图
+function warmPhotoFor(date) {
+  let h = 0;
+  for (let i = 0; i < date.length; i++) h = (h * 31 + date.charCodeAt(i)) % 9973;
+  return PAST_PHOTO_POOL[h % PAST_PHOTO_POOL.length];
+}
+
 function showPastLight() {
   const pastLight = document.getElementById('pastLight');
   const pastLightText = document.getElementById('pastLightText');
+  const pastLightPhoto = document.getElementById('pastLightPhoto');
   const memory = pickMemory();
 
-  if (!memory) {
-    // No past memories yet — show poetic placeholder
+  // 还没有过去的记录 —— 一张空白相片，配一句等待的话
+  const revealEmpty = () => {
+    pastLightPhoto.style.backgroundImage = '';
+    pastLightPhoto.classList.add('empty');
     pastLightText.textContent = t('past_light_none');
     pastLight.style.display = 'flex';
-    // Fade in with delay
     setTimeout(() => pastLight.classList.add('visible'), 600);
     currentMemoryData = null;
-    return;
-  }
+  };
+
+  if (!memory) return revealEmpty();
 
   const nonEmpty = memory.entries.filter(c => c.trim());
-  if (!nonEmpty.length) {
-    pastLightText.textContent = t('past_light_none');
-    pastLight.style.display = 'flex';
-    setTimeout(() => pastLight.classList.add('visible'), 600);
-    currentMemoryData = null;
-    return;
-  }
+  if (!nonEmpty.length) return revealEmpty();
 
-  // Show "曾经的微光" with a snippet
+  // 宝利来底部写的就是那天写下的话（手写体）
   const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
-  const snippet = chosenText.length > 18 ? chosenText.slice(0, 18) + '…' : chosenText;
-  pastLightText.textContent = t('past_light_text') + ' 「' + snippet + '」';
+  const caption = chosenText.length > 26 ? chosenText.slice(0, 26) + '…' : chosenText;
+
+  pastLightPhoto.classList.remove('empty');
+  pastLightPhoto.style.backgroundImage = 'url("' + warmPhotoFor(memory.date) + '")';
+  pastLightText.textContent = caption;
   pastLight.style.display = 'flex';
   currentMemoryData = memory;
-  // Fade in with delay, like a gentle afterthought
   setTimeout(() => pastLight.classList.add('visible'), 600);
 }
 
@@ -3245,6 +3314,7 @@ function renderHistory(query = '') {
 
   if (!keys.length) {
     listEl.innerHTML = emptyHistoryBlock(t('empty_history'));
+    appendDiaryLink(listEl);
     return;
   }
 
@@ -3281,10 +3351,17 @@ function renderHistory(query = '') {
 
   if (!anyMatch && q) {
     listEl.innerHTML = emptyHistoryBlock(t('no_match'));
+    appendDiaryLink(listEl);
     return;
   }
 
-  // 最底部的淡链接入口
+  appendDiaryLink(listEl);
+}
+
+// 光之日记入口：历史列表最底部的淡链接。
+// 必须放在「空历史 / 无搜索结果」之外也一样渲染 —— 新用户还没有记录，
+// 但一样应该能找到光之日记。
+function appendDiaryLink(listEl) {
   const link = document.createElement('a');
   link.className = 'history-diary-link';
   link.href = 'diary.html';

@@ -16,9 +16,13 @@
   // 仅在 WB 托管域名下启用云端（服务器校验 Origin，其余域名回退本地）
   const USE_CLOUD = typeof location !== 'undefined' && location.hostname.endsWith('app.workbuddy.host');
 
-  // 用户在云端版选择「不登录，先记下来」时置为 true —— 整个会话退回本地模式，
+  // 用户在云端版选择「匿名使用」时置为 true —— 整个会话退回本地模式，
   // 全程不触碰云端数据（不是匿名登录，也不是伪造会话，就是不读不写云端）。
-  let _forceLocal = false;
+  // ⚠️ 必须持久化：diary.html 是独立页面，会重新加载 backend.js，
+  //    若只存内存，跳过去后 _forceLocal 归 false → isCloud 变 true → 登录门禁把用户踢回首页。
+  let _forceLocal = (function () {
+    try { return localStorage.getItem('prefer_local') === '1'; } catch (e) { return false; }
+  })();
   function _isCloud() { return USE_CLOUD && !_forceLocal; }
 
   // ── 本地模式常量 ──
@@ -83,7 +87,14 @@
     // 动态：选择「不登录」后应为 false
     get isCloud() { return _isCloud(); },
     // 云端版里主动退回纯本机模式（不读写云端，不是匿名登录）
-    forceLocalMode() { _forceLocal = true; },
+    forceLocalMode() {
+      _forceLocal = true;
+      try { localStorage.setItem('prefer_local', '1'); } catch (e) {}
+    },
+    clearForceLocal() {
+      _forceLocal = false;
+      try { localStorage.removeItem('prefer_local'); } catch (e) {}
+    },
     _tokens: null,
     _listeners: [],
 
@@ -271,22 +282,35 @@
         const list = Array.isArray(models) ? models : (models?.data || []);
         const model = list.find(m => m.disabled !== true) || list[0];
         if (!model || !model.id) throw new Error('NO_MODEL');
-        let acc = '';
-        for await (const chunk of c.llm.chat.completions.create({
-          model: model.id,
-          messages: [
-            { role: 'system', content: systemText },
-            { role: 'user', content: userText }
-          ],
-          stream: true,
-          temperature: opts?.temperature ?? 0.82,
-          max_tokens: opts?.max_tokens ?? 600,
-          response_format: { type: 'json_object' },
-        })) {
-          const delta = chunk?.choices?.[0]?.delta?.content;
-          if (delta) acc += delta;
+
+        const run = async (useJsonFormat) => {
+          const body = {
+            model: model.id,
+            messages: [
+              { role: 'system', content: systemText },
+              { role: 'user', content: userText }
+            ],
+            stream: true,                                    // 平台要求：必须流式
+            temperature: opts?.temperature ?? 0.82,
+            max_tokens: opts?.max_tokens ?? 600,
+          };
+          // response_format 能显著提高 JSON 合规性，但不是所有模型都支持；
+          // 支持就用，不支持则去掉重试一次，避免整次调用白费。
+          if (useJsonFormat) body.response_format = { type: 'json_object' };
+          let acc = '';
+          for await (const chunk of c.llm.chat.completions.create(body)) {
+            const delta = chunk?.choices?.[0]?.delta?.content;
+            if (delta) acc += delta;
+          }
+          return acc;
+        };
+
+        try {
+          return await run(true);
+        } catch (e1) {
+          console.warn('[WB] callLLM(json_object) 失败，去掉该参数重试', e1);
+          return await run(false);
         }
-        return acc;
       } catch (e) {
         console.error('[WB] callLLM error', e);
         throw e;
