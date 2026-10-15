@@ -35,8 +35,10 @@
       --text-primary: #1c1917;
       --text-secondary: #78716c;
       --text-tertiary: #a8a29e;
-      --accent: #1c1917;
-      --accent-soft: #f5f5f4;
+      /* 品牌主色：翡翠绿（原为近黑 #1c1917，按钮发黑） */
+      --accent: #0E6B50;
+      --accent-hover: #0B5541;
+      --accent-soft: #eef4f1;
       --success: #16a34a;
       --radius: 14px;
       --radius-lg: 20px;
@@ -79,13 +81,6 @@
       transition: all 0.18s ease;
     }
     .nav-tab.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow-sm); }
-    .nav-diary-btn {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 6px 14px; border-radius: 10px; font-size: 13px; font-weight: 500;
-      background: var(--surface); color: var(--accent); border: 1px solid var(--border-light);
-      text-decoration: none; transition: all 0.18s ease; white-space: nowrap;
-    }
-    .nav-diary-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
 
     /* ─── User Avatar ─── */
     .user-avatar {
@@ -253,7 +248,7 @@
     /* ─── Submit Button ─── */
     .submit-btn {
       width: 100%; padding: 15px;
-      background: var(--text-primary); color: #fafaf9;
+      background: var(--accent); color: #fff;
       border: none; border-radius: var(--radius);
       font-size: 15px; font-weight: 600; letter-spacing: -0.2px;
       cursor: pointer; transition: all 0.18s ease;
@@ -360,6 +355,41 @@
     .history-text { font-size: 15px; line-height: 1.6; flex: 1; }
     .highlight { background: #fef9c3; border-radius: 3px; padding: 0 2px; }
 
+    /* ── 历史：单条隐藏（极简，常态几乎不可见） ── */
+    .history-item.dim { opacity: 0.3; }
+    .history-hide {
+      flex-shrink: 0; background: none; border: none; cursor: pointer;
+      color: var(--text-tertiary); font-size: 16px; line-height: 1;
+      opacity: 0.18; transition: opacity 0.15s ease;
+      padding: 4px 8px; margin: -4px -8px 0 0; border-radius: 50%;
+      font-family: inherit;
+    }
+    .history-hide:hover, .history-hide:focus-visible { opacity: 0.7; outline: none; }
+    @media (hover: none) { .history-hide { opacity: 0.38; } }
+
+    /* 撤销提示：极淡，浮在底部，自动消失 */
+    .undo-toast {
+      position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(8px);
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(23,23,23,0.9); color: #fff;
+      padding: 11px 18px; border-radius: 999px; font-size: 14px;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 9000; box-shadow: 0 8px 24px rgba(0,0,0,0.18); white-space: nowrap;
+    }
+    .undo-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+    .undo-toast button {
+      background: none; border: none; color: #86efac; font-size: 14px; font-weight: 600;
+      cursor: pointer; padding: 0; font-family: inherit;
+    }
+
+    /* 历史列表底部的光之日记入口：刻意做得很淡 */
+    .history-diary-link {
+      display: block; text-align: center; margin: 28px auto 8px;
+      font-size: 13px; color: var(--text-tertiary); opacity: 0.5;
+      text-decoration: none; padding: 10px;
+    }
+    .history-diary-link:hover { opacity: 0.85; }
+
     .empty-history {
       text-align: center; padding: 60px 24px;
       color: var(--text-tertiary);
@@ -390,7 +420,7 @@
     .modal-desc { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; }
     .modal-btn {
       width: 100%; padding: 15px;
-      background: var(--text-primary); color: #fafaf9;
+      background: var(--accent); color: #fff;
       border: none; border-radius: var(--radius);
       font-size: 15px; font-weight: 600; cursor: pointer;
       transition: opacity 0.18s; font-family: inherit;
@@ -400,7 +430,7 @@
     /* ─── Notification Banner ─── */
     .notif-banner {
       position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
-      background: var(--text-primary); color: #fafaf9;
+      background: var(--accent); color: #fff;
       border-radius: 12px; padding: 12px 20px;
       font-size: 14px; font-weight: 500;
       box-shadow: var(--shadow-lg); z-index: 200;
@@ -436,14 +466,28 @@
     .login-input::placeholder { color: var(--text-tertiary); }
     .login-btn {
       width: 100%; padding: 15px;
-      background: var(--text-primary); color: #fafaf9;
+      background: var(--accent); color: #fff;
       border: none; border-radius: var(--radius);
       font-size: 15px; font-weight: 600; cursor: pointer;
       transition: all 0.18s ease; font-family: inherit;
       pointer-events: auto;
     }
-    .login-btn:hover { opacity: 0.88; }
-    .login-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .login-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .login-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    /* 次要按钮：描边而非实心，主次分明 */
+    .login-btn-ghost {
+      background: transparent; color: var(--accent);
+      border: 1px solid var(--accent); margin-top: 8px;
+    }
+    .login-btn-ghost:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent-hover); }
+    /* 免登录入口：比主按钮更轻，安静地存在于底部 */
+    .login-btn-plain {
+      background: transparent; color: var(--text-secondary);
+      border: none; margin-top: 10px; font-weight: 500;
+      font-size: 14px; text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .login-btn-plain:hover:not(:disabled) { color: var(--accent); background: transparent; }
     .login-hint {
       font-size: 13px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6;
     }
@@ -469,7 +513,7 @@
       font-family: inherit;
     }
     .lang-btn.active {
-      background: var(--text-primary); color: #fafaf9;
+      background: var(--accent); color: #fff;
     }
 
     /* ─── Install Banner ─── */
@@ -492,7 +536,7 @@
     .install-banner-text p { font-size: 13px; color: var(--text-secondary); }
     .install-banner-btn {
       padding: 10px 20px; border-radius: 10px; border: none;
-      background: var(--text-primary); color: var(--bg);
+      background: var(--accent); color: #fff;
       font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
       font-family: inherit; transition: opacity 0.18s;
     }
@@ -527,6 +571,27 @@
       border-bottom: 1px solid var(--border-light); margin-bottom: 4px;
       word-break: break-all;
     }
+    /* 数据在云端的可见状态：邮箱下面一行，明确「存了多少、存在哪」 */
+    .user-menu-meta {
+      padding: 4px 12px 8px; font-size: 11px; color: var(--text-tertiary);
+      opacity: 0.85; letter-spacing: 0.02em;
+    }
+    /* 本地模式的轻量引导条 —— 极淡一行，可关闭，关过就不再出现 */
+    .local-cloud-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 14px; margin: 10px auto 0; max-width: 640px;
+      font-size: 12px; color: var(--text-tertiary);
+      background: var(--surface); border: 1px solid var(--border-light);
+      border-radius: 10px; line-height: 1.5;
+    }
+    .local-cloud-bar a { color: var(--accent); text-decoration: none; white-space: nowrap; }
+    .local-cloud-bar a:hover { text-decoration: underline; }
+    .local-cloud-bar .lcb-close {
+      margin-left: auto; background: none; border: none; cursor: pointer;
+      color: var(--text-tertiary); font-size: 15px; line-height: 1; padding: 2px 4px;
+      opacity: 0.6; flex-shrink: 0;
+    }
+    .local-cloud-bar .lcb-close:hover { opacity: 1; }
 
     /* ─── Sync Indicator ─── */
     .sync-badge {
@@ -915,19 +980,26 @@
   </div>
 </div>
 
-<!-- Force-clear old Service Worker caches from pre-login version -->
+<!-- 一次性清理：旧版（登录前）Service Worker 缓存。
+     必须只跑一次 —— 每次加载都注销再注册会和下面的注册互相打架，
+     导致 SW 反复报错、用户拿到陈旧页面。 -->
 <script>
 (function(){
   if (!document.currentScript) return;
+  var FLAG = 'sw_cleanup_v26';
+  try { if (localStorage.getItem(FLAG) === '1') return; } catch (e) { return; }
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(function(regs) {
       regs.forEach(function(reg) { reg.unregister(); });
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          names.forEach(function(name) { caches.delete(name); });
+        });
+      }
+      try { localStorage.setItem(FLAG, '1'); } catch (e) {}
     });
-    if ('caches' in window) {
-      caches.keys().then(function(names) {
-        names.forEach(function(name) { caches.delete(name); });
-      });
-    }
+  } else {
+    try { localStorage.setItem(FLAG, '1'); } catch (e) {}
   }
 })();
 </script>
@@ -944,7 +1016,7 @@
 
   <!-- 本地模式（GitHub Pages / localhost）：无登录，直接进入 -->
   <div id="loginLocalOnly">
-    <button class="login-btn" id="enterBtn">开始记录</button>
+    <button class="login-btn" id="enterBtn" data-i18n="enter_btn">开始记录</button>
     <div class="login-hint" data-i18n="login_hint">无需注册，写下即开始（记录只属于你）</div>
   </div>
 
@@ -953,12 +1025,13 @@
     <input class="login-input" id="loginEmail" type="email" autocomplete="email" placeholder="输入你的邮箱" data-i18n-placeholder="login_email_ph">
     <div class="login-password-wrap">
       <input class="login-input" id="loginPassword" type="password" autocomplete="current-password" placeholder="设置密码（首次将自动注册）" data-i18n-placeholder="login_password_ph">
-      <span class="login-password-toggle" id="pwToggle">显示</span>
+      <span class="login-password-toggle" id="pwToggle" data-i18n="pw_show">显示</span>
     </div>
     <input class="login-input" id="loginCode" type="text" inputmode="numeric" placeholder="输入邮箱验证码" style="display:none;" data-i18n-placeholder="login_code_ph">
     <button class="login-btn" id="loginBtn" data-i18n="login_btn">登 录</button>
     <button class="login-btn login-btn-ghost" id="signupBtn" data-i18n="signup_btn">注册新账号</button>
     <div class="login-hint"><a href="#" id="forgotPw" data-i18n="forgot_pw">忘记密码？</a></div>
+    <button class="login-btn login-btn-plain" id="anonBtn" data-i18n="login_anon">先记下来，不登录（只存这台设备）</button>
     <div class="login-error" id="loginError" style="display:none;"></div>
   </div>
 </div>
@@ -983,12 +1056,12 @@
       <button class="nav-tab active" data-tab="today" data-i18n="tab_today">今天</button>
         <button class="nav-tab" data-tab="history" data-i18n="tab_history">历史</button>
       </div>
-      <a class="nav-diary-btn" href="diary.html" data-i18n="nav_diary">光之日记</a>
       <div class="user-avatar" id="userAvatar"></div>
   </div>
   <!-- User Menu -->
   <div class="user-menu" id="userMenu">
     <div class="user-menu-email" id="userMenuEmail"></div>
+    <div class="user-menu-meta" id="userMenuMeta"></div>
     <button class="user-menu-item" id="aiSettingsBtn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.69-.95 1.65 1.65 0 0 0-1.12 1.74l.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.65-1.65V11a2 2 0 0 1 0-4v.09A1.65 1.65 0 0 0 6.6 9a1.65 1.65 0 0 0-1.1-1.65 1.65 1.65 0 0 0-1.69-.95l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 2.88a1.65 1.65 0 0 0-1.65-1.65V1a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1.65 1.65 1.65 1.65 0 0 0 1.1-1.65l-.06-.06a2 2 0 0 1 2.83 2.83l.06.06A1.65 1.65 0 0 0 15 4.68a1.65 1.65 0 0 0 1.65 1.65V7a2 2 0 0 1 4 0V6.91a1.65 1.65 0 0 0 1.65-1.65 1.65 1.65 0 0 0-.95-1.69l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 21.12 4.68a1.65 1.65 0 0 0 1.65 1.65V7a2 2 0 0 1 0 4v-.09a1.65 1.65 0 0 0-1.65-1.65z"/></svg>
       <span data-i18n="ai_settings">AI 设置</span>
@@ -1014,8 +1087,8 @@
     <div class="ai-settings-hint">仅保存在本设备，不会上传。</div>
     <div class="ai-settings-status" id="aiSettingsStatus"></div>
     <div class="ai-settings-actions">
-      <button class="ai-settings-btn cancel" onclick="toggleAISettings()">取消</button>
-      <button class="ai-settings-btn save" onclick="saveAISettings()">保存</button>
+      <button class="ai-settings-btn cancel" onclick="toggleAISettings()" data-i18n="cancel">取消</button>
+      <button class="ai-settings-btn save" onclick="saveAISettings()" data-i18n="save">保存</button>
     </div>
   </div>
 </div>
@@ -1186,9 +1259,22 @@ const I18N = {
     pw_hide: '隐藏',
     login_hint: '无需注册，写下即开始（记录只属于你）',
     nav_title: '感恩日记',
-    nav_diary: '光之日记',
     tab_today: '今天',
     tab_history: '历史',
+    history_hide: '隐藏这条',
+    history_hidden: '已隐藏',
+    undo: '撤销',
+    history_diary_link: '✦ 把今天的感恩写成一封信',
+    account_saved_days: '云端已存 {n} 天',
+    account_local_mode: '本机模式 · 数据存在这台设备',
+    local_cloud_hint: '数据存在这台设备上 · 要跨设备同步请用云端版',
+    local_cloud_go: '前往云端版',
+    local_cloud_login: '登录以跨设备同步',
+    ai_settings: 'AI 设置',
+    login_anon: '先记下来，不登录（只存这台设备）',
+    enter_btn: '开始记录',
+    cancel: '取消',
+    save: '保存',
     logout: '退出登录',
     submit_btn: '记录今天的感恩',
     completed_title: '今天的感恩已完成',
@@ -1292,9 +1378,22 @@ const I18N = {
     pw_hide: 'Hide',
     login_hint: 'No sign-up needed — just start writing. Your entries stay yours.',
     nav_title: 'Gratitude',
-    nav_diary: 'Light Diary',
     tab_today: 'Today',
     tab_history: 'History',
+    history_hide: 'Hide this entry',
+    history_hidden: 'Hidden',
+    undo: 'Undo',
+    history_diary_link: '✦ Turn gratitude into a letter',
+    account_saved_days: '{n} days saved in cloud',
+    account_local_mode: 'Local mode · stored on this device',
+    local_cloud_hint: 'Stored on this device only · use the cloud version to sync across devices',
+    local_cloud_go: 'Open cloud version',
+    local_cloud_login: 'Sign in to sync across devices',
+    ai_settings: 'AI Settings',
+    login_anon: 'Just start writing — no sign-in (this device only)',
+    enter_btn: 'Start Writing',
+    cancel: 'Cancel',
+    save: 'Save',
     logout: 'Sign Out',
     submit_btn: 'Record Today\'s Gratitude',
     completed_title: 'Today\'s Gratitude Complete',
@@ -1457,19 +1556,39 @@ window.allEntries = allEntries;
 const STORAGE_KEY = 'gratitude_entries_v1';
 function loadLocal() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
 function saveLocal(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+// ── 隐藏标记（每条独立）──
+// 单独存一个 key，不改动 gratitude_entries_v1 的数组结构：
+// allEntries[date] 必须始终保持 3 个元素且位置固定，否则隐藏一条会导致内容串位、
+// 保存时把第 2 条写进第 1 条的位置。所以「是否隐藏」用平行 map 表达。
+const HIDDEN_KEY = 'gratitude_hidden_v1';
+var hiddenMap = {};
+function loadHidden() { try { return JSON.parse(localStorage.getItem(HIDDEN_KEY)) || {}; } catch { return {}; } }
+function saveHidden(map) { localStorage.setItem(HIDDEN_KEY, JSON.stringify(map)); }
+function normalizeFlags(h) { return Array.isArray(h) ? [!!h[0], !!h[1], !!h[2]] : [false, false, false]; }
+function flagsFor(date) { return normalizeFlags(hiddenMap[date]); }
+// 返回该天可见的内容数组（保持原顺序，仅过滤）
+function visibleEntriesFor(date) {
+  const arr = allEntries[date] || [];
+  const f = flagsFor(date);
+  return arr.filter((c, i) => c && c.trim() && !f[i]);
+}
 function todayKey() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 
 async function loadCloud() {
-  if (!SB._tokens) return {};
+  if (!SB._tokens) return { entries: {}, hidden: {} };
   try {
     setSyncStatus('syncing');
     const user = SB._tokens.user;
     const rows = await SB.getEntries(user.id);
-    const map = {};
-    (rows || []).forEach(row => { map[row.date] = [row.content1 || '', row.content2 || '', row.content3 || '']; });
+    const map = {}, hid = {};
+    (rows || []).forEach(row => {
+      map[row.date] = [row.content1 || '', row.content2 || '', row.content3 || ''];
+      hid[row.date] = normalizeFlags(row.hidden);
+    });
     setSyncStatus('online');
-    return map;
-  } catch (e) { console.error('Cloud load error:', e); setSyncStatus('offline'); return {}; }
+    return { entries: map, hidden: hid };
+  } catch (e) { console.error('Cloud load error:', e); setSyncStatus('offline'); return { entries: {}, hidden: {} }; }
 }
 
 async function saveCloud(dateKey, contents) {
@@ -1477,7 +1596,7 @@ async function saveCloud(dateKey, contents) {
   try {
     setSyncStatus('syncing');
     const user = SB._tokens.user;
-    await SB.upsertEntry(user.id, dateKey, contents[0] || '', contents[1] || '', contents[2] || '');
+    await SB.upsertEntry(user.id, dateKey, contents[0] || '', contents[1] || '', contents[2] || '', flagsFor(dateKey));
     setSyncStatus('online');
   } catch (e) { console.error('Cloud save error:', e); setSyncStatus('offline'); }
 }
@@ -1486,23 +1605,40 @@ async function migrateLocalToCloud() {
   const localData = loadLocal();
   const keys = Object.keys(localData);
   if (!keys.length || !SB._tokens) return;
-  const cloudData = await loadCloud();
+  const cloud = await loadCloud();
   let migrated = 0;
   for (const key of keys) {
-    if (cloudData[key]) continue;
+    if (cloud.entries[key]) continue;
     const contents = localData[key];
     if (contents && contents.length === 3 && contents.some(c => c.trim())) {
       await saveCloud(key, contents);
       migrated++;
     }
   }
+  // 本地隐藏标记补充上行（云端该天已存在时也要把本地隐藏状态同步过去）
+  const localHidden = loadHidden();
+  for (const key of Object.keys(localHidden)) {
+    const f = normalizeFlags(localHidden[key]);
+    if (!f.some(Boolean)) continue;
+    if (!cloud.entries[key]) continue; // 该天不在云端，走上面的条目迁移即可
+    const cf = normalizeFlags(cloud.hidden[key]);
+    if (cf[0] === f[0] && cf[1] === f[1] && cf[2] === f[2]) continue;
+    await SB.upsertEntry(SB._tokens.user.id, key,
+      (allEntries[key] || [])[0] || '', (allEntries[key] || [])[1] || '', (allEntries[key] || [])[2] || '', f);
+  }
   if (migrated > 0) showBanner(t('migrated', { n: migrated }));
-  allEntries = { ...localData, ...cloudData };
+  allEntries = { ...localData, ...cloud.entries };
 }
 
 function mergeData(localData, cloudData) {
   const merged = { ...localData };
   for (const key of Object.keys(cloudData)) merged[key] = cloudData[key];
+  return merged;
+}
+// 云端优先合并隐藏标记（与 mergeData 顺序保持一致）
+function mergeFlags(localFlags, cloudFlags) {
+  const merged = { ...localFlags };
+  for (const key of Object.keys(cloudFlags)) merged[key] = normalizeFlags(cloudFlags[key]);
   return merged;
 }
 
@@ -1547,6 +1683,7 @@ function showApp() {
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
   hideSplash();
+  maybeShowLocalCloudBar();
 }
 
 function errMessage(e) {
@@ -1658,6 +1795,16 @@ async function initAuth() {
   // 云端模式（WB 托管）：展示邮箱/密码表单，等待用户主动登录
   if (SB.isCloud) {
     wireCloudLogin();
+    // 上次选过「不登录，先记下来」→ 直接进入本机模式，不再挡登录墙
+    let preferLocal = false;
+    try { preferLocal = localStorage.getItem('prefer_local') === '1'; } catch (e) {}
+    if (preferLocal) {
+      SB.forceLocalMode();
+      await SB.ensureSession();
+      showApp();
+      await startApp();
+      return;
+    }
     // 先尝试既有会话（返回用户由 onAuthStateChange 驱动 showApp）
     try {
       const session = await Promise.race([
@@ -1701,6 +1848,7 @@ SB.onAuthStateChange(async (event, session) => {
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     allEntries = {};
+    hiddenMap = {};
     showLogin();
   }
 });
@@ -1709,7 +1857,7 @@ SB.onAuthStateChange(async (event, session) => {
 document.getElementById('enterBtn').addEventListener('click', async () => {
   const btn = document.getElementById('enterBtn');
   btn.disabled = true;
-  btn.textContent = '正在进入…';
+  btn.textContent = t('login_btn_loading');
   try {
     const session = await SB.ensureSession();
     if (session && session.user) {
@@ -1724,14 +1872,29 @@ document.getElementById('enterBtn').addEventListener('click', async () => {
     showBanner('暂时无法连接，请检查网络后重试');
   } finally {
     btn.disabled = false;
-    btn.textContent = '开始记录';
+    btn.textContent = t('enter_btn');
   }
+});
+
+// ── 云端版里的「不登录，先记下来」──
+// 整会话退回纯本机模式：不读写云端、不创建匿名账号、不伪造会话。
+// 选择会被记住，下次打开直接进入，不再被登录墙挡住。
+document.getElementById('anonBtn').addEventListener('click', async () => {
+  try { localStorage.setItem('prefer_local', '1'); } catch (e) {}
+  SB.forceLocalMode();
+  clearLoginError();
+  document.getElementById('loginCloudForm').style.display = 'none';
+  currentUser = null;
+  showApp();
+  await startApp();
+  logEvent('enter_local_only');
 });
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await SB.signOut();
   document.getElementById('userMenu').classList.remove('show');
   allEntries = {};
+  hiddenMap = {};
   currentUser = null;
   showLogin();
 });
@@ -1743,23 +1906,87 @@ document.getElementById('userAvatar').addEventListener('click', (e) => {
 document.addEventListener('click', () => { document.getElementById('userMenu').classList.remove('show'); });
 
 function updateUserUI() {
-  if (!currentUser) return;
-  const email = currentUser.email || '';
-  document.getElementById('userMenuEmail').textContent = email;
-  const avatar = document.getElementById('userAvatar');
-  avatar.textContent = email.charAt(0).toUpperCase();
+  const metaEl = document.getElementById('userMenuMeta');
+  const avatarEl = document.getElementById('userAvatar');
+  const emailEl = document.getElementById('userMenuEmail');
+
+  if (currentUser) {
+    const email = currentUser.email || '';
+    if (emailEl) emailEl.textContent = email;
+    if (avatarEl) avatarEl.textContent = email.charAt(0).toUpperCase() || '·';
+  } else {
+    // LOCAL_MODE（无登录）：头像降级为一个淡淡的圆点，不再冒充账号
+    if (emailEl) emailEl.textContent = '';
+    if (avatarEl) avatarEl.textContent = '·';
+  }
+  updateCloudMeta();
+}
+
+// 数据在云端的可见状态：明确告诉用户「存了多少天、存在哪里」
+function updateCloudMeta() {
+  const el = document.getElementById('userMenuMeta');
+  if (!el) return;
+  if (!SB.isCloud) {
+    el.textContent = t('account_local_mode');   // 本机模式 · 数据存在这台设备
+    return;
+  }
+  const days = Object.keys(allEntries || {})
+    .filter(k => (allEntries[k] || []).some((c, i) => c && c.trim() && !flagsFor(k)[i]))
+    .length;
+  el.textContent = t('account_saved_days', { n: days });
+}
+
+// 本地版的轻量引导：数据只在本机，想跨设备就去云端版。极淡一行，可关闭且只提示一次
+const LCB_DISMISS = 'local_cloud_bar_dismissed';
+function maybeShowLocalCloudBar() {
+  if (SB.isCloud) return;
+  if (localStorage.getItem(LCB_DISMISS) === '1') return;
+  if (document.getElementById('localCloudBar')) return;
+  const shell = document.getElementById('appShell');
+  if (!shell) return;
+
+  const bar = document.createElement('div');
+  bar.className = 'local-cloud-bar';
+  bar.id = 'localCloudBar';
+  // 在 WB 云端域名上，用户选过「不登录」→ 给一条回到登录的路（而不是跳去同一个地址）
+  const onCloudHost = SB._cloud === true;
+  bar.innerHTML =
+    `<span>${escapeHtml(t('local_cloud_hint'))}</span>` +
+    (onCloudHost
+      ? `<a href="#" id="lcbLogin">${escapeHtml(t('local_cloud_login'))}</a>`
+      : `<a href="https://gratitude-v2.app.workbuddy.host/" target="_blank" rel="noopener">${escapeHtml(t('local_cloud_go'))}</a>`) +
+    `<button class="lcb-close" type="button" aria-label="×">×</button>`;
+  bar.querySelector('.lcb-close').addEventListener('click', () => {
+    bar.remove();
+    localStorage.setItem(LCB_DISMISS, '1');
+  });
+  const loginLink = bar.querySelector('#lcbLogin');
+  if (loginLink) {
+    loginLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      try { localStorage.removeItem('prefer_local'); } catch (err) {}
+      location.reload();   // 重新走 initAuth，回到登录表单
+    });
+  }
+  shell.insertBefore(bar, shell.firstChild);
 }
 
 // ─── Start App ──────────────────────────────────────────────────────────────
 async function startApp() {
   updateUserUI();
-  const cloudData = await loadCloud();
+  const cloud = await loadCloud();
   const localData = loadLocal();
-  allEntries = mergeData(localData, cloudData);
+  const localHidden = loadHidden();
+  allEntries = mergeData(localData, cloud.entries);
+  hiddenMap = mergeFlags(localHidden, cloud.hidden);
   await migrateLocalToCloud();
   const updatedCloud = await loadCloud();
-  allEntries = mergeData(localData, updatedCloud);
+  allEntries = mergeData(localData, updatedCloud.entries);
+  hiddenMap = mergeFlags(localHidden, updatedCloud.hidden);
   saveLocal(allEntries);
+  saveHidden(hiddenMap);
+  updateCloudMeta();
+  maybeShowLocalCloudBar();
   const key = todayKey();
   if (allEntries[key] && allEntries[key].some(c => c.trim())) {
     entries = allEntries[key];
@@ -2289,6 +2516,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
   todayDone = true;
   renderToday();
   renderHistory();
+  updateCloudMeta();
 
   // A quiet reflection, revealed once the thanks modal is closed
   showGentleQuestion(trimmed.join('\n'));
@@ -2984,30 +3212,46 @@ document.getElementById('echoText').addEventListener('click', () => {
 });
 
 // ─── History Render ────────────────────────────────────────────────────────
-function renderHistory(query = '') {
-  const keys = Object.keys(allEntries).sort((a, b) => b.localeCompare(a));
-  const statsEl = document.getElementById('historyStats');
-  statsEl.textContent = keys.length ? t('history_stats_n', { n: keys.length }) : t('history_stats_0');
+// 计算某天「未被隐藏」的条目，保留原始下标 idx —— 隐藏不能压缩数组，否则内容会串位
+function visibleItemsFor(key, q) {
+  const arr = allEntries[key] || [];
+  const f = flagsFor(key);
+  const out = [];
+  arr.forEach((text, idx) => {
+    if (!text || !text.trim()) return;
+    if (f[idx]) return;
+    const match = !q || text.toLowerCase().includes(q);
+    if (q && !match) return; // 搜索时只保留命中项
+    out.push({ text, idx, match: true });
+  });
+  return out;
+}
 
+function renderHistory(query = '') {
+  const q = (query || '').trim().toLowerCase();
   const listEl = document.getElementById('historyList');
+  const statsEl = document.getElementById('historyStats');
   listEl.innerHTML = '';
 
+  // 按可见天数统计（被隐藏的不计入）
+  const visibleDays = Object.keys(allEntries)
+    .filter(k => (allEntries[k] || []).some((c, i) => c && c.trim() && !flagsFor(k)[i]));
+  statsEl.textContent = visibleDays.length
+    ? t('history_stats_n', { n: visibleDays.length })
+    : t('history_stats_0');
+
+  const locale = LANG === 'zh' ? 'zh-CN' : 'en-US';
+  const keys = visibleDays.sort((a, b) => b.localeCompare(a));
+
   if (!keys.length) {
-    listEl.innerHTML = `<div class="empty-history">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
-      </svg>
-      <p>${t('empty_history')}</p>
-    </div>`;
+    listEl.innerHTML = emptyHistoryBlock(t('empty_history'));
     return;
   }
 
-  const locale = LANG === 'zh' ? 'zh-CN' : 'en-US';
   let anyMatch = false;
   keys.forEach(key => {
-    const dayEntries = allEntries[key];
-    const filtered = query ? dayEntries.filter(e => e.toLowerCase().includes(query.toLowerCase())) : dayEntries;
-    if (!filtered.length) return;
+    const items = visibleItemsFor(key, q);
+    if (!items.length) return;
     anyMatch = true;
 
     const d = new Date(key + 'T00:00:00');
@@ -3020,12 +3264,14 @@ function renderHistory(query = '') {
     const card = document.createElement('div');
     card.className = 'history-card';
 
-    dayEntries.forEach(text => {
-      const visible = !query || text.toLowerCase().includes(query.toLowerCase());
+    items.forEach(({ text, idx, match }) => {
       const item = document.createElement('div');
-      item.className = 'history-item';
-      item.style.opacity = visible ? '1' : '0.3';
-      item.innerHTML = `<div class="history-bullet"></div><div class="history-text">${query ? highlight(text, query) : escapeHtml(text)}</div>`;
+      item.className = 'history-item' + (match ? '' : ' dim');
+      item.innerHTML =
+        `<div class="history-bullet"></div>` +
+        `<div class="history-text">${q ? highlight(text, q) : escapeHtml(text)}</div>` +
+        `<button class="history-hide" data-date="${escapeHtml(key)}" data-idx="${idx}" ` +
+        `aria-label="${t('history_hide')}" title="${t('history_hide')}">×</button>`;
       card.appendChild(item);
     });
 
@@ -3033,14 +3279,82 @@ function renderHistory(query = '') {
     listEl.appendChild(group);
   });
 
-  if (!anyMatch && query) {
-    listEl.innerHTML = `<div class="empty-history">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-      </svg>
-      <p>${t('no_match')}</p>
-    </div>`;
+  if (!anyMatch && q) {
+    listEl.innerHTML = emptyHistoryBlock(t('no_match'));
+    return;
   }
+
+  // 最底部的淡链接入口
+  const link = document.createElement('a');
+  link.className = 'history-diary-link';
+  link.href = 'diary.html';
+  link.textContent = t('history_diary_link');
+  listEl.appendChild(link);
+}
+
+function emptyHistoryBlock(msg) {
+  return `<div class="empty-history">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/>
+      </svg>
+      <p>${msg}</p>
+    </div>`;
+}
+
+// ── 隐藏一条 + 撤销 ──
+let _undoState = null;
+function ensureUndoToast() {
+  let el = document.getElementById('undoToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'undo-toast';
+    el.id = 'undoToast';
+    el.innerHTML = `<span id="undoToastText"></span><button id="undoToastBtn">${t('undo')}</button>`;
+    document.body.appendChild(el);
+    document.getElementById('undoToastBtn').addEventListener('click', doUndo);
+  }
+  return el;
+}
+function showUndoToast(text) {
+  const el = ensureUndoToast();
+  document.getElementById('undoToastText').textContent = text;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 4200);
+}
+function setFlag(date, idx, hidden) {
+  const f = flagsFor(date);
+  f[idx] = hidden;
+  hiddenMap[date] = f;
+  saveHidden(hiddenMap);
+  // 同步到云端/本地库（内容按原位置原样写回，保证不串位）
+  const arr = allEntries[date] || ['', '', ''];
+  saveCloud(date, [arr[0] || '', arr[1] || '', arr[2] || '']);
+  updateCloudMeta();
+}
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.history-hide');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const date = btn.dataset.date, idx = parseInt(btn.dataset.idx, 10);
+  if (!date || isNaN(idx)) return;
+  const prev = flagsFor(date)[idx];
+  setFlag(date, idx, true);
+  _undoState = { date, idx, prev };
+  renderHistory(document.getElementById('searchInput')?.value?.trim() || '');
+  showUndoToast(t('history_hidden'));
+  logEvent('history_entry_hidden', { date, idx });
+});
+function doUndo() {
+  if (!_undoState) return;
+  const { date, idx, prev } = _undoState;
+  setFlag(date, idx, prev);
+  _undoState = null;
+  const el = document.getElementById('undoToast');
+  if (el) el.classList.remove('show');
+  renderHistory(document.getElementById('searchInput')?.value?.trim() || '');
+  logEvent('history_entry_restored', { date, idx });
 }
 
 function escapeHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

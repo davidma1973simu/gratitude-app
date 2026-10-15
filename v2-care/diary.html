@@ -782,18 +782,49 @@ function updateImportButton() {
   }
 }
 
+// 本地有多套历史键格式，两个都读，避免「导入今日感恩」读不到数据：
+//   grat_entries_local    → { date: { content1, content2, content3 } }（backend.js 本地模式）
+//   gratitude_entries_v1  → { date: [c1, c2, c3] }（index.html 纯本地模式）
+// 同键名 index.html 写入，这里必须与它对齐，否则日记永远导入不到内容。
+function pickFromAny(source, date, i) {
+  if (!source) return '';
+  if (Array.isArray(source)) return source[i] || '';
+  return source['content' + (i + 1)] || '';
+}
+function readLocalStore(key) {
+  try {
+    var raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) || {}) : {};
+  } catch(e) { return {}; }
+}
+function localHiddenFlags(date) {
+  try {
+    var m = JSON.parse(localStorage.getItem('gratitude_hidden_v1')) || {};
+    var f = m[date];
+    return Array.isArray(f) ? [!!f[0], !!f[1], !!f[2]] : [false, false, false];
+  } catch(e) { return [false, false, false]; }
+}
 function loadV1Entries() {
   // 云端模式：直接返回已加载的云端条目缓存
   if (SB.isCloud) return cloudEntriesCache;
-  // LOCAL_MODE 下把感恩条目写进 grat_entries_local（按日期存 content1/2/3）
   try {
-    var raw = localStorage.getItem('grat_entries_local');
-    if (!raw) return {};
-    var obj = JSON.parse(raw);
+    var stores = [
+      readLocalStore('grat_entries_local'),     // backend.js 本地模式
+      readLocalStore('gratitude_entries_v1')    // index.html 纯本地模式（优先）
+    ];
+    var merged = {};
+    stores.forEach(function(obj){
+      Object.keys(obj).forEach(function(date){
+        merged[date] = obj[date];   // 数组顺序保证后者优先
+      });
+    });
     var map = {};
-    Object.keys(obj).forEach(function(date){
-      var d = obj[date] || {};
-      var arr = [d.content1, d.content2, d.content3].filter(function(x){ return x && x.trim(); });
+    Object.keys(merged).forEach(function(date){
+      var f = localHiddenFlags(date);
+      // 必须按原始槽位 0/1/2 先套隐藏标记，再过滤空值，否则索引会错位
+      var arr = [0,1,2].map(function(i){
+        return (f[i] ? '' : pickFromAny(merged[date], date, i));
+      }).filter(function(x){ return x && x.trim(); });
       if (arr.length) map[date] = arr;
     });
     return map;
@@ -808,7 +839,11 @@ async function loadCloudEntriesForDiary() {
     var rows = await SB.getEntries();
     cloudEntriesCache = {};
     (rows || []).forEach(function(r){
-      var arr = [r.content1, r.content2, r.content3].filter(function(x){ return x && x.trim(); });
+      // 云端同样尊重隐藏标记：历史里隐藏过的条目不该在日记里重新出现
+      var f = Array.isArray(r.hidden) ? [!!r.hidden[0], !!r.hidden[1], !!r.hidden[2]] : [false,false,false];
+      var arr = [0,1,2].map(function(i){
+        return f[i] ? '' : [r.content1, r.content2, r.content3][i];
+      }).filter(function(x){ return x && x.trim(); });
       if (arr.length) cloudEntriesCache[r.date] = arr;
     });
   } catch(e) { cloudEntriesCache = {}; }

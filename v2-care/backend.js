@@ -16,6 +16,11 @@
   // 仅在 WB 托管域名下启用云端（服务器校验 Origin，其余域名回退本地）
   const USE_CLOUD = typeof location !== 'undefined' && location.hostname.endsWith('app.workbuddy.host');
 
+  // 用户在云端版选择「不登录，先记下来」时置为 true —— 整个会话退回本地模式，
+  // 全程不触碰云端数据（不是匿名登录，也不是伪造会话，就是不读不写云端）。
+  let _forceLocal = false;
+  function _isCloud() { return USE_CLOUD && !_forceLocal; }
+
   // ── 本地模式常量 ──
   const LOCAL_USER = { id: 'local', email: '', username: '' };
   const LOCAL_SESSION = { user: LOCAL_USER };
@@ -37,7 +42,7 @@
 
   function initCloud() {
     if (cloud) return cloud;
-    if (!USE_CLOUD) return null;
+    if (!_isCloud()) return null;
     if (_cloudInitTried) return cloud; // 已尝试但 SDK 未就绪
     _cloudInitTried = true;
     if (typeof window.WorkBuddyCloud === 'undefined') {
@@ -75,7 +80,10 @@
 
   const CB = {
     _cloud: USE_CLOUD,
-    isCloud: USE_CLOUD,
+    // 动态：选择「不登录」后应为 false
+    get isCloud() { return _isCloud(); },
+    // 云端版里主动退回纯本机模式（不读写云端，不是匿名登录）
+    forceLocalMode() { _forceLocal = true; },
     _tokens: null,
     _listeners: [],
 
@@ -86,7 +94,7 @@
 
     // ── 会话 ──
     async ensureSession() {
-      if (!USE_CLOUD) { this._tokens = LOCAL_SESSION; this._notify('SIGNED_IN', LOCAL_SESSION); return LOCAL_SESSION; }
+      if (!_isCloud()) { this._tokens = LOCAL_SESSION; this._notify('SIGNED_IN', LOCAL_SESSION); return LOCAL_SESSION; }
       const c = initCloud();
       if (!c) return null;
       try {
@@ -102,12 +110,12 @@
     },
 
     async restoreSession() {
-      if (!USE_CLOUD) return LOCAL_SESSION;
+      if (!_isCloud()) return LOCAL_SESSION;
       return this.ensureSession();
     },
 
     async getSession() {
-      if (!USE_CLOUD) return LOCAL_SESSION;
+      if (!_isCloud()) return LOCAL_SESSION;
       const c = initCloud();
       if (!c) return null;
       try {
@@ -121,7 +129,7 @@
     },
 
     async signOut() {
-      if (!USE_CLOUD) { this._tokens = null; this._notify('SIGNED_OUT', null); return; }
+      if (!_isCloud()) { this._tokens = null; this._notify('SIGNED_OUT', null); return; }
       const c = initCloud();
       if (c) { try { await c.auth.signOut(); } catch (e) {} }
       this._tokens = null;
@@ -130,7 +138,7 @@
 
     // ── 邮箱 + 密码登录 ──
     async signInWithEmailAndPassword(email, password) {
-      if (!USE_CLOUD) throw new Error('NOT_CLOUD');
+      if (!_isCloud()) throw new Error('NOT_CLOUD');
       const c = initCloud();
       if (!c) throw new Error('CLOUD_UNAVAILABLE');
       const { data: session, error } = await c.auth.signInWithPassword({ email, password });
@@ -142,7 +150,7 @@
 
     // 注册第一步：发送邮箱验证码
     async startSignUp(email, password) {
-      if (!USE_CLOUD) throw new Error('NOT_CLOUD');
+      if (!_isCloud()) throw new Error('NOT_CLOUD');
       const c = initCloud();
       if (!c) throw new Error('CLOUD_UNAVAILABLE');
       const sent = await c.auth.sendOtp({ email });
@@ -172,7 +180,7 @@
     },
 
     async resetPassword(email) {
-      if (!USE_CLOUD) return;
+      if (!_isCloud()) return;
       const c = initCloud();
       if (!c) throw new Error('CLOUD_UNAVAILABLE');
       const r = await c.auth.resetPasswordForEmail(email);
@@ -180,14 +188,23 @@
     },
 
     // ── 数据层 ──
+    // 读取隐藏标记：字段缺失（老数据）一律视为未隐藏
+    _flags(d) {
+      return [!!d.hidden1, !!d.hidden2, !!d.hidden3];
+    },
+
     async getEntries() {
-      if (!USE_CLOUD) {
+      if (!_isCloud()) {
         const obj = _lsGet(LS_ENTRIES, {});
         return Object.keys(obj)
           .sort((a, b) => b.localeCompare(a))
           .map(date => {
             const d = obj[date];
-            return { date, content1: d.content1 || '', content2: d.content2 || '', content3: d.content3 || '' };
+            return {
+              date,
+              content1: d.content1 || '', content2: d.content2 || '', content3: d.content3 || '',
+              hidden: this._flags(d)
+            };
           });
       }
       const c = initCloud();
@@ -196,17 +213,27 @@
         // RLS 已按 owner 隔离，无需传 userId
         const { data, error } = await c.database
           .from('grat_entries')
-          .select('date, content1, content2, content3')
+          .select('date, content1, content2, content3, hidden1, hidden2, hidden3')
           .order('date', { ascending: false });
         if (error) { console.error('[WB] getEntries', error); return []; }
-        return (data || []).map(r => ({ date: r.date, content1: r.content1 || '', content2: r.content2 || '', content3: r.content3 || '' }));
+        return (data || []).map(r => ({
+          date: r.date,
+          content1: r.content1 || '', content2: r.content2 || '', content3: r.content3 || '',
+          hidden: this._flags(r)
+        }));
       } catch (e) { console.error('[WB] getEntries error', e); return []; }
     },
 
-    async upsertEntry(_userId, date, c1, c2, c3) {
-      if (!USE_CLOUD) {
+    // flags = [bool,bool,bool] 隐藏标记；省略则全部不隐藏
+    async upsertEntry(_userId, date, c1, c2, c3, flags) {
+      const f = Array.isArray(flags) ? flags : [false, false, false];
+      const patch = {
+        content1: c1 || '', content2: c2 || '', content3: c3 || '',
+        hidden1: !!f[0], hidden2: !!f[1], hidden3: !!f[2]
+      };
+      if (!_isCloud()) {
         const obj = _lsGet(LS_ENTRIES, {});
-        obj[date] = { content1: c1 || '', content2: c2 || '', content3: c3 || '', createdAt: Date.now() };
+        obj[date] = Object.assign({ createdAt: Date.now() }, obj[date], patch);
         _lsSet(LS_ENTRIES, obj);
         return;
       }
@@ -221,13 +248,13 @@
         if (existing && existing.id) {
           const { error } = await c.database
             .from('grat_entries')
-            .update({ content1: c1 || '', content2: c2 || '', content3: c3 || '' })
+            .update(patch)
             .eq('id', existing.id);
           if (error) throw error;
         } else {
           const { error } = await c.database
             .from('grat_entries')
-            .insert({ date, content1: c1 || '', content2: c2 || '', content3: c3 || '' });
+            .insert(Object.assign({ date }, patch));
           if (error) throw error;
         }
       } catch (e) { console.error('[WB] upsertEntry error', e); throw e; }
@@ -235,7 +262,7 @@
 
     // ── 无 Key LLM（仅云端）──
     async callLLM(systemText, userText, opts) {
-      if (!USE_CLOUD) throw new Error('NOT_CLOUD');
+      if (!_isCloud()) throw new Error('NOT_CLOUD');
       const c = initCloud();
       if (!c) throw new Error('CLOUD_UNAVAILABLE');
       try {
@@ -267,7 +294,7 @@
     },
 
     async logEvent(event, properties) {
-      if (!USE_CLOUD) {
+      if (!_isCloud()) {
         const arr = _lsGet(LS_EVENTS, []);
         arr.push({ event, properties: properties || {}, ts: new Date().toISOString() });
         _lsSet(LS_EVENTS, arr.slice(-200));
