@@ -1161,13 +1161,10 @@
 <script src="backend.js"></script>
 <script>
 // ─── Path fix ──
-(function() {
-  var basePath = '/gratitude-app/v2';
-  if (location.pathname !== basePath && location.pathname !== basePath + '/' &&
-      !location.pathname.startsWith(basePath)) {
-    location.replace(basePath + '/');
-  }
-})();
+// 旧版本为 GitHub Pages 子目录部署写死了 '/gratitude-app/v2' 强制跳转；
+// 现在 index.html 全部使用相对路径（backend.js / diary.html / images/...），
+// 在根目录部署（WB 托管）和子目录部署（GitHub Pages）下都能正确解析，
+// 这段跳转会把根目录访问强踢到不存在的 /gratitude-app/v2/ 导致 404，故移除。
 
 // ─── i18n ──────────────────────────────────────────────────────────────────
 const I18N = {
