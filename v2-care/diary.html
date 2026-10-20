@@ -230,16 +230,20 @@
     }
     .output-image-wrap {
       border-radius: 16px; overflow: hidden;
-      position: relative; aspect-ratio: 3/4;
+      position: relative;
+      width: 100%; height: 0; padding-bottom: 133.33%; /* 3:4 —— 不依赖 aspect-ratio，导出更稳 */
       box-shadow: 0 3px 16px rgba(180,120,80,0.12);
+      background: #f3ece4;
     }
     .output-image {
-      width: 100%; height: 100%; object-fit: cover;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; object-fit: cover; object-position: center;
     }
-    /* Small screen: stack */
+    /* Small screen: 图片作为横幅置顶，文字在下（杂志式） */
     @media (max-width: 440px) {
-      .output-body-layout { flex-direction: column; }
-      .output-image-block { width: 100%; max-width: none; aspect-ratio: 16/10; }
+      .output-body-layout { flex-direction: column-reverse; }
+      .output-image-block { width: 100%; max-width: none; }
+      .output-image-wrap { padding-bottom: 62%; border-radius: 14px; }
     }
 
     /* ─── User input: handwriting + large + bold ─── */
@@ -468,25 +472,36 @@
       background: none; border: none; color: rgba(255,255,255,0.45);
       font-size: 15px; cursor: pointer; padding: 4px; flex-shrink: 0;
     }
-      background: var(--accent-soft); color: var(--accent); font-weight: 600;
-    }
 
     /* ─── Settings Panel ─── */
     .settings-panel {
       display: none;
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      z-index: 100;
+      position: fixed;
+      top: 0; right: 0; bottom: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 300;
+      padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
       background: rgba(61,43,31,0.25);
       backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     }
-    .settings-panel.active { display: flex; align-items: center; justify-content: center; }
+    .settings-panel.active {
+      display: flex; align-items: center; justify-content: center;
+      animation: settingsFade 0.22s ease both;
+    }
+    @keyframes settingsFade { from { opacity: 0 } to { opacity: 1 } }
     .settings-card {
       background: var(--surface);
       border-radius: var(--radius-lg);
       padding: 28px 24px;
-      width: 92%; max-width: 380px;
+      width: 100%; max-width: 380px;
+      max-height: 100%;
+      overflow-y: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,0.18);
-      animation: fadeInUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+      animation: settingsPop 0.3s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes settingsPop {
+      from { opacity: 0; transform: translateY(8px) scale(0.985) }
+      to   { opacity: 1; transform: translateY(0) scale(1) }
     }
     .settings-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
     .settings-sub { font-size: 12.5px; color: var(--text-tertiary); margin-bottom: 18px; line-height: 1.6; }
@@ -678,15 +693,19 @@
 // ══════════════════════════════════════
 // Settings
 // ══════════════════════════════════════
-function toggleSettings(){
+function toggleSettings(force){
   var panel = document.getElementById('settingsPanel');
-  if(panel.classList.contains('active')){
-    panel.classList.remove('active');
-  } else {
+  var open = (typeof force === 'boolean') ? force : !panel.classList.contains('active');
+  if(open){
     var key = localStorage.getItem('diary_ai_key') || '';
     document.getElementById('apiKeyInput').value = key;
+    document.getElementById('settingsStatus').className = 'settings-status';
+    document.getElementById('settingsStatus').textContent = '';
     panel.classList.add('active');
-    setTimeout(function(){ document.getElementById('apiKeyInput').focus(); }, 100);
+    setTimeout(function(){ document.getElementById('apiKeyInput').focus(); }, 120);
+  } else {
+    panel.classList.remove('active');
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
   }
 }
 function saveSettings(){
@@ -694,21 +713,28 @@ function saveSettings(){
   var status = document.getElementById('settingsStatus');
   if(!key){
     localStorage.removeItem('diary_ai_key');
-    status.className = 'settings-status ok';
-    status.textContent = '已清除 API Key，将使用模拟模式';
-    setTimeout(function(){ toggleSettings(); }, 1200);
-    return;
-  }
-  if(!key.startsWith('sk-')){
+  } else if(!key.startsWith('sk-')){
     status.className = 'settings-status err';
     status.textContent = 'Key 格式不正确，应以 sk- 开头';
     return;
+  } else {
+    localStorage.setItem('diary_ai_key', key);
   }
-  localStorage.setItem('diary_ai_key', key);
-  status.className = 'settings-status ok';
-  status.textContent = '已保存 ✦';
-  setTimeout(function(){ toggleSettings(); }, 1000);
+  // 保存即关闭 —— 不做停留式反馈
+  toggleSettings(false);
+  showNotification(key ? '已保存 ✦' : '已清除 Key');
 }
+
+// 支持：回车保存 / Esc 关闭 / 点击遮罩关闭
+document.addEventListener('keydown', function(e){
+  var panel = document.getElementById('settingsPanel');
+  if(!panel.classList.contains('active')) return;
+  if(e.key === 'Enter'){ e.preventDefault(); saveSettings(); }
+  if(e.key === 'Escape'){ toggleSettings(false); }
+});
+document.getElementById('settingsPanel').addEventListener('click', function(e){
+  if(e.target === this) toggleSettings(false);
+});
 
 // ══════════════════════════════════════
 // State
@@ -720,11 +746,13 @@ var recordingStream = null;
 var recordingTimer = null;
 var recordingSeconds = 0;
 
+// 图片池：只收「高感性、正能量、无人像」的画面（光/海/天空/花/山野）
+// 明确剔除：calm-01、gentle-01、warm-03、warm-04、warm-06（有人物/人像）
 var IMAGE_DB = {
-  warm: ['images/warm/warm-01.jpg','images/warm/warm-02.jpg','images/warm/warm-03.jpg','images/warm/warm-04.jpg','images/warm/warm-05.jpg','images/warm/warm-06.jpg'],
-  calm: ['images/calm/calm-01.jpg','images/calm/calm-02.jpg','images/calm/calm-03.jpg','images/calm/calm-04.jpg','images/calm/calm-05.jpg','images/calm/calm-06.jpg'],
-  hopeful: ['images/hopeful/hopeful-01.jpg','images/hopeful/hopeful-02.jpg','images/hopeful/hopeful-03.jpg','images/hopeful/hopeful-04.jpg','images/hopeful/hopeful-05.jpg','images/hopeful/hopeful-06.jpg'],
-  gentle: ['images/gentle/gentle-01.jpg','images/gentle/gentle-02.jpg','images/gentle/gentle-03.jpg','images/gentle/gentle-04.jpg','images/gentle/gentle-05.jpg','images/gentle/gentle-06.jpg']
+  warm: ['images/warm/warm-01.jpg','images/warm/warm-02.jpg','images/warm/warm-05.jpg','images/hopeful/hopeful-01.jpg','images/gentle/gentle-04.jpg'],
+  calm: ['images/calm/calm-02.jpg','images/calm/calm-03.jpg','images/calm/calm-04.jpg','images/calm/calm-05.jpg','images/calm/calm-06.jpg'],
+  hopeful: ['images/hopeful/hopeful-01.jpg','images/hopeful/hopeful-02.jpg','images/hopeful/hopeful-04.jpg','images/hopeful/hopeful-06.jpg','images/warm/warm-02.jpg'],
+  gentle: ['images/gentle/gentle-02.jpg','images/gentle/gentle-03.jpg','images/gentle/gentle-04.jpg','images/gentle/gentle-05.jpg','images/warm/warm-05.jpg']
 };
 
 var EMOTION_KEYWORDS = {
@@ -1185,7 +1213,13 @@ function genDiaryParts(input,emotions){
 
   return { userText: userText, aiText: aiLines.join('\n') };
 }
-function pickImage(emo){var p=IMAGE_DB[emo]||IMAGE_DB.warm;return p[Math.floor(Math.random()*p.length)];}
+function pickImage(emo){
+  var p = IMAGE_DB[emo] || IMAGE_DB.warm;
+  var cur = (document.getElementById('outputImage')||{}).getAttribute ? document.getElementById('outputImage').getAttribute('src') : '';
+  var pool = p.filter(function(x){ return x !== cur; });
+  if(!pool.length) pool = p;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 function regenerateImage(){if(!currentEmotion)return;var el=document.getElementById('outputImage');el.style.opacity='0.3';
   setTimeout(function(){el.src=pickImage(currentEmotion);el.onload=function(){el.style.opacity='1';};el.style.transition='opacity 0.4s ease';},200);
 }
@@ -1392,6 +1426,26 @@ function saveDiary(){
   // Remove contenteditable from user input in clone (fixes cursor rendering)
   var userInput = clone.querySelector('.diary-user-input');
   if(userInput) userInput.removeAttribute('contenteditable');
+
+  // 图片：html2canvas 不支持 object-fit / aspect-ratio，会把图拉变形。
+  // 导出前改成「固定像素尺寸 + background-size:cover」，视觉上与屏幕一致。
+  clone.querySelectorAll('.output-image-wrap').forEach(function(wrap){
+    var img = wrap.querySelector('.output-image');
+    var src = img ? img.getAttribute('src') : '';
+    var w = wrap.offsetWidth || 160;
+    var h = wrap.offsetHeight || Math.round(w * 4 / 3);
+    wrap.style.width = w + 'px';
+    wrap.style.height = h + 'px';
+    wrap.style.paddingBottom = '0';
+    wrap.style.overflow = 'hidden';
+    if(src){
+      wrap.style.backgroundImage = 'url("' + src + '")';
+      wrap.style.backgroundSize = 'cover';
+      wrap.style.backgroundPosition = 'center center';
+      wrap.style.backgroundRepeat = 'no-repeat';
+    }
+    if(img) img.remove();
+  });
 
   html2canvas(clone, {
     scale: 2,
