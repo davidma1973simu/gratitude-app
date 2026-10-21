@@ -2917,15 +2917,23 @@ document.getElementById('reunionKeepBtn').addEventListener('click', () => {
   const overlay = document.getElementById('reunionOverlay');
   const memory = overlay._memoryData;
   if (!memory) return;
-  generateCard(memory);
+  // 等签名字体烘焙好再出卡：否则会贴上 fallback 的细手写体
+  if (!_sigReady && _sigReadyPromise) {
+    _sigReadyPromise.then(() => generateCard(memory));
+  } else {
+    generateCard(memory);
+  }
 });
 
 // ════════════════════════════════════════
 // ─── PRE-RENDERED SIGNATURE WORD CACHE ───
 // ════════════════════════════════════════
-// Renders all signature words at app init using "Permanent Marker" font (sharpie style).
-// Stores as Image objects so generateCard() can stamp them instantly — no font loading at card-gen time.
+// 把 30 个签名词用本地 Satisfy（手写粗体）烘成 Image，卡片直接贴图，生成时不再等字体。
+// ⚠️ 必须等 Satisfy 真正可绘制再烘 —— 否则 canvas 会用 fallback 细手写体，
+//    而且这个错误结果会被永久缓存到本次会话结束（表现为"字体变细了"）。
 var _sigCache = {};
+var _sigReady = false;
+var _sigReadyPromise = null;
 var _sigWordsAll = [
   'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
   'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
@@ -2935,13 +2943,14 @@ var _sigWordsAll = [
 ];
 
 function preRenderSigWords() {
-  // Satisfy: expressive script font (SIL license, Google Fonts)
-  // Fallback: cursive system font if Google Fonts blocked in China
+  // Satisfy: expressive script font (local woff2, sharpie style)
   var FONT_SIZE = 240;       // larger render = crisper when scaled down, captures script flourishes
   var FONT = FONT_SIZE + 'px "Satisfy", "Playlist Script", "Caveat", cursive';
   var COLOR = 'rgba(18,14,10,0.86)';  // slightly darker for more contrast
   var PAD = Math.max(2, Math.round(FONT_SIZE * 0.04));  // 极小留白：只给笔锋出格的空间
 
+  var bake = function() {
+  if (_sigReady) return;
   _sigWordsAll.forEach(function(word) {
     try {
       // ── 量出「真笔迹」的包围盒，不再用 font-size 当高度 ──
@@ -2963,6 +2972,7 @@ function preRenderSigWords() {
       }
       var inkW = Math.ceil(left + right);
       var inkH = Math.ceil(asc + desc);
+
 
       // Render to offscreen canvas — 画布 = 墨迹 + 对称留白（因此画布中心 = 墨迹中心）
       var c = document.createElement('canvas');
@@ -2987,6 +2997,19 @@ function preRenderSigWords() {
       _sigCache[word] = null;
     }
   });
+  _sigReady = true;
+  };
+
+  // 等字体可绘制再烘（document.fonts.load 解析时字体已可用于 canvas）；
+  // 2.5s 兜底：字体迟迟不来也要能出卡，最多退回 fallback 手写体。
+  var fontReady = (document.fonts && document.fonts.load)
+    ? document.fonts.load('400 ' + FONT_SIZE + 'px "Satisfy"', _sigWordsAll.join(' '))
+        .then(function() { return document.fonts.ready; })
+        .catch(function() {})
+    : Promise.resolve();
+  var timeout = new Promise(function(res) { setTimeout(res, 2500); });
+  _sigReadyPromise = Promise.race([fontReady, timeout]).then(bake);
+  return _sigReadyPromise;
 }
 
 function generateCard(memory) {
@@ -3159,7 +3182,7 @@ function generateCard(memory) {
       var _pad = sigImg._pad || 0;
       var _inkSrcW = sigImg._w - _pad * 2;
       var _inkSrcH = sigImg._h - _pad * 2;
-      var _scale = Math.min((W * 0.58) / _inkSrcW, 1.5);
+      var _scale = Math.min((W * 0.58) / _inkSrcW, 132 / _inkSrcH, 1.5);
       var _drawW = sigImg._w * _scale;
       var _drawH = sigImg._h * _scale;
       var _inkW = _inkSrcW * _scale;
