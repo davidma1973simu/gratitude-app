@@ -2940,33 +2940,47 @@ function preRenderSigWords() {
   var FONT_SIZE = 240;       // larger render = crisper when scaled down, captures script flourishes
   var FONT = FONT_SIZE + 'px "Satisfy", "Playlist Script", "Caveat", cursive';
   var COLOR = 'rgba(18,14,10,0.86)';  // slightly darker for more contrast
+  var PAD = Math.max(2, Math.round(FONT_SIZE * 0.04));  // 极小留白：只给笔锋出格的空间
 
   _sigWordsAll.forEach(function(word) {
     try {
-      // Measure word first
+      // ── 量出「真笔迹」的包围盒，不再用 font-size 当高度 ──
+      // 旧版把整块 240px 行高都当墨迹，导致大量透明空白被算进位置计算，
+      // 视觉上字很低、压住下面的正文。这里改用 actualBoundingBox* 精确裁切。
       var mc = document.createElement('canvas');
       var mctx = mc.getContext('2d');
       mctx.font = FONT;
-      var metrics = mctx.measureText(word);
-      var padX = Math.round(FONT_SIZE * 0.6);
-      var padY = Math.round(FONT_SIZE * 0.4);
-      var cw = Math.ceil(metrics.width) + padX * 2;
-      var ch = FONT_SIZE + padY * 2;
+      var m = mctx.measureText(word);
+      var asc, desc, left, right;
+      if (typeof m.actualBoundingBoxAscent === 'number' && isFinite(m.actualBoundingBoxAscent)) {
+        asc   = Math.max(m.actualBoundingBoxAscent, 1);
+        desc  = Math.max(m.actualBoundingBoxDescent || 0, 0);
+        left  = Math.max(m.actualBoundingBoxLeft || 0, 0);
+        right = Math.max(m.actualBoundingBoxRight || m.width, 1);
+      } else {
+        asc = FONT_SIZE * 0.72; desc = FONT_SIZE * 0.26;
+        left = 0; right = m.width;
+      }
+      var inkW = Math.ceil(left + right);
+      var inkH = Math.ceil(asc + desc);
 
-      // Render to offscreen canvas
+      // Render to offscreen canvas — 画布 = 墨迹 + 对称留白（因此画布中心 = 墨迹中心）
       var c = document.createElement('canvas');
-      c.width = cw;
-      c.height = ch;
+      c.width = inkW + PAD * 2;
+      c.height = inkH + PAD * 2;
       var cx = c.getContext('2d');
       cx.font = FONT;
       cx.fillStyle = COLOR;
       cx.textAlign = 'left';
       cx.textBaseline = 'alphabetic';
-      cx.fillText(word, padX, FONT_SIZE + padY - padY * 0.3);
+      cx.fillText(word, PAD + left, PAD + asc);
 
       // Store as Image for fast drawImage stamping
       var img = new Image();
       img.src = c.toDataURL('image/png');
+      img._w = c.width;       // 含留白的画布宽
+      img._h = c.height;      // 含留白的画布高
+      img._pad = PAD;         // 四周留白，用于反算墨迹真实尺寸
       _sigCache[word] = img;
     } catch(e) {
       console.warn('preRenderSigWords failed for:', word, e);
@@ -3100,9 +3114,76 @@ function generateCard(memory) {
     }
 
     // ══════════════════════════════════════════════════
+    // ─── SIGNATURE GEOMETRY — 手写体骑在照片底边上 ───
+    // 规则：墨迹 ≥ 60% 落在照片内，其余落在下面白边；
+    //       正文整体下移，绝不与签名重叠。
+    // ══════════════════════════════════════════════════
+    var _sigWordsEmotion = {
+      warm:    ['love','warmth','bloom','kiss','shine','golden','radiance','kindness','alive'],
+      calm:    ['peaceful','serenity','calm','breathe','soft','present','mindful','whisper'],
+      hope:    ['hope','light','sunrise','shine','bloom','alive','free'],
+      gentle:  ['gentle','tender','kindness','whisper','embrace','mindful','soft'],
+      soulful: ['soul','gratitude','intimacy','cherish','present','free']
+    };
+    var sigWords = [
+      'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
+      'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
+      'radiance', 'calm', 'cherish', 'mindful', 'intimacy', 'kiss',
+      'sunrise', 'breathe', 'present', 'alive', 'kindness', 'shine',
+      'whisper', 'embrace', 'wander', 'free', 'soft', 'golden'
+    ];
+    // Try emotion-based selection
+    try {
+      var _todayKey = typeof todayKey === 'function' ? todayKey() : null;
+      var _todayEntries = _todayKey && typeof allEntries !== 'undefined' && allEntries[_todayKey] ? allEntries[_todayKey] : [];
+      var _text = _todayEntries.filter(function(e){ return e && e.trim(); }).join(' ');
+      var _emotion = 'gentle';
+      if (_text) {
+        var _scores = { warm:0, calm:0, hope:0, gentle:0 };
+        ['爱','暖','温','笑','开心','快乐','喜','甜','阳光','光','热','感谢','幸福','美好'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.warm++; });
+        ['静','安','平','宁','息','放松','呼吸','安静','平静','宁静','淡','慢'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.calm++; });
+        ['希望','梦想','未来','期待','明天','相信','可能','光明'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.hope++; });
+        ['温柔','柔软','细腻','轻轻','慢慢','柔和','微风','月光','花','叶'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.gentle++; });
+        var _best = 'gentle'; var _bestScore = -1;
+        Object.keys(_scores).forEach(function(k){ if(_scores[k] > _bestScore) { _bestScore = _scores[k]; _best = k; } });
+        if (_bestScore > 0) _emotion = _best;
+      }
+      var _catWords = _sigWordsEmotion[_emotion];
+      if (_catWords && _catWords.length) sigWords = _catWords;
+    } catch(e) {}
+    var sigWord = sigWords[Math.floor(Math.random() * sigWords.length)];
+    var sigImg = _sigCache[sigWord];
+    var sigGeom = null;
+
+    if (sigImg && sigImg._w) {
+      var _pad = sigImg._pad || 0;
+      var _inkSrcW = sigImg._w - _pad * 2;
+      var _inkSrcH = sigImg._h - _pad * 2;
+      var _scale = Math.min((W * 0.58) / _inkSrcW, 1.5);
+      var _drawW = sigImg._w * _scale;
+      var _drawH = sigImg._h * _scale;
+      var _inkW = _inkSrcW * _scale;
+      var _inkH = _inkSrcH * _scale;
+      // 轻微倾斜（真实手写幅度，避免旋转把字甩到正文上）
+      var _tilt = (Math.random() * 12 - 7) * Math.PI / 180;   // -7° ~ +5°
+      // 旋转后的墨迹半高
+      var _rotHalfH = Math.abs(_inkW / 2 * Math.sin(_tilt)) + Math.abs(_inkH / 2 * Math.cos(_tilt));
+      // 墨迹约 62% 在照片上：中心只比照片底边低 0.24 个半高
+      var _centerY = photoY + photoH - _rotHalfH * 0.24;
+      var _centerX = BORDER + 10 + _drawW / 2;
+      sigGeom = {
+        img: sigImg, drawW: _drawW, drawH: _drawH, tilt: _tilt,
+        cx: _centerX, cy: _centerY,
+        inkBottom: _centerY + _rotHalfH,
+        inkTop: _centerY - _rotHalfH
+      };
+    }
+
+    // ══════════════════════════════════════════════════
     // ─── CAPTION AREA: Clean, peaceful, readable ───
     // ══════════════════════════════════════════════════
-    const capTop = photoY + photoH + 18;
+    // 正文起点必须让开签名墨迹的下沿（+20px 呼吸）
+    const capTop = Math.max(photoY + photoH + 18, sigGeom ? sigGeom.inkBottom + 20 : 0);
     const capCenterX = W / 2;
 
     // Thin, light system font — ultra-clean, Apple-quality
@@ -3158,60 +3239,13 @@ function generateCard(memory) {
       ctx.fillText(ln, W - 32, textStartY + i * Math.round(fSize * 1.75));
     });
 
-    // ─── SIGNATURE WORD — sharpie/marker handwriting feel ───
-    // Emotion-based word selection (Feature 4)
-    var _sigWordsEmotion = {
-      warm:    ['love','warmth','bloom','kiss','shine','golden','radiance','kindness','alive'],
-      calm:    ['peaceful','serenity','calm','breathe','soft','present','mindful','whisper'],
-      hope:    ['hope','light','sunrise','shine','bloom','alive','free'],
-      gentle:  ['gentle','tender','kindness','whisper','embrace','mindful','soft'],
-      soulful: ['soul','gratitude','intimacy','cherish','present','free']
-    };
-    var sigWords = [
-      'peaceful', 'love', 'soul', 'gratitude', 'bloom', 'tender',
-      'light', 'warmth', 'serenity', 'bliss', 'hope', 'gentle',
-      'radiance', 'calm', 'cherish', 'mindful', 'intimacy', 'kiss',
-      'sunrise', 'breathe', 'present', 'alive', 'kindness', 'shine',
-      'whisper', 'embrace', 'wander', 'free', 'soft', 'golden'
-    ];
-    // Try emotion-based selection
-    try {
-      var _todayKey = typeof todayKey === 'function' ? todayKey() : null;
-      var _todayEntries = _todayKey && typeof allEntries !== 'undefined' && allEntries[_todayKey] ? allEntries[_todayKey] : [];
-      var _text = _todayEntries.filter(function(e){ return e && e.trim(); }).join(' ');
-      var _emotion = 'gentle';
-      if (_text) {
-        var _scores = { warm:0, calm:0, hope:0, gentle:0 };
-        ['爱','暖','温','笑','开心','快乐','喜','甜','阳光','光','热','感谢','幸福','美好'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.warm++; });
-        ['静','安','平','宁','息','放松','呼吸','安静','平静','宁静','淡','慢'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.calm++; });
-        ['希望','梦想','未来','期待','明天','相信','可能','光明'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.hope++; });
-        ['温柔','柔软','细腻','轻轻','慢慢','柔和','微风','月光','花','叶'].forEach(function(k){ if(_text.indexOf(k)>=0) _scores.gentle++; });
-        var _best = 'gentle'; var _bestScore = -1;
-        Object.keys(_scores).forEach(function(k){ if(_scores[k] > _bestScore) { _bestScore = _scores[k]; _best = k; } });
-        if (_bestScore > 0) _emotion = _best;
-      }
-      var _catWords = _sigWordsEmotion[_emotion];
-      if (_catWords && _catWords.length) sigWords = _catWords;
-    } catch(e) {}
-    var sigWord = sigWords[Math.floor(Math.random() * sigWords.length)];
-    var sigImg = _sigCache[sigWord];  // pre-rendered Image or null
-
-    if (sigImg) {
-      // Stamp pre-rendered sharpie signature — straddles photo bottom & white border (like real Polaroid)
+    // ─── STAMP SIGNATURE ───
+    // 墨迹大半压在照片上、小半落在白边（位置在 capTop 之前算好，正文已让开）
+    if (sigGeom) {
       ctx.save();
-      var _stampW = sigImg.width;
-      var _stampH = sigImg.height;
-      var _scale = Math.min((W * 0.68) / _stampW, 1.5);  // ~68% card width (30% bigger than before)
-      var _drawW = Math.round(_stampW * _scale);
-      var _drawH = Math.round(_stampH * _scale);
-      // Position: lower-left, overlapping photo bottom edge by ~20-30%
-      var _placeX = BORDER + 12;
-      var _placeY = photoY + photoH - _drawH * 0.38;  // top ~38% on photo, rest on white
-      // Random slight rotation like real handwriting (-10° to +7°)
-      var _tilt = (Math.random() * 17 - 10) * Math.PI / 180;
-      ctx.translate(_placeX + _drawW / 2, _placeY + _drawH / 2);
-      ctx.rotate(_tilt);
-      ctx.drawImage(sigImg, -_drawW / 2, -_drawH / 2, _drawW, _drawH);
+      ctx.translate(sigGeom.cx, sigGeom.cy);
+      ctx.rotate(sigGeom.tilt);
+      ctx.drawImage(sigGeom.img, -sigGeom.drawW / 2, -sigGeom.drawH / 2, sigGeom.drawW, sigGeom.drawH);
       ctx.restore();
     }
 
