@@ -2670,6 +2670,25 @@ function formatMemoryDate(memory) {
   return t('watermark_daysago', { n: diffDays });
 }
 
+// ─── 同一段回忆，全站只抽一次 ────────────────────────────────────────────────
+// 曾经的微光（宝利来相片）、感谢弹窗里的回响、重逢全屏、留住这束光的卡片，
+// 必须显示【同一天】的【同一条】。以前四处各 random 一次，
+// 结果首页写「菜市场摊主」，点进去却是「刘老师」—— 对不上。
+// 现在按日期缓存选中的下标：同一天永远同一条，跨页面也一致。
+const _entryPickByDate = {};
+let currentEchoMemory = null; // 感谢弹窗里那句回响来自哪一天
+function chosenEntryFor(memory) {
+  if (!memory || !Array.isArray(memory.entries)) return '';
+  const idx = memory.entries.map((c, i) => (c && c.trim() ? i : -1)).filter(i => i >= 0);
+  if (!idx.length) return '';
+  let picked = _entryPickByDate[memory.date];
+  if (picked == null || idx.indexOf(picked) === -1) {
+    picked = idx[Math.floor(Math.random() * idx.length)];
+    _entryPickByDate[memory.date] = picked;
+  }
+  return memory.entries[picked];
+}
+
 // ─── v2: Echo (past gratitude in thank-you modal) ──────────────────────────
 function showEchoInModal() {
   const memory = pickMemory();
@@ -2679,8 +2698,9 @@ function showEchoInModal() {
   const nonEmpty = memory.entries.filter(c => c.trim());
   if (!nonEmpty.length) return;
 
-  // Pick one entry randomly (or the first)
-  const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  // 与宝利来相片 / 重逢同一条（同一天固定同一条，避免三处各抽一次）
+  const chosenText = chosenEntryFor(memory);
+  if (!chosenText) return;
   const echoSection = document.getElementById('echoSection');
   const echoDate = document.getElementById('echoDate');
   const echoText = document.getElementById('echoText');
@@ -2696,6 +2716,7 @@ function showEchoInModal() {
   echoDate.textContent = dateLabel;
   echoText.textContent = chosenText;
   echoHint.textContent = t('echo_hint');
+  currentEchoMemory = memory; // 点这句时，重逢必须是同一天同一条
 
   echoSection.style.display = 'block';
   echoSection.classList.remove('visible');
@@ -2724,8 +2745,8 @@ function showWatermark() {
     return;
   }
 
-  // Pick one entry randomly
-  const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  // Pick one entry — 与宝利来相片同一条（按日期缓存）
+  const chosenText = chosenEntryFor(memory);
   const watermark = document.getElementById('watermark');
   const watermarkContent = document.getElementById('watermarkContent');
   const watermarkDate = document.getElementById('watermarkDate');
@@ -2784,8 +2805,9 @@ function showPastLight() {
   const nonEmpty = memory.entries.filter(c => c.trim());
   if (!nonEmpty.length) return revealEmpty();
 
-  // 宝利来底部写的就是那天写下的话（手写体）
-  const chosenText = nonEmpty[Math.floor(Math.random() * nonEmpty.length)];
+  // 宝利来底部写的就是那天写下的话（手写体）—— 与重逢全屏同一条
+  const chosenText = chosenEntryFor(memory);
+  if (!chosenText) return revealEmpty();
   const caption = chosenText.length > 26 ? chosenText.slice(0, 26) + '…' : chosenText;
 
   pastLightPhoto.classList.remove('empty');
@@ -2840,11 +2862,8 @@ function openReunion(memory) {
       : `${diffDays} days ago`;
   }
 
-  // ── Pick ONE random non-empty entry (syncs with card) ──
-  const nonEmptyEntries = memory.entries.filter(t => t.trim());
-  const chosenEntry = nonEmptyEntries.length > 0
-    ? nonEmptyEntries[Math.floor(Math.random() * nonEmptyEntries.length)]
-    : '';
+  // ── 显示哪一条：与首页宝利来相片完全一致（同一天固定同一条）────────────
+  const chosenEntry = chosenEntryFor(memory);
   // Store chosen entry so card generation uses the exact same one
   overlay._chosenEntry = chosenEntry;
 
@@ -3268,9 +3287,8 @@ function showCardPreview(dataUrl) {
 
 // Also allow echo text to open reunion (clicking the echo entry)
 document.getElementById('echoText').addEventListener('click', () => {
-  // Re-pick same memory or use the current one
-  // Since we don't store the echo's memory, re-pick
-  const memory = pickMemory();
+  // 用弹窗里那一句所属的那一天，不再重新抽（否则会出现「点进去对不上」）
+  const memory = currentEchoMemory || pickMemory();
   if (memory) {
     // Close the thanks modal first
     document.getElementById('thanksOverlay').classList.remove('show');
