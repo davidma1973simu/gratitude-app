@@ -68,7 +68,7 @@
     try {
       cloud.auth.onAuthStateChange((event, session) => {
         if (session && session.user) {
-          CB._tokens = { access_token: 'wb', user: { id: session.user.id, email: session.user.email || '' } };
+          CB._tokens = { access_token: 'wb', user: { id: session.user.id, email: session.user.email || '', phone: session.user.phone || '' } };
           CB._notify('SIGNED_IN', CB._tokens);
         } else if (!session) {
           CB._tokens = null;
@@ -80,7 +80,8 @@
   }
 
   function _sessionFromWB(session) {
-    return { access_token: 'wb', user: { id: session.user.id, email: session.user.email || '' } };
+    const u = session.user || {};
+    return { access_token: 'wb', user: { id: u.id, email: u.email || '', phone: u.phone || '' } };
   }
 
   const CB = {

@@ -82,15 +82,27 @@
     }
     .nav-tab.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow-sm); }
 
-    /* ─── User Avatar ─── */
+    /* ─── User Avatar ───
+       登录后是一个实心翡翠绿圆 + 白色首字（昵称 > 邮箱首字母），
+       没有可用的首字时退回一个淡绿的人形图标，不再是孤零零一个点。 */
     .user-avatar {
       width: 32px; height: 32px; border-radius: 50%;
-      background: var(--accent-soft); border: 1px solid var(--border);
+      background: var(--accent); color: #fff;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary);
-      transition: all 0.18s ease; overflow: hidden;
+      cursor: pointer; font-size: 13.5px; font-weight: 600;
+      letter-spacing: -0.2px; line-height: 1;
+      border: none; padding: 0; overflow: hidden;
+      transition: background 0.18s ease, transform 0.18s ease;
+      user-select: none;
     }
-    .user-avatar:hover { border-color: var(--text-tertiary); }
+    .user-avatar:hover { background: var(--accent-hover); }
+    .user-avatar:active { transform: scale(0.96); }
+    /* 无人形首字时（未登录 / 手机号账号还没设昵称）：淡绿底 + 人形 */
+    .user-avatar.is-icon {
+      background: var(--accent-soft); color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(14,107,80,0.14);
+    }
+    .user-avatar.is-icon:hover { background: var(--accent-soft); color: var(--accent-hover); }
 
     /* ─── Main ─── */
     main { flex: 1; padding: 24px 24px 100px; max-width: 560px; margin: 0 auto; width: 100%; }
@@ -141,10 +153,10 @@
     }
     .nickname-edit-btn {
       display: none;
-      font-size: 13px;
       cursor: pointer;
       opacity: 0.4;
       transition: opacity 0.25s;
+      align-items: center;
     }
     .nickname-edit-btn:hover { opacity: 0.7; }
 
@@ -660,6 +672,25 @@
       padding: 4px 12px 8px; font-size: 11px; color: var(--text-tertiary);
       opacity: 0.85; letter-spacing: 0.02em;
     }
+    /* 昵称：头像上那个字的来源，就地可改 */
+    .user-menu-nick {
+      display: flex; align-items: center; gap: 8px;
+      padding: 2px 12px 10px; margin-bottom: 4px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .user-menu-nick label {
+      font-size: 11px; color: var(--text-tertiary); flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+    .user-menu-nick input {
+      flex: 1; min-width: 0; width: 100%;
+      border: none; border-bottom: 1px dashed var(--border);
+      background: transparent; padding: 3px 2px;
+      font-size: 13px; font-family: inherit; color: var(--text-primary);
+      outline: none; transition: border-color 0.18s ease;
+    }
+    .user-menu-nick input::placeholder { color: var(--text-tertiary); font-size: 12px; }
+    .user-menu-nick input:focus { border-bottom-color: var(--accent); }
     /* 本地模式的轻量引导条 —— 极淡一行，可关闭，关过就不再出现 */
     .local-cloud-bar {
       display: flex; align-items: center; gap: 8px;
@@ -1189,6 +1220,10 @@
   <div class="user-menu" id="userMenu">
     <div class="user-menu-email" id="userMenuEmail"></div>
     <div class="user-menu-meta" id="userMenuMeta"></div>
+    <div class="user-menu-nick">
+      <label for="menuNickname" data-i18n="nickname">昵称</label>
+      <input id="menuNickname" type="text" maxlength="16" autocomplete="off" placeholder="取个名字，头像用它首字" data-i18n-placeholder="nickname_ph">
+    </div>
     <button class="user-menu-item" id="aiSettingsBtn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.69-.95 1.65 1.65 0 0 0-1.12 1.74l.06.06a2 2 0 0 1-2.83-2.83l-.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.65-1.65V11a2 2 0 0 1 0-4v.09A1.65 1.65 0 0 0 6.6 9a1.65 1.65 0 0 0-1.1-1.65 1.65 1.65 0 0 0-1.69-.95l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 2.88a1.65 1.65 0 0 0-1.65-1.65V1a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1.65 1.65 1.65 1.65 0 0 0 1.1-1.65l-.06-.06a2 2 0 0 1 2.83 2.83l.06.06A1.65 1.65 0 0 0 15 4.68a1.65 1.65 0 0 0 1.65 1.65V7a2 2 0 0 1 4 0V6.91a1.65 1.65 0 0 0 1.65-1.65 1.65 1.65 0 0 0-.95-1.69l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 21.12 4.68a1.65 1.65 0 0 0 1.65 1.65V7a2 2 0 0 1 0 4v-.09a1.65 1.65 0 0 0-1.65-1.65z"/></svg>
       <span data-i18n="ai_settings">AI 设置</span>
@@ -1233,7 +1268,7 @@
         <span class="nickname-label" id="nicknameLabel"></span>
         <input class="nickname-input" id="nicknameInput" type="text"
                maxlength="16" placeholder="Your name" autocomplete="off" />
-        <span class="nickname-edit-btn" id="nicknameEditBtn">✏️</span>
+        <span class="nickname-edit-btn" id="nicknameEditBtn" title="修改昵称"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
       </div>
       <!-- v2: Encouragement / milestone area — always visible -->
       <div class="encouragement-area" id="encouragementArea" style="display:none;">
@@ -1416,6 +1451,9 @@ const I18N = {
     ai_settings: 'AI 设置',
     anon_btn: '匿名使用',
     anon_note: '只存这台设备',
+    signed_in: '已登录',
+    nickname: '昵称',
+    nickname_ph: '取个名字，头像用它首字',
     enter_btn: '开始记录',
     cancel: '取消',
     save: '保存',
@@ -1550,6 +1588,9 @@ const I18N = {
     ai_settings: 'AI Settings',
     anon_btn: 'Use anonymously',
     anon_note: 'This device only',
+    signed_in: 'Signed in',
+    nickname: 'Name',
+    nickname_ph: 'Pick a name — its first letter goes on the avatar',
     enter_btn: 'Start Writing',
     cancel: 'Cancel',
     save: 'Save',
@@ -2174,24 +2215,62 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 
 document.getElementById('userAvatar').addEventListener('click', (e) => {
   e.stopPropagation();
-  document.getElementById('userMenu').classList.toggle('show');
+  const menu = document.getElementById('userMenu');
+  menu.classList.toggle('show');
+  if (menu.classList.contains('show')) {
+    // 每次打开都拿一次最新昵称，避免显示旧值
+    const ni = document.getElementById('menuNickname');
+    if (ni) ni.value = getNickname();
+  }
 });
 document.addEventListener('click', () => { document.getElementById('userMenu').classList.remove('show'); });
 
+// ── 头像：昵称首字 > 邮箱首字母 > 人形图标 ──
+// 以前只取邮箱首字母，手机号账号没有邮箱就退化成「·」，看起来像没加载完。
+function getNickname() {
+  try { return (localStorage.getItem('gratitude_nickname') || '').trim(); } catch (e) { return ''; }
+}
+function firstCharOf(s) {
+  const arr = Array.from((s || '').trim());
+  if (!arr.length) return '';
+  const c = arr[0];
+  return /[a-z]/i.test(c) ? c.toUpperCase() : c;
+}
+function avatarLabel() {
+  const nick = getNickname();
+  if (nick) return firstCharOf(nick);
+  const email = (currentUser && currentUser.email) || '';
+  if (email) return firstCharOf(email);
+  return '';
+}
+function renderAvatar() {
+  const el = document.getElementById('userAvatar');
+  if (!el) return;
+  const label = avatarLabel();
+  if (label) {
+    el.classList.remove('is-icon');
+    el.textContent = label;
+    el.setAttribute('aria-label', label);
+  } else {
+    el.classList.add('is-icon');
+    el.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.6" r="3.5"/><path d="M5.6 20c.5-3.4 3.2-5.4 6.4-5.4s5.9 2 6.4 5.4"/></svg>';
+    el.removeAttribute('aria-label');
+  }
+}
+
 function updateUserUI() {
-  const metaEl = document.getElementById('userMenuMeta');
   const avatarEl = document.getElementById('userAvatar');
   const emailEl = document.getElementById('userMenuEmail');
 
   if (currentUser) {
     const email = currentUser.email || '';
-    if (emailEl) emailEl.textContent = email;
-    if (avatarEl) avatarEl.textContent = email.charAt(0).toUpperCase() || '·';
+    const phone = currentUser.phone || '';
+    if (emailEl) emailEl.textContent = email || phone || getNickname() || t('signed_in');
   } else {
-    // LOCAL_MODE（无登录）：头像降级为一个淡淡的圆点，不再冒充账号
+    // LOCAL_MODE（无登录）：不冒充账号，人形图标即可
     if (emailEl) emailEl.textContent = '';
-    if (avatarEl) avatarEl.textContent = '·';
   }
+  renderAvatar();
   updateCloudMeta();
 }
 
@@ -2273,6 +2352,7 @@ async function startApp() {
   setNavDate();
   setGreeting();
   initNickname();
+  wireNicknameMenu();
   // Pre-render signature words (sharpie style) for instant card stamping
   preRenderSigWords();
   renderToday();
@@ -2300,7 +2380,7 @@ function initNickname() {
       row.style.display = 'flex';
       // Delay for fade-in
       requestAnimationFrame(() => requestAnimationFrame(() => row.classList.add('visible')));
-      btn.style.display = 'inline';
+      btn.style.display = 'inline-flex';
     } else {
       row.style.display = 'none';
       row.classList.remove('visible');
@@ -2336,13 +2416,59 @@ function initNickname() {
     }
     input.classList.remove('show');
     showName(name);
+    afterNicknameChange(name);
   }
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveNickname(); input.blur(); } });
   input.addEventListener('blur', () => setTimeout(saveNickname, 100));
   input.addEventListener('click', (e) => e.stopPropagation());
 
+  // 昵称在别处（用户菜单）被改 → 这里跟着刷新
+  window.refreshHeaderNickname = function () {
+    name = localStorage.getItem(NICK_KEY) || '';
+    showName(name);
+  };
+
   // Initial display
   showName(name);
+}
+
+// 昵称变了：头像上那个字要跟着变，用户菜单里的输入框也要同步
+function afterNicknameChange(name) {
+  renderAvatar();
+  const menuInput = document.getElementById('menuNickname');
+  if (menuInput && document.activeElement !== menuInput) menuInput.value = name || '';
+}
+
+// 用户菜单里的昵称输入：就地可改，回车/失焦即保存
+function wireNicknameMenu() {
+  const input = document.getElementById('menuNickname');
+  const menu = document.getElementById('userMenu');
+  if (!input || !menu) return;
+  // 菜单里的点击不要冒泡到 document（否则一点输入框菜单就关了）；
+  // 但点菜单项时仍要像以前一样把菜单收起来
+  menu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (e.target.closest && e.target.closest('.user-menu-item')) {
+      setTimeout(() => menu.classList.remove('show'), 0);
+    }
+  });
+  input.value = getNickname();
+
+  let committed = getNickname();
+  const commit = () => {
+    const v = input.value.trim();
+    if (v === committed) return;
+    if (v) localStorage.setItem('gratitude_nickname', v);
+    else localStorage.removeItem('gratitude_nickname');
+    committed = v;
+    input.value = v;
+    afterNicknameChange(v);
+    if (typeof window.refreshHeaderNickname === 'function') window.refreshHeaderNickname();
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); input.blur(); }
+  });
+  input.addEventListener('blur', commit);
 }
 
 // ─── Nav & Greeting ────────────────────────────────────────────────────────
