@@ -43,6 +43,7 @@
   let cloud = null;
   let _cloudInitTried = false;
   let _pendingSignup = null;
+  let _pendingPhone = null;
 
   function initCloud() {
     if (cloud) return cloud;
@@ -196,6 +197,84 @@
       if (!c) throw new Error('CLOUD_UNAVAILABLE');
       const r = await c.auth.resetPasswordForEmail(email);
       if (r.error) throw r.error;
+    },
+
+    // ── 手机号 + 短信验证码（大陆号 11 位；首次即注册）──
+    async sendPhoneOtp(phone) {
+      if (!_isCloud()) throw new Error('NOT_CLOUD');
+      const c = initCloud();
+      if (!c) throw new Error('CLOUD_UNAVAILABLE');
+      const r = await c.auth.sendOtp({ phone });
+      if (r.error) throw r.error;
+      _pendingPhone = { phone, verificationId: r.data.verificationId, isExistingUser: r.data.isExistingUser };
+      return r.data;
+    },
+
+    async verifyPhoneOtp(code) {
+      if (!_isCloud() || !_pendingPhone) throw new Error('NO_PENDING_PHONE');
+      const c = initCloud();
+      if (!c) throw new Error('CLOUD_UNAVAILABLE');
+      const p = _pendingPhone;
+      const r = await c.auth.verifyOtp({
+        phone: p.phone,
+        verificationId: p.verificationId,
+        isExistingUser: p.isExistingUser,
+        token: code,
+      });
+      if (r.error) throw r.error;
+      _pendingPhone = null;
+      this._tokens = _sessionFromWB(r.data);
+      this._notify('SIGNED_IN', this._tokens);
+      return this._tokens;
+    },
+
+    // ── 第三方登录：wechat（微信扫码/授权） / workbuddy（WorkBuddy 账号）──
+    // 整页跳转到中继页，回来时地址栏带 code + state，由 handleOAuthCallback 收尾
+    async signInWithOAuth(provider) {
+      if (!_isCloud()) throw new Error('NOT_CLOUD');
+      const c = initCloud();
+      if (!c) throw new Error('CLOUD_UNAVAILABLE');
+      const redirectTo = location.origin + location.pathname;
+      const r = await c.auth.signInWithOAuth({ provider, redirectTo });
+      if (r.error) throw r.error;
+      const url = r.data && r.data.url;
+      if (!url) throw new Error('NO_OAUTH_URL');
+      location.href = url;
+    },
+
+    hasOAuthCallback() {
+      try {
+        const p = new URLSearchParams(location.search);
+        return p.has('code') && p.has('state');
+      } catch (e) { return false; }
+    },
+
+    async handleOAuthCallback() {
+      if (!_isCloud()) return null;
+      const c = initCloud();
+      if (!c) throw new Error('CLOUD_UNAVAILABLE');
+      let provider = '';
+      try { provider = new URLSearchParams(location.search).get('provider') || ''; } catch (e) {}
+      let r;
+      if (provider === 'workbuddy' && c.auth.handleWorkBuddyCallback) {
+        r = await c.auth.handleWorkBuddyCallback(location.search);
+      } else if (c.auth.handleWechatWebCallback) {
+        r = await c.auth.handleWechatWebCallback(location.search);
+        // 个别情况下中继不带 provider，先用微信解；失败再按 WorkBuddy 解一次
+        if (!provider && r && r.error && c.auth.handleWorkBuddyCallback) {
+          r = await c.auth.handleWorkBuddyCallback(location.search);
+        }
+      }
+      // 清掉地址栏上的 code/state：否则刷新会重复消费同一个授权码
+      try { history.replaceState(null, '', location.origin + location.pathname + location.hash); } catch (e) {}
+      if (r && r.error) throw r.error;
+      const sess = r && r.data;
+      if (sess && sess.user) {
+        this._tokens = _sessionFromWB(sess);
+        this._notify('SIGNED_IN', this._tokens);
+        return this._tokens;
+      }
+      return null;
     },
 
     // ── 数据层 ──

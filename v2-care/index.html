@@ -515,9 +515,51 @@
       border-top: 1px dashed var(--border);
       margin: 24px 0 22px;
     }
+    /* ─── 其他登录方式：邮箱之外的三条小路，图标一行 ─── */
+    .login-alt { margin-top: 26px; }
+    .login-alt-divider {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 12px; color: var(--text-tertiary); letter-spacing: 0.3px;
+    }
+    .login-alt-divider::before,
+    .login-alt-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .login-alt-row {
+      display: flex; justify-content: center; gap: 28px; margin-top: 18px;
+    }
+    .alt-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 7px;
+      background: none; border: none; padding: 0; cursor: pointer;
+      font-family: inherit; color: var(--text-secondary);
+    }
+    .alt-icon {
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    }
+    .alt-btn:hover .alt-icon { border-color: var(--accent); color: var(--accent); }
+    .alt-btn:active .alt-icon { transform: scale(0.96); }
+    .alt-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .alt-label { font-size: 11.5px; color: var(--text-tertiary); letter-spacing: 0.2px; }
+    /* 手机验证码：与邮箱表单互斥显示 */
+    .phone-send {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: var(--accent);
+      font-size: 13px; font-family: inherit; padding: 4px 2px;
+      pointer-events: auto;
+    }
+    .phone-send:disabled { color: var(--text-tertiary); cursor: not-allowed; }
     .login-hint {
       font-size: 13px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.6;
     }
+    /* 表单反馈：报错是暗红，成功/提示是品牌绿，同一位置不跳动 */
+    .login-error {
+      font-size: 13px; line-height: 1.6; margin-top: 14px;
+      text-align: center; letter-spacing: 0.2px; color: #b3261e;
+    }
+    .login-error.ok { color: var(--accent); }
     /* 「忘记密码？」等次级链接：不要浏览器默认的蓝色下划线 */
     .login-hint a {
       color: var(--text-tertiary); text-decoration: none;
@@ -1069,16 +1111,55 @@
     <div class="anon-note" data-i18n="anon_note">只存这台设备</div>
     <div class="login-or"></div>
 
-    <input class="login-input" id="loginEmail" type="email" autocomplete="email" placeholder="输入你的邮箱" data-i18n-placeholder="login_email_ph">
-    <div class="login-password-wrap">
-      <input class="login-input" id="loginPassword" type="password" autocomplete="current-password" placeholder="设置密码（首次将自动注册）" data-i18n-placeholder="login_password_ph">
-      <span class="login-password-toggle" id="pwToggle" data-i18n="pw_show">显示</span>
+    <div id="emailPanel">
+      <input class="login-input" id="loginEmail" type="email" autocomplete="email" placeholder="输入你的邮箱" data-i18n-placeholder="login_email_ph">
+      <div class="login-password-wrap">
+        <input class="login-input" id="loginPassword" type="password" autocomplete="current-password" placeholder="设置密码（首次将自动注册）" data-i18n-placeholder="login_password_ph">
+        <span class="login-password-toggle" id="pwToggle" data-i18n="pw_show">显示</span>
+      </div>
+      <input class="login-input" id="loginCode" type="text" inputmode="numeric" placeholder="输入邮箱验证码" style="display:none;" data-i18n-placeholder="login_code_ph">
+      <button class="login-btn" id="loginBtn" data-i18n="login_btn">登 录</button>
+      <button class="login-btn login-btn-ghost" id="signupBtn" data-i18n="signup_btn">注册新账号</button>
+      <div class="login-hint"><a href="#" id="forgotPw" data-i18n="forgot_pw">忘记密码？</a></div>
     </div>
-    <input class="login-input" id="loginCode" type="text" inputmode="numeric" placeholder="输入邮箱验证码" style="display:none;" data-i18n-placeholder="login_code_ph">
-    <button class="login-btn" id="loginBtn" data-i18n="login_btn">登 录</button>
-    <button class="login-btn login-btn-ghost" id="signupBtn" data-i18n="signup_btn">注册新账号</button>
-    <div class="login-hint"><a href="#" id="forgotPw" data-i18n="forgot_pw">忘记密码？</a></div>
+
+    <!-- 手机号 + 短信验证码（点「手机号」图标后显示） -->
+    <div id="phonePanel" style="display:none;">
+      <input class="login-input" id="loginPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="11" placeholder="手机号" data-i18n-placeholder="login_phone_ph">
+      <div class="login-password-wrap">
+        <input class="login-input" id="loginPhoneCode" type="text" inputmode="numeric" maxlength="6" placeholder="短信验证码" data-i18n-placeholder="login_phone_code_ph">
+        <button class="phone-send" id="sendPhoneCode" type="button" data-i18n="phone_send">获取验证码</button>
+      </div>
+      <button class="login-btn" id="phoneLoginBtn" data-i18n="login_btn">登 录</button>
+      <div class="login-hint"><a href="#" id="backToEmail" data-i18n="back_to_email">改用邮箱登录</a></div>
+    </div>
+
     <div class="login-error" id="loginError" style="display:none;"></div>
+
+    <!-- 邮箱之外的三条路：手机号 / 微信 / WorkBuddy 账号 -->
+    <div class="login-alt">
+      <div class="login-alt-divider"><span data-i18n="other_ways">或</span></div>
+      <div class="login-alt-row">
+        <button class="alt-btn" id="altPhone" type="button" aria-label="手机号登录">
+          <span class="alt-icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><line x1="10.6" y1="18.6" x2="13.4" y2="18.6"/></svg>
+          </span>
+          <span class="alt-label" data-i18n="alt_phone">手机号</span>
+        </button>
+        <button class="alt-btn" id="altWechat" type="button" aria-label="微信登录">
+          <span class="alt-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9.2 3C5.4 3 2.3 5.6 2.3 8.8c0 1.8 1 3.4 2.6 4.5l-.6 2 2.3-1.2c.8.2 1.7.4 2.6.4h.5a5.6 5.6 0 0 1-.2-1.5c0-3 3-5.5 6.8-5.5h.6C16.2 4.8 13 3 9.2 3Zm-2.5 3a.95.95 0 1 1 0 1.9.95.95 0 0 1 0-1.9Zm5 0a.95.95 0 1 1 0 1.9.95.95 0 0 1 0-1.9Z"/><path d="M22 13.2c0-2.6-2.6-4.7-5.7-4.7s-5.7 2.1-5.7 4.7 2.6 4.7 5.7 4.7c.7 0 1.4-.1 2-.3l1.9 1-.5-1.6c1.4-.9 2.3-2.3 2.3-3.8Zm-7.6-1.6a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Zm3.8 0a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Z"/></svg>
+          </span>
+          <span class="alt-label" data-i18n="alt_wechat">微信</span>
+        </button>
+        <button class="alt-btn" id="altWorkbuddy" type="button" aria-label="WorkBuddy 账号登录">
+          <span class="alt-icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.4"/><path d="M5.4 20c.5-3.4 3.2-5.4 6.6-5.4s6.1 2 6.6 5.4"/></svg>
+          </span>
+          <span class="alt-label" data-i18n="alt_workbuddy">WorkBuddy</span>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1300,6 +1381,20 @@ const I18N = {
     signup_btn: '注册新账号',
     signup_verify_btn: '完成注册',
     forgot_pw: '忘记密码？',
+    login_phone_ph: '手机号',
+    login_phone_code_ph: '短信验证码',
+    phone_send: '获取验证码',
+    phone_sending: '发送中…',
+    phone_sent: '验证码已发送',
+    phone_resend: '{n}s 后重发',
+    back_to_email: '改用邮箱登录',
+    other_ways: '或',
+    alt_phone: '手机号',
+    alt_wechat: '微信',
+    alt_workbuddy: 'WorkBuddy',
+    err_phone: '请输入 11 位手机号',
+    err_phone_code: '请输入短信验证码',
+    err_oauth: '暂时无法打开，请稍后重试',
     signup_code_sent: '验证码已发送，请查收邮箱',
     forgot_sent: '重置链接已发送至邮箱，请查收',
     err_code: '请输入邮箱验证码',
@@ -1420,6 +1515,20 @@ const I18N = {
     signup_btn: 'Create account',
     signup_verify_btn: 'Complete sign-up',
     forgot_pw: 'Forgot password?',
+    login_phone_ph: 'Phone number',
+    login_phone_code_ph: 'SMS code',
+    phone_send: 'Get code',
+    phone_sending: 'Sending…',
+    phone_sent: 'Code sent',
+    phone_resend: 'Resend in {n}s',
+    back_to_email: 'Use email instead',
+    other_ways: 'or',
+    alt_phone: 'Phone',
+    alt_wechat: 'WeChat',
+    alt_workbuddy: 'WorkBuddy',
+    err_phone: 'Enter an 11-digit phone number',
+    err_phone_code: 'Enter the SMS code',
+    err_oauth: 'Could not open right now, please retry',
     signup_code_sent: 'Verification code sent to your email',
     forgot_sent: 'Password reset link sent to your email',
     err_code: 'Please enter the verification code',
@@ -1747,12 +1856,22 @@ function errMessage(e) {
 function showLoginError(msg) {
   const el = document.getElementById('loginError');
   if (!el) return;
+  el.classList.remove('ok');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+// 成功/提示：同一位置，绿色而非红色（验证码已发送等）
+function showLoginNotice(msg) {
+  const el = document.getElementById('loginError');
+  if (!el) return;
+  el.classList.add('ok');
   el.textContent = msg;
   el.style.display = 'block';
 }
 function clearLoginError() {
   const el = document.getElementById('loginError');
   if (!el) return;
+  el.classList.remove('ok');
   el.style.display = 'none';
   el.textContent = '';
 }
@@ -1792,7 +1911,7 @@ function wireCloudLogin() {
       loginBtn.textContent = t('signup_verify_btn');
       signupBtn.style.display = 'none';
       forgotPw.parentElement.style.display = 'none';
-      showLoginError(t('signup_code_sent'));
+      showLoginNotice(t('signup_code_sent'));
     } catch (e) {
       showLoginError(errMessage(e));
     } finally {
@@ -1834,17 +1953,121 @@ function wireCloudLogin() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showLoginError(t('err_email'));
     try {
       await SB.resetPassword(email);
-      showLoginError(t('forgot_sent'));
+      showLoginNotice(t('forgot_sent'));
     } catch (err) {
       showLoginError(errMessage(err));
     }
   });
 }
 
+// ── 云端模式：手机号验证码 / 微信 / WorkBuddy 账号 ──
+function wireAltLogin() {
+  const emailPanel = document.getElementById('emailPanel');
+  const phonePanel = document.getElementById('phonePanel');
+  const phoneEl = document.getElementById('loginPhone');
+  const codeEl = document.getElementById('loginPhoneCode');
+  const sendBtn = document.getElementById('sendPhoneCode');
+  const phoneLoginBtn = document.getElementById('phoneLoginBtn');
+  const altPhoneBtn = document.getElementById('altPhone');
+
+  function showPhoneMode(on) {
+    emailPanel.style.display = on ? 'none' : 'block';
+    phonePanel.style.display = on ? 'block' : 'none';
+    clearLoginError();
+    if (on) setTimeout(() => { try { phoneEl.focus(); } catch (e) {} }, 80);
+  }
+
+  altPhoneBtn.addEventListener('click', () => {
+    // 已在手机模式再点一次 = 收起，回到邮箱
+    showPhoneMode(phonePanel.style.display === 'none');
+  });
+  document.getElementById('backToEmail').addEventListener('click', (e) => {
+    e.preventDefault();
+    showPhoneMode(false);
+  });
+
+  let timer = null;
+  function startCountdown() {
+    let left = 60;
+    sendBtn.disabled = true;
+    sendBtn.textContent = t('phone_resend').replace('{n}', left);
+    clearInterval(timer);
+    timer = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        clearInterval(timer);
+        sendBtn.disabled = false;
+        sendBtn.textContent = t('phone_send');
+      } else {
+        sendBtn.textContent = t('phone_resend').replace('{n}', left);
+      }
+    }, 1000);
+  }
+
+  sendBtn.addEventListener('click', async () => {
+    clearLoginError();
+    const phone = (phoneEl.value || '').replace(/\D/g, '');
+    if (!/^1\d{10}$/.test(phone)) return showLoginError(t('err_phone'));
+    const orig = sendBtn.textContent;
+    sendBtn.disabled = true;
+    sendBtn.textContent = t('phone_sending');
+    try {
+      await SB.sendPhoneOtp(phone);
+      startCountdown();
+      showLoginNotice(t('phone_sent'));
+      try { codeEl.focus(); } catch (e) {}
+    } catch (e) {
+      sendBtn.disabled = false;
+      sendBtn.textContent = orig;
+      showLoginError(errMessage(e));
+    }
+  });
+
+  phoneLoginBtn.addEventListener('click', async () => {
+    clearLoginError();
+    const phone = (phoneEl.value || '').replace(/\D/g, '');
+    if (!/^1\d{10}$/.test(phone)) return showLoginError(t('err_phone'));
+    const code = (codeEl.value || '').trim();
+    if (code.length < 4) return showLoginError(t('err_phone_code'));
+    const orig = phoneLoginBtn.textContent;
+    phoneLoginBtn.disabled = true;
+    phoneLoginBtn.textContent = t('login_btn_loading');
+    try {
+      await SB.verifyPhoneOtp(code); // SIGNED_IN 由 onAuthStateChange 接管
+    } catch (e) {
+      phoneLoginBtn.disabled = false;
+      phoneLoginBtn.textContent = orig;
+      showLoginError(errMessage(e));
+    }
+  });
+
+  // 微信 / WorkBuddy：整页跳转到授权中继，回来后由 initAuth 收尾
+  const startOAuth = async (provider, btn) => {
+    clearLoginError();
+    btn.disabled = true;
+    try {
+      await SB.signInWithOAuth(provider); // 成功即离开本页
+    } catch (e) {
+      btn.disabled = false;
+      showLoginError(errMessage(e) || t('err_oauth'));
+    }
+  };
+  document.getElementById('altWechat').addEventListener('click', function () { startOAuth('wechat', this); });
+  document.getElementById('altWorkbuddy').addEventListener('click', function () { startOAuth('workbuddy', this); });
+}
+
 async function initAuth() {
   // 云端模式（WB 托管）：展示邮箱/密码表单，等待用户主动登录
   if (SB.isCloud) {
     wireCloudLogin();
+    wireAltLogin();
+    // 微信扫码 / WorkBuddy 账号登录回来：地址栏带 code + state，先换会话再继续
+    if (SB.hasOAuthCallback && SB.hasOAuthCallback()) {
+      let ok = false;
+      try { ok = !!(await SB.handleOAuthCallback()); }
+      catch (e) { console.error('oauth callback:', e); showLoginError(errMessage(e) || t('err_oauth')); }
+      if (ok) return; // 已由 onAuthStateChange 接管（showApp + startApp）
+    }
     // 上次选过「不登录，先记下来」→ 直接进入本机模式，不再挡登录墙
     let preferLocal = false;
     try { preferLocal = localStorage.getItem('prefer_local') === '1'; } catch (e) {}
