@@ -4,7 +4,11 @@
 
 > *A gratitude app that doesn't guilt you into writing. It just waits for the light.*
 
+**当前发布版 v2.0.0（V2-Care）** → https://gratitude-v2.app.workbuddy.host/
+
 [**V1-Diary 体验 →**](https://davidma1973simu.github.io/gratitude-app/v1-diary/diary.html) &nbsp;·&nbsp; [**V2 体验 →**](https://davidma1973simu.github.io/gratitude-app/v2/) &nbsp;·&nbsp; [**V1 原版 →**](https://davidma1973simu.github.io/gratitude-app/v1/)
+
+> 版本怎么数、每次改了什么，见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 
@@ -74,7 +78,7 @@ V2 是 Polaroid 拍立得风格的感恩体验。视觉更美，情感更深，�
 
 ---
 
-### V2-Care — AI 悄悄在身后
+### V2-Care — AI 悄悄在身后 ⭐ 当前发布版 v2.0.0
 
 *你不用知道 AI 在做什么。你只会觉得，这个 app 更懂你了。*
 
@@ -89,9 +93,9 @@ V2-Care 是 V2 的 AI 增强版。**所有 AI 功能对用户完全隐藏**—�
 | **③ 给今天的我** | 提交后出现一句安静的洞察 | AI 解读你的感恩片段，给一句有洞察力的回应（不是彩虹屁） | 不打扰，不弹出，就安静地在感谢弹窗里出现一句 |
 | **④ 签名词情绪匹配** | 卡片底部签名英文词好像很搭 | 不再随机30词，AI 根据当天情绪基调选词（warm → love，calm → stillness） | 卡片更有灵魂，签名不只是装饰 |
 
-[体验 V2-Care →](https://davidma1973simu.github.io/gratitude-app/v2-care/)
+[体验 V2-Care →](https://gratitude-v2.app.workbuddy.host/) &nbsp;·&nbsp; [GitHub Pages 镜像](https://davidma1973simu.github.io/gratitude-app/v2-care/)
 
-**适合谁**：愿意折腾 API Key 的深度用户、技术社区开发者、想体验 AI 增强感恩的人。
+**适合谁**：想长期记录、希望换设备不丢数据、愿意被 AI 安静地看见的人。云端版不需要自备 API Key。
 
 **设计原则**：AI 是幕后工作者，不是台前表演者。用户不需要知道 AI 在做什么——只会觉得这个 app 更懂自己了。
 
@@ -262,11 +266,11 @@ CREATE POLICY "Users update own entries" ON entries FOR UPDATE USING (auth.uid()
 
 | 版本 | 状态 | 核心 |
 |------|------|------|
-| **V1** | ✅ 稳定 | 基础感恩练习 — 写、存、回顾 |
-| **V1-Diary** | ✅ 稳定 | AI 光之日记 — 多模态输入、AI卡片、PNG导出 |
-| **V2** | ✅ 稳定 | 情感深度 — Polaroid卡片、Reunion、安静鼓励 |
-| **V2-Care** | 🧪 Beta | V2 + AI四维增强 — 个性化鼓励、语义Reunion、洞察、签名选词 |
-| **V3** | 🔮 愿景 | 光的汇聚 — 内在积累可视化、回声地图、光的赠予、周期律动 |
+| **V1** | 🗄 存档 | 基础感恩练习 — 写、存、回顾 |
+| **V1-Diary** | 🗄 存档 | AI 光之日记 — 多模态输入、AI卡片、PNG导出 |
+| **V2** | 🗄 存档 | 情感深度 — Polaroid卡片、Reunion、安静鼓励 |
+| **V2-Care** | ✅ 发布 **v2.0.0** | V2 + 账号云同步 + AI四维增强 + 光之日记 — 唯一对外版本 |
+| **V3** | 🔮 愿景 | 光的汇聚 — 内在积累可视化、回声地图 |
 
 ---
 
