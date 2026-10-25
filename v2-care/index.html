@@ -292,9 +292,83 @@
     }
     .edit-btn:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--text-tertiary); }
 
-    /* ─── v2: Past Light —— 首页只留一行很淡的字，点它直接出卡（2026-10-25 定）───
-       撤掉了首页的宝利来相片与那一步「显影」：首页要干净，相片是产物，不是首页装饰 */
+    /* ─── v2: Past Light —— 平时只是一行很淡的字，轻点才显影成宝利来相片 ─── */
     .past-light-entry { margin-top: 20px; }
+    .past-light {
+      margin-top: 4px;
+      opacity: 0;
+      transform: scale(0.94) rotate(-1.4deg);
+      transition: opacity 0.75s ease, transform 0.75s cubic-bezier(.22,.68,.32,1);
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      will-change: opacity, transform;
+    }
+    .past-light.visible { opacity: 1; transform: scale(1) rotate(-1.4deg); }
+    .past-light:hover { transform: scale(1) translateY(-3px) rotate(-1.4deg); }
+    .past-light-hint {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: .06em;
+      color: var(--text-tertiary);
+      opacity: 0;
+      transition: opacity .6s ease .35s;
+    }
+    .past-light-hint.visible { opacity: .7; }
+    .polaroid {
+      width: 172px;
+      padding: 9px 9px 0;
+      background: #fffdfa;
+      border-radius: 2px;
+      box-shadow: 0 5px 16px rgba(28,25,23,0.11), 0 1px 3px rgba(28,25,23,0.07);
+    }
+    .polaroid-photo {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background-color: #e8e2d8;
+      background-size: cover;
+      background-position: center;
+      border-radius: 1px;
+      /* 宝利来特有的暖调、略降反差 */
+      filter: saturate(0.94) contrast(1.02) brightness(1.02);
+      position: relative;
+    }
+    /* 感光乳剂的暖粉色调 + 暗角，贴住宝利来的质感 */
+    .polaroid-photo::after {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(60% 55% at 48% 40%, rgba(255,255,255,0) 0%, rgba(58,38,24,0.20) 100%),
+        linear-gradient(180deg, rgba(255,236,222,0.10) 0%, rgba(226,200,208,0.10) 100%);
+      border-radius: 1px;
+    }
+    /* 还没有过去 —— 像一张尚未曝光的相纸：柔和的暖白，中央一点柔光 */
+    .polaroid-photo.empty {
+      background-image:
+        radial-gradient(72% 62% at 50% 42%, rgba(255,255,253,0.95) 0%, rgba(255,255,253,0) 72%),
+        linear-gradient(135deg, #f6f1e8 0%, #efe8da 48%, #e6dccb 100%);
+    }
+    .polaroid-caption {
+      font-family: 'Ma Shan Zheng', 'Zhi Mang Xing', 'Satisfy', cursive;
+      font-size: 16px;
+      line-height: 1.45;
+      color: #8d8377;
+      padding: 12px 4px 6px;
+      text-align: center;
+      min-height: 40px;
+      word-break: break-word;
+      text-wrap: balance;
+    }
+    /* 相纸底部印的日期 —— 像真宝利来背面那行日期戳，让这张相片自己知道是哪天 */
+    .polaroid-date {
+      font-size: 10px;
+      letter-spacing: .07em;
+      color: #b6ab9a;
+      text-align: center;
+      padding: 0 2px 12px;
+      font-variant-numeric: tabular-nums;
+    }
 
     /* ─── History View ─── */
     .history-header { margin-bottom: 24px; }
@@ -1252,12 +1326,20 @@
         <div class="gentle-text" id="gentleText"></div>
         <div class="gentle-hint" id="gentleHint">不用回答也可以 · 轻点此处收起</div>
       </div>
-      <!-- v2: 曾经的微光 —— 首页只有这一行很淡的字；点它直接出卡（相片不进首页） -->
+      <!-- v2: 曾经的微光 —— 一行淡字 → 显影成相片 → 走进那一天 → 留住这束光 -->
       <div class="past-light-entry" id="pastLightEntry" style="display:none;">
         <div class="watermark" id="watermark">
           <span class="watermark-content" id="watermarkContent"></span>
           <span class="watermark-date" id="watermarkDate"></span>
         </div>
+        <div class="past-light" id="pastLight" style="display:none;">
+          <div class="polaroid">
+            <div class="polaroid-photo" id="pastLightPhoto"></div>
+            <div class="polaroid-caption" id="pastLightText"></div>
+            <div class="polaroid-date" id="pastLightDate"></div>
+          </div>
+        </div>
+        <div class="past-light-hint" id="pastLightHint" style="display:none;" data-i18n="past_light_hint">轻点相片，走进那一天</div>
       </div>
     </div>
 
@@ -1500,8 +1582,7 @@ const I18N = {
     card_photo_reset: '换回默认相片',
     past_light_text: '曾经的微光',
     past_light_none: '每一束光，都在等待被记住',
-    past_light_hint: '你曾为这些瞬间心动',
-    past_light_keep: '留住这束光',
+    past_light_hint: '轻点相片，走进那一天',
     reunion_share: '分享',
     reunion_saving: '生成中…',
     reunion_saved: '✅ 图片已保存',
@@ -1641,8 +1722,7 @@ const I18N = {
     card_photo_reset: 'Default photo',
     past_light_text: 'A flicker of past light',
     past_light_none: 'Every light waits to be remembered',
-    past_light_hint: 'You once felt something here',
-    past_light_keep: 'Keep this light',
+    past_light_hint: 'Tap the photo to step back into that day',
     reunion_share: 'Share',
     reunion_saving: 'Generating…',
     reunion_saved: '✅ Image saved',
@@ -2885,6 +2965,8 @@ document.getElementById('gentleArea').addEventListener('click', () => {
 
 document.getElementById('editBtn').addEventListener('click', () => {
   todayDone = false;
+  // 回到一行淡字，重新记录时不被一张相片压着
+  collapsePastLight();
   // Hide the gentle question when re-editing
   const gentle = document.getElementById('gentleArea');
   if (gentle) { gentle.classList.remove('visible'); gentle.style.display = 'none'; }
@@ -3098,12 +3180,65 @@ function showWatermark() {
 
   entry.style.display = 'block';
   currentMemoryData = memory;
+  collapsePastLight();
 }
 
-// 一行淡字点下去，直接出卡 —— 首页不摆相片，相片是产物
+// 收回到一行淡字 —— 每次渲染都从收起状态开始，不把相片直接摊在页面上
+function collapsePastLight() {
+  const watermark = document.getElementById('watermark');
+  const pastLight = document.getElementById('pastLight');
+  const hint = document.getElementById('pastLightHint');
+  if (!watermark || !pastLight) return;
+  pastLight.classList.remove('visible');
+  pastLight.style.display = 'none';
+  hint.classList.remove('visible');
+  hint.style.display = 'none';
+  watermark.classList.remove('faded');
+  watermark.style.display = 'inline-block';
+}
+
+// 轻轻一点，那行淡字显影成一张宝利来相片 —— 这一步不能省，它是"想起来"的动作
+function revealPastLight() {
+  const memory = currentMemoryData;
+  if (!memory) return;
+  const chosenText = chosenEntryFor(memory);
+  if (!chosenText) return;
+
+  const watermark = document.getElementById('watermark');
+  const pastLight = document.getElementById('pastLight');
+  const hint = document.getElementById('pastLightHint');
+  const photo = document.getElementById('pastLightPhoto');
+
+  photo.classList.remove('empty');
+  photo.style.backgroundImage = 'url("' + (customPhotoFor(memory.date) || warmPhotoFor(memory.date)) + '")';
+  document.getElementById('pastLightText').textContent =
+    chosenText.length > 26 ? chosenText.slice(0, 26) + '…' : chosenText;
+  document.getElementById('pastLightDate').textContent = memoryDateLine(memory);
+
+  watermark.classList.add('faded');
+  setTimeout(() => { watermark.style.display = 'none'; }, 380);
+
+  pastLight.style.display = 'flex';
+  requestAnimationFrame(() => pastLight.classList.add('visible'));
+  hint.style.display = 'block';
+  setTimeout(() => hint.classList.add('visible'), 320);
+
+  // 相片显影后如果有一部分在屏幕外，轻轻带上来一点，不抢镜
+  setTimeout(() => {
+    const r = pastLight.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (r.bottom > vh - 24) {
+      window.scrollBy({ top: Math.min(r.bottom - vh + 96, r.top - 96), behavior: 'smooth' });
+    }
+  }, 620);
+
+  logEvent('past_light_revealed');
+}
+
+// 点击那行淡字 → 显影；不跳转，先把相片交到手上
 document.getElementById('watermark').addEventListener('click', (e) => {
   e.stopPropagation();
-  openCardFor(currentMemoryData);
+  revealPastLight();
 });
 
 // ─── v2: 曾经的微光 —— 宝利来相片（照片 + 手写体文字）─────────────────────
@@ -3175,20 +3310,14 @@ function readPhotoFile(file, cb) {
   else setTimeout(run, 1200);
 })();
 
-// ─── 一行淡字 → 直接出卡（2026-10-25 用户定稿）─────────────────────────────
-// 一路撤掉三层中间态：首页宝利来相片 → 全屏重逢（#1c1917 黑底）→ 再点「留住这束光」。
-// 现在首页只有那行淡字，点它一步到卡：相片是产物，不是首页装饰。
-function openCardFor(memory) {
-  if (!memory) return;
-  const run = () => generateCard(memory);
-  // 等签名字体烘焙好再出卡，否则会贴上 fallback 的细手写体
-  if (!_sigReady && _sigReadyPromise) _sigReadyPromise.then(run);
-  else run();
-}
+// 相片再点一次 → 走进那一天（黑底重逢），在那一屏里才决定「留住这束光」
+document.getElementById('pastLight').addEventListener('click', () => {
+  if (currentMemoryData) openReunion(currentMemoryData);
+});
 
 // ─── v2: Reunion Full-screen ───────────────────────────────────────────────
-// ⚠️ 2026-10-25 起没有任何入口再调用它：首页那行淡字与弹窗里的回响都直接出卡。
-// 保留代码与 DOM 仅作调试（真机上看那一天的原文），要删可整体移除。
+// 这一屏不是多余的过场：点是「想起」，点开是「站到那一天里面」，最后才「留住」。
+// 2026-10-25 试过跳过它直接出卡，读感太硬、没有情感，已恢复。
 function openReunion(memory) {
   logEvent('reunion_opened');
   const overlay = document.getElementById('reunionOverlay');
@@ -3829,7 +3958,7 @@ document.getElementById('echoText').addEventListener('click', () => {
     document.getElementById('thanksOverlay').classList.remove('show');
     const echoSection = document.getElementById('echoSection');
     if (echoSection) { echoSection.style.display = 'none'; echoSection.classList.remove('visible'); }
-    setTimeout(() => openCardFor(memory), 300);
+    setTimeout(() => openReunion(memory), 300);
   }
 });
 
