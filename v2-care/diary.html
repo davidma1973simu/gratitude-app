@@ -171,129 +171,155 @@
     @keyframes loadinDot { 0%,80%,100%{opacity:0.3;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.1)} }
 
     /* ══════════════════════════════════════
-       OUTPUT SECTION — Compact Instagram Card
+       OUTPUT SECTION — 一页日记（方向 A，2026-10-25）
+       点阵纸 + 装订线 + 日期 + 温度带 + 正文 + 铅笔旁注 + 粘贴相片 + 落款
        ══════════════════════════════════════ */
     .output-section {
       display: none;
-      background: var(--surface);
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 8px 40px rgba(180,120,80,0.15);
       position: relative;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #fbf7ef;
+      box-shadow: 0 12px 44px rgba(120,100,70,0.16), 0 1px 3px rgba(120,100,70,0.08);
       margin-bottom: 24px;
     }
     .output-section.active { display: block; }
-
-    .output-deco-circle {
-      position: absolute; top: -60px; right: -50px;
-      width: 180px; height: 180px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(212,165,116,0.05), transparent 65%);
-      pointer-events: none; z-index: 0;
+    /* 点阵纸底：data-uri SVG 平铺 —— html2canvas 导出时不会丢 */
+    .paper-bg {
+      position: absolute; inset: 0; pointer-events: none;
+      background-color: #fbf7ef;
+      background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='1' cy='1' r='0.85' fill='%23cdbfa8' fill-opacity='0.5'/%3E%3C/svg%3E");
+      background-size: 16px 16px;
+      background-repeat: repeat;
     }
-
+    /* 装订红线 */
+    .paper-margin {
+      position: absolute; top: 0; bottom: 0; left: 27px; width: 1px;
+      background: rgba(196,92,80,0.24); pointer-events: none;
+    }
     .output-inner {
-      padding: 22px 20px 24px;
       position: relative; z-index: 1;
+      padding: 30px 22px 26px 44px;
     }
 
     /* Date + Tag row */
     .output-header-row {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
+      display: flex; align-items: flex-start; justify-content: space-between;
     }
-    .output-date-block { flex-shrink: 0; }
     .output-date-big {
-      font-size: 38px; font-weight: 800; line-height: 1;
-      color: var(--text-primary); letter-spacing: -1.5px;
+      font-size: 46px; font-weight: 600; line-height: 0.92;
+      color: #332c25; letter-spacing: -1.5px;
     }
     .output-date-sub {
-      font-size: 12px; color: var(--text-tertiary);
-      margin-top: 2px; letter-spacing: 0.3px;
+      font-size: 10px; color: #a1968a;
+      margin-top: 7px; letter-spacing: 0.2em;
     }
     .output-tag {
-      display: inline-block; padding: 4px 12px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, rgba(14,107,80,0.10), rgba(13,138,95,0.07));
-      color: var(--accent); font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px;
+      margin-top: 2px; display: inline-block; padding: 5px 11px;
+      border-radius: 99px; white-space: nowrap;
+      border: 1px solid rgba(14,107,80,0.26);
+      background: rgba(255,255,255,0.55);
+      color: var(--accent); font-size: 10px; letter-spacing: 0.12em;
+      transform: rotate(-3deg);
     }
 
-    /* ─── Body: text left, image right ─── */
-    .output-body-layout {
-      display: flex; gap: 14px;
-      margin-bottom: 16px; align-items: flex-start;
+    /* ─── 温度带：一条线 + 一枚指针，取代 4×7 点阵 ─── */
+    .mood { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+    .mood-word { font-size: 11px; letter-spacing: 0.14em; color: #8a7b6a; white-space: nowrap; }
+    .mood-track {
+      position: relative; flex: 1; height: 3px; border-radius: 3px;
+      background: linear-gradient(90deg, #8fbcb2 0%, #cfc39a 42%, #e8b07a 72%, #d98f6a 100%);
     }
-    .output-text-block { flex: 1; min-width: 0; }
+    .mood-pin {
+      position: absolute; top: 50%; width: 9px; height: 9px;
+      margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+      background: #fff; border: 1.5px solid #d98f6a;
+      box-shadow: 0 0 0 3px rgba(217,143,106,0.16);
+    }
+    .mood-score { font-size: 11px; color: #a1968a; font-variant-numeric: tabular-nums; }
 
-    /* Image right block */
+    /* ─── 相片：贴在纸上的宝利来，位置与宽度不再挤压正文 ─── */
     .output-image-block {
-      width: 38%; max-width: 200px; flex-shrink: 0; align-self: flex-start;
+      margin: 26px auto 2px; width: 76%; max-width: 300px;
+      padding: 7px 7px 22px; background: #fffdfa;
+      transform: rotate(-1.8deg);
+      box-shadow: 0 6px 18px rgba(40,32,24,0.16), 0 1px 2px rgba(40,32,24,0.08);
+      position: relative;
+    }
+    /* 一小段胶带，让这张相片像"贴"上去的 */
+    .photo-tape {
+      position: absolute; top: -10px; left: 50%; width: 62px; height: 19px;
+      margin-left: -31px; background: rgba(232,220,190,0.78);
+      transform: rotate(-3deg);
+      box-shadow: 0 1px 2px rgba(40,32,24,0.08);
     }
     .output-image-wrap {
-      border-radius: 16px; overflow: hidden;
-      position: relative;
-      width: 100%; height: 0; padding-bottom: 133.33%; /* 3:4 —— 不依赖 aspect-ratio，导出更稳 */
-      box-shadow: 0 3px 16px rgba(180,120,80,0.12);
-      background: #f3ece4;
+      position: relative; width: 100%; height: 0; padding-bottom: 75%;
+      overflow: hidden; background: #f3ece4;
     }
     .output-image {
       position: absolute; top: 0; left: 0;
       width: 100%; height: 100%; object-fit: cover; object-position: center;
     }
-    /* Small screen: 图片作为横幅置顶，文字在下（杂志式） */
     @media (max-width: 440px) {
-      .output-body-layout { flex-direction: column-reverse; }
-      .output-image-block { width: 100%; max-width: none; }
-      .output-image-wrap { padding-bottom: 62%; border-radius: 14px; }
+      .output-image-block { width: 88%; max-width: none; }
     }
 
     /* ─── 一天的第一句话：把三条并置成一段第一人称的陈诉 ─── */
     .diary-epigraph {
-      display: flex; gap: 9px; align-items: flex-start;
-      font-size: 14.5px; line-height: 1.95;
-      color: #4a5850;
-      letter-spacing: 0.3px;
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: 14px; line-height: 1.95;
+      color: #6f6659;
+      letter-spacing: 0.02em;
       font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
-      margin: 0 0 20px;
-      padding-bottom: 16px;
-      border-bottom: 0.5px solid rgba(14, 107, 80, 0.14);
+      margin: 24px 0 0;
     }
     .diary-epigraph .epi-mark {
-      flex: none; font-size: 9px; line-height: 3.2;
-      color: var(--accent); opacity: 0.65;
+      flex: none; font-size: 9px; line-height: 2.9;
+      color: var(--accent); opacity: 0.6;
     }
     .diary-epigraph[hidden] { display: none; }
 
-    /* ─── User input: handwriting + large + bold ─── */
+    /* ─── 正文：日记主体（不用手写体，靠字号、行距和留白撑住） ─── */
     .diary-user-input {
-      font-size: 20px; line-height: 1.9;
-      color: var(--text-primary);
-      font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      margin-bottom: 12px;
+      margin-top: 18px;
+      font-size: 18px; line-height: 2.0;
+      color: #332c25;
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.01em;
       white-space: pre-wrap; word-break: break-word;
     }
     .diary-user-input[contenteditable="true"] {
-      outline: none; border-radius: 8px;
-      padding: 10px; margin: -10px -10px 2px;
+      outline: none; border-radius: 6px;
+      padding: 6px; margin: 12px -6px 0;
       transition: background 0.15s;
     }
-    .diary-user-input[contenteditable="true"]:focus { background: var(--accent-soft); }
+    .diary-user-input[contenteditable="true"]:focus { background: rgba(14,107,80,0.04); }
 
-    /* ─── AI wrapper text: system font, smaller ─── */
+    /* ─── AI wrapper text：比正文低一档，像接着写下去的一小段 ─── */
     .diary-ai-text {
-      font-size: 13.5px; line-height: 1.75;
-      color: var(--text-secondary);
-      margin-bottom: 14px;
+      margin-top: 10px;
+      font-size: 14px; line-height: 1.95;
+      color: #5f574d;
       white-space: pre-wrap; word-break: break-word;
       font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
-      opacity: 0.8;
     }
 
     .diary-edit-hint {
       display: inline-block; font-size: 10px; color: var(--text-tertiary);
       opacity: 0.35; margin-left: 5px;
     }
+
+    /* ─── 情绪洞察：正文下面的铅笔旁注，不再是一块灰卡片 ─── */
+    .diary-note {
+      margin-top: 14px;
+      font-size: 13px; line-height: 1.9;
+      color: #9a8f83;
+      letter-spacing: 0.01em;
+    }
+    .diary-note::before { content: '↳ '; color: #bfb4a6; }
+    .diary-note[hidden] { display: none; }
 
     /* User attachments row */
     .output-attachments {
@@ -309,83 +335,89 @@
       border-radius: 8px; font-size: 11.5px; color: var(--text-secondary);
     }
 
-    /* ─── Emotion Dot Grid ─── */
-    .emotion-dots { margin-bottom: 16px; }
-    .emotion-dots-label {
-      font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-      text-transform: uppercase; color: var(--text-tertiary);
-      margin-bottom: 8px;
-    }
-    .emotion-dots-row {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 4px;
-    }
-    .emotion-dots-name {
-      font-size: 12px; font-weight: 600;
-      color: var(--text-secondary); min-width: 40px; flex-shrink: 0;
-    }
-    .emotion-dots-track { display: flex; gap: 4px; }
-    .emotion-dot {
-      width: 11px; height: 11px; border-radius: 50%;
-      transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .emotion-dot.empty { background: var(--border-light); opacity: 0.25; transform: scale(0.8); }
-    .emotion-dot.warm { background: var(--emotion-warm); }
-    .emotion-dot.calm { background: var(--emotion-calm); }
-    .emotion-dot.hopeful { background: var(--emotion-hopeful); }
-    .emotion-dot.gentle { background: var(--emotion-gentle); }
-
-    /* ─── Insight Block ─── */
-    .output-insight {
-      font-size: 13px; line-height: 1.75;
-      color: var(--text-secondary);
-      padding: 14px 16px;
-      background: linear-gradient(135deg, rgba(14,107,80,0.05), rgba(14,107,80,0.03));
-      border-radius: 12px;
-      margin-bottom: 14px;
-      position: relative;
-    }
-    .output-insight::before {
-      content: ''; position: absolute;
-      left: -1px; top: 50%; transform: translateY(-50%);
-      width: 2.5px; height: 50%;
-      border-radius: 2.5px;
-      background: linear-gradient(to bottom, var(--emotion-warm), var(--emotion-gentle));
-    }
-    .output-insight-label {
-      font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-      text-transform: uppercase; color: var(--accent); margin-bottom: 4px;
-    }
-
-    /* ─── Tome ─── */
+    /* ─── Tome：落款 ─── */
     .output-tome {
-      font-size: 13.5px; line-height: 1.65;
-      color: var(--text-primary);
-      padding: 10px 0 2px;
-      margin-bottom: 14px;
-      border-top: 1px solid var(--border-light);
-      font-style: italic; opacity: 0.85;
+      margin-top: 26px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(150,132,108,0.22);
+      font-size: 16px; line-height: 1.7;
+      color: #4a423a;
+      letter-spacing: 0.01em;
     }
-    .output-tome-label {
-      font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-      text-transform: uppercase; color: var(--text-tertiary);
-      margin-bottom: 3px; font-style: normal;
+    .output-tome .tome-label {
+      display: block; margin-top: 7px;
+      font-size: 9.5px; letter-spacing: 0.2em; color: #b3a89b;
     }
 
-    /* ─── Actions ─── */
-    .output-actions { display: flex; gap: 8px; padding-top: 2px; flex-wrap: wrap; }
-    .output-action-btn {
-      flex: 1; padding: 10px; border-radius: 11px;
-      border: 1px solid var(--border-light); background: var(--surface);
-      color: var(--text-secondary); font-size: 12.5px; cursor: pointer;
-      transition: all 0.15s ease; font-family: inherit;
-      text-align: center; display: flex; align-items: center; justify-content: center; gap: 3px;
-      min-width: 0;
+    /* ─── Actions：一个主按钮 + 一条淡文字 ─── */
+    .output-actions {
+      margin-top: 22px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     }
-    .output-action-btn:hover { background: var(--accent-soft); border-color: var(--border); }
+    .output-action-btn {
+      font-family: inherit; cursor: pointer;
+      transition: opacity 0.15s ease;
+    }
     .output-action-btn.primary {
-      background: linear-gradient(135deg, #0E6B50, #0d8a5f); color: white;
-      border-color: transparent; font-weight: 600;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 10px;
+      padding: 11px 20px;
+      font-size: 13.5px; letter-spacing: 0.03em;
+    }
+    .output-action-btn.primary:hover { opacity: 0.9; }
+    .output-action-btn.primary:disabled { opacity: 0.6; cursor: default; }
+    .output-action-btn.share-link {
+      background: none; border: none; padding: 0;
+      color: #9a8f83; font-size: 12.5px; letter-spacing: 0.04em;
+    }
+    .output-action-btn.share-link:hover { color: var(--accent); }
+
+    /* ══════════════════════════════════════
+       分享面板
+       ══════════════════════════════════════ */
+    .share-sheet { position: fixed; inset: 0; z-index: 190; pointer-events: none; }
+    .share-sheet-mask {
+      position: absolute; inset: 0; background: rgba(24,20,16,0.42);
+      opacity: 0; transition: opacity 0.28s ease;
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    }
+    .share-sheet-panel {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      background: #fffefb; border-radius: 20px 20px 0 0;
+      padding: 14px 22px calc(24px + env(safe-area-inset-bottom, 0px));
+      transform: translateY(101%);
+      transition: transform 0.32s cubic-bezier(0.22,0.68,0.32,1);
+      box-shadow: 0 -14px 44px rgba(24,20,16,0.22);
+    }
+    .share-sheet.show { pointer-events: auto; }
+    .share-sheet.show .share-sheet-mask { opacity: 1; }
+    .share-sheet.show .share-sheet-panel { transform: translateY(0); }
+    .sheet-grab { width: 38px; height: 4px; border-radius: 4px; background: #ded5c7; margin: 0 auto 14px; }
+    .sheet-title { font-size: 11.5px; letter-spacing: 0.14em; color: #9a8f83; text-align: center; margin-bottom: 18px; }
+    .sheet-grid { display: flex; justify-content: space-between; gap: 4px; }
+    .sheet-item {
+      background: none; border: none; padding: 0; font-family: inherit;
+      cursor: pointer; width: 60px; text-align: center;
+    }
+    .sheet-ico {
+      width: 46px; height: 46px; margin: 0 auto 8px; border-radius: 50%;
+      border: 1px solid rgba(120,108,92,0.22); background: #fdfbf7; color: #57503f;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sheet-ico svg { width: 22px; height: 22px; }
+    .sheet-item em { display: block; font-style: normal; font-size: 10.5px; color: #7d7264; letter-spacing: 0.02em; }
+    .sheet-item.hero .sheet-ico {
+      background: rgba(14,107,80,0.06); border-color: rgba(14,107,80,0.32); color: var(--accent);
+    }
+    .sheet-note { margin-top: 14px; font-size: 10px; line-height: 1.7; color: #b0a598; text-align: center; }
+    .sheet-save {
+      margin-top: 14px; width: 100%; padding: 12px; border-radius: 10px; border: none;
+      background: var(--accent); color: #fff; font-size: 13.5px; font-family: inherit;
+      letter-spacing: 0.03em; cursor: pointer;
+    }
+    .sheet-copy {
+      margin: 12px auto 0; display: block; background: none; border: none; padding: 4px;
+      font-size: 11.5px; color: #a89d90; font-family: inherit; letter-spacing: 0.04em; cursor: pointer;
     }
     .output-action-btn.primary:hover { box-shadow: 0 3px 14px rgba(14,107,80,0.28); }
 
@@ -551,8 +583,8 @@
     @media (max-width: 480px) {
       main { padding: 14px 12px 90px; }
       .input-section { padding: 14px; }
-      .output-inner { padding: 18px 14px 20px; }
-      .output-date-big { font-size: 32px; }
+      .output-inner { padding: 24px 16px 22px 36px; }
+      .output-date-big { font-size: 40px; }
     }
   </style>
 </head>
@@ -612,69 +644,62 @@
     <div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div>
   </div>
 
-  <!-- Output Section -->
+  <!-- Output Section — 一页日记 -->
   <div class="output-section" id="outputSection">
-    <div class="output-deco-circle"></div>
+    <div class="paper-bg"></div>
+    <div class="paper-margin"></div>
     <div class="output-inner">
 
       <!-- Date + Tag -->
       <div class="output-header-row">
-        <div class="output-date-block">
+        <div>
           <div class="output-date-big" id="outputDateNum">—</div>
           <div class="output-date-sub" id="outputDateStr">—</div>
         </div>
         <span class="output-tag">✦ 光之日记</span>
       </div>
 
-      <!-- Body: text left, image right -->
-      <div class="output-body-layout">
-        <div class="output-text-block">
-          <!-- 一天的第一句话（AI 并置三条，不编造） -->
-          <div class="diary-epigraph" id="outputEpigraph" hidden>
-            <span class="epi-mark">✦</span><span id="epigraphText"></span>
-          </div>
+      <!-- 温度带（取代原 4×7 点阵） -->
+      <div class="mood" id="emotionBars"></div>
 
-          <!-- User input (handwriting) -->
-          <div class="diary-user-input" id="outputUserInput" contenteditable="true"></div>
-          <span class="diary-edit-hint">可编辑</span>
+      <!-- 一天的第一句话 -->
+      <div class="diary-epigraph" id="outputEpigraph" hidden>
+        <span class="epi-mark">✦</span><span id="epigraphText"></span>
+      </div>
 
-          <!-- AI wrapper text -->
-          <div class="diary-ai-text" id="outputAiText"></div>
+      <!-- 正文（可编辑） -->
+      <div class="diary-user-input" id="outputUserInput" contenteditable="true"></div>
+      <span class="diary-edit-hint">可编辑</span>
 
-          <!-- Attachments -->
-          <div class="output-attachments" id="outputAttachments"></div>
+      <!-- AI 延伸 -->
+      <div class="diary-ai-text" id="outputAiText"></div>
 
-          <!-- Emotion Dots -->
-          <div class="emotion-dots" id="emotionBars"></div>
+      <!-- 附件 -->
+      <div class="output-attachments" id="outputAttachments"></div>
 
-          <!-- Insight -->
-          <div class="output-insight" id="outputAnalysis">
-            <div class="output-insight-label">情绪洞察</div>
-            <div id="analysisText"></div>
-          </div>
+      <!-- 旁注：情绪洞察 -->
+      <div class="diary-note" id="outputAnalysis" hidden><span id="analysisText"></span></div>
 
-          <!-- Tome -->
-          <div class="output-tome" id="outputTome">
-            <div class="output-tome-label">致此刻的你</div>
-            <div id="tomeText"></div>
-          </div>
-
-          <!-- Actions -->
-          <div class="output-actions">
-            <button class="output-action-btn primary" onclick="saveDiary()">💾 保存图片</button>
-            <button class="output-action-btn" onclick="shareDiary()">📤 分享</button>
-            <button class="output-action-btn" onclick="regenerateImage()">🖼️ 换图</button>
-          </div>
-        </div>
-
-        <!-- Image right -->
-        <div class="output-image-block">
-          <div class="output-image-wrap">
-            <img class="output-image" id="outputImage" src="" alt="">
-          </div>
+      <!-- 相片：贴在纸上 -->
+      <div class="output-image-block">
+        <span class="photo-tape"></span>
+        <div class="output-image-wrap">
+          <img class="output-image" id="outputImage" src="" alt="">
         </div>
       </div>
 
+      <!-- 落款 -->
+      <div class="output-tome" id="outputTome">
+        <div id="tomeText"></div>
+        <span class="tome-label">致此刻的你</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="output-actions">
+        <button class="output-action-btn primary" onclick="saveDiary()">保存图片</button>
+        <button class="output-action-btn share-link" onclick="openShareSheet()">分享</button>
+        <button class="output-action-btn share-link" onclick="regenerateImage()">换一张相片</button>
+      </div>
     </div>
   </div>
 
@@ -1377,8 +1402,11 @@ function renderOutput(parts, imageUrl, emotions, analysis, tome, narrative){
   }
 
   renderOutputAttachments();
-  renderEmotionDots(emotions);
-  document.getElementById('analysisText').textContent=analysis;
+  renderMoodBar(emotions);
+  var analysisEl = document.getElementById('outputAnalysis');
+  var analysisTxt = (analysis || '').trim();
+  document.getElementById('analysisText').textContent = analysisTxt;
+  if (analysisEl) analysisEl.hidden = !analysisTxt;
   document.getElementById('tomeText').textContent=tome;
 }
 
@@ -1398,31 +1426,41 @@ function renderOutputAttachments(){  var c=document.getElementById('outputAttach
 }
 
 // ══════════════════════════════════════
-// Emotion DOT GRID
+// 温度带（取代 4×7 点阵）
 // ══════════════════════════════════════
-function renderEmotionDots(scores){
+// 四种情绪里取最强的那一种：一个词、一条线、一枚指针、一个数字。
+// 点阵是数据语言，这条线是日记语言 —— 它只回答一件事：今天是暖的还是静的。
+function _rgbaOf(hex,a){
+  var n=parseInt(hex.replace('#',''),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+}
+function renderMoodBar(scores){
   var container=document.getElementById('emotionBars');
+  if(!container) return;
+  scores=scores||{};
   var labels={warm:'温暖',calm:'平静',hopeful:'希望',gentle:'温柔'};
+  var colors={warm:'#e8a06a',calm:'#7fb3a8',hopeful:'#d8b45a',gentle:'#cfa0b4'};
   var order=['warm','calm','hopeful','gentle'];
-  var TOTAL_DOTS=7;
-  var html='<div class="emotion-dots-label">情绪光谱</div>';
+  var dom='warm', top=-1;
   for(var i=0;i<order.length;i++){
-    var emo=order[i],pct=scores[emo],filled=Math.round(pct/100*TOTAL_DOTS);
-    if(filled===0&&pct>5)filled=1;if(filled>TOTAL_DOTS)filled=TOTAL_DOTS;
-    html+='<div class="emotion-dots-row"><span class="emotion-dots-name">'+labels[emo]+'</span><div class="emotion-dots-track">';
-    for(var d=0;d<TOTAL_DOTS;d++){
-      html+='<span class="emotion-dot '+(d<filled?emo:'empty')+'" data-delay="'+(d*60)+'"></span>';
-    }
-    html+='</div></div>';
+    var v=Number(scores[order[i]]); if(isNaN(v)) v=0;
+    if(v>top){ top=v; dom=order[i]; }
   }
-  container.innerHTML=html;
-  setTimeout(function(){
-    var dots=container.querySelectorAll('.emotion-dot:not(.empty)');
-    dots.forEach(function(dot){var delay=parseInt(dot.getAttribute('data-delay'))||0;
-      dot.style.transform='scale(0)';dot.style.opacity='0';
-      setTimeout(function(){dot.style.transition='all 0.35s cubic-bezier(0.34,1.56,0.64,1)';dot.style.transform='scale(1)';dot.style.opacity='1';},delay);
-    });
-  },150);
+  if(top<0) top=0;
+  var pct=Math.max(5,Math.min(95,top));
+  container.innerHTML=
+    '<span class="mood-word">'+labels[dom]+'</span>'+
+    '<span class="mood-track"><i class="mood-pin" style="left:'+pct+'%;border-color:'+colors[dom]+
+      ';box-shadow:0 0 0 3px '+_rgbaOf(colors[dom],0.16)+'"></i></span>'+
+    '<span class="mood-score">'+Math.round(top)+'</span>';
+  var pin=container.querySelector('.mood-pin');
+  if(pin){
+    pin.style.transform='scale(0)';
+    setTimeout(function(){
+      pin.style.transition='transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
+      pin.style.transform='scale(1)';
+    },120);
+  }
 }
 
 // ══════════════════════════════════════
@@ -1475,9 +1513,10 @@ document.getElementById('gentleArea').addEventListener('click', function(){
   setTimeout(function(){ area.style.display = 'none'; }, 1000);
 });
 
-function saveDiary(){
+function saveDiary(target){
+  var tgt = target || '';
   var btn = document.querySelector('.output-action-btn[onclick="saveDiary()"]');
-  if(btn){ btn.disabled = true; btn.innerHTML = '⏳ 生成中'; }
+  if(btn){ btn.disabled = true; btn.textContent = '正在生成…'; }
 
   // Clone card content, strip UI elements that shouldn't appear in image
   var cardEl = document.getElementById('outputSection');
@@ -1534,8 +1573,15 @@ function saveDiary(){
 
     // Cleanup
     document.body.removeChild(clone);
-    if(btn){ btn.disabled = false; btn.innerHTML = '💾 保存图片'; }
-    showNotification('卡片已保存 ✦');
+    if(btn){ btn.disabled = false; btn.textContent = '保存图片'; }
+    // 分享面板里进来的：图存好了，再接一句「去哪儿发」
+    var guide = {
+      moments: '已存进相册 · 打开微信发到朋友圈',
+      xhs: '已存进相册 · 去小红书发这一篇',
+      weibo: '已存进相册 · 去微博发这一条'
+    };
+    showNotification(guide[tgt] || '这一页已保存 ✦');
+    if(tgt) copyDiaryText(true);
     showShareHint();
 
     // Also persist text data to localStorage (for history)
@@ -1545,7 +1591,7 @@ function saveDiary(){
   }).catch(function(err){
     console.warn('html2canvas error:', err);
     document.body.removeChild(clone);
-    if(btn){ btn.disabled = false; btn.innerHTML = '💾 保存图片'; }
+    if(btn){ btn.disabled = false; btn.textContent = '保存图片'; }
     // Fallback: just persist text data
     persistDiaryData();
     showGentleQuestion();
@@ -1678,6 +1724,40 @@ function dismissShareHint(){
   if(bar) bar.classList.remove('show');
 }
 
+// ─── 分享面板 ─────────────────────────────────────────────────────────────
+// 事实：朋友圈没有 web 开放接口。JS-SDK 只能定制「分享卡片」，且需要已认证公众号 +
+// 安全域名 + 后端签名，并且只在微信内置浏览器生效 —— 它不替用户发朋友圈。
+// 所以这里不假装能直发：存图 + 复制文字 + 一句「去哪儿发」的引导。
+function openShareSheet(){
+  var s = document.getElementById('shareSheet');
+  if(!s) return;
+  s.classList.add('show');
+  logEvent('diary_share_sheet_opened');
+}
+function closeShareSheet(){
+  var s = document.getElementById('shareSheet');
+  if(s) s.classList.remove('show');
+}
+function copyDiaryText(silent){
+  var t = diaryPlainText();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){
+      if(!silent) showNotification('已复制文字 ✦');
+      logEvent('diary_text_copied');
+    }).catch(function(){
+      if(!silent) showNotification('复制失败，可长按正文选择');
+    });
+  } else if(!silent){
+    showNotification('这个浏览器不支持一键复制');
+  }
+}
+// 微信好友 / 更多 → 走系统分享面板（移动端里面有微信）；其余 → 存图 + 引导
+function shareTo(target){
+  closeShareSheet();
+  if(target === 'wechat' || target === 'more'){ shareDiary(); return; }
+  saveDiary(target);
+}
+
 // ─── 浏览器返回按钮保护 ───
 (function(){
   var basePath = window.location.pathname.replace(/[^/]*$/, '');
@@ -1696,6 +1776,40 @@ function dismissShareHint(){
   <span class="share-hint-text">图片已保存 · 如果分享后有人问起，可以告诉他们</span>
   <button class="share-hint-btn" onclick="copyShareLink()">复制链接</button>
   <button class="share-hint-dismiss" onclick="dismissShareHint()">✕</button>
+</div>
+
+<!-- Share sheet -->
+<div class="share-sheet" id="shareSheet">
+  <div class="share-sheet-mask" onclick="closeShareSheet()"></div>
+  <div class="share-sheet-panel">
+    <div class="sheet-grab"></div>
+    <div class="sheet-title">把这页光分享出去</div>
+    <div class="sheet-grid">
+      <button class="sheet-item hero" onclick="shareTo('moments')">
+        <span class="sheet-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4.5h14v10H10l-5 4z" stroke-linejoin="round"/><circle cx="9" cy="9.5" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="9.5" r=".9" fill="currentColor" stroke="none"/></svg></span>
+        <em>朋友圈</em>
+      </button>
+      <button class="sheet-item" onclick="shareTo('wechat')">
+        <span class="sheet-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 9h12v7H8l-4 4z" stroke-linejoin="round"/><path d="M9 6.5h11v7h-3" stroke-linejoin="round"/></svg></span>
+        <em>微信好友</em>
+      </button>
+      <button class="sheet-item" onclick="shareTo('xhs')">
+        <span class="sheet-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 4.5h11a2 2 0 0 1 2 2v13H7a2 2 0 0 1-2-2z" stroke-linejoin="round"/><path d="M18 8.5h1.5v11H8"/></svg></span>
+        <em>小红书</em>
+      </button>
+      <button class="sheet-item" onclick="shareTo('weibo')">
+        <span class="sheet-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 6c4.5 0 8 2.5 8 5.8s-3.5 5.7-8 5.7c-1 0-2-.15-2.9-.4L5 19l1.3-3.2C4.8 14.6 4 13.3 4 11.8 4 8.5 7.5 6 12 6Z" stroke-linejoin="round"/></svg></span>
+        <em>微博</em>
+      </button>
+      <button class="sheet-item" onclick="shareTo('more')">
+        <span class="sheet-ico"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/></svg></span>
+        <em>更多</em>
+      </button>
+    </div>
+    <div class="sheet-note">朋友圈没有开放接口 · 会先把图存进相册并复制这段文字</div>
+    <button class="sheet-save" onclick="closeShareSheet();saveDiary();">保存图片到相册</button>
+    <button class="sheet-copy" onclick="closeShareSheet();copyDiaryText();">复制文字</button>
+  </div>
 </div>
 </body>
 </html>

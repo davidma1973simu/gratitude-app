@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gratitude-v2-v38';
+const CACHE_NAME = 'gratitude-v2-v39';
 // Use relative paths that work on GitHub Pages subdirectory
 const BASE = self.location.pathname.replace('/sw.js', '');
 const ASSETS = [
