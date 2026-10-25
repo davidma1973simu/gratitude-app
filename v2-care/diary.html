@@ -246,6 +246,23 @@
       .output-image-wrap { padding-bottom: 62%; border-radius: 14px; }
     }
 
+    /* ─── 一天的第一句话：把三条并置成一段第一人称的陈诉 ─── */
+    .diary-epigraph {
+      display: flex; gap: 9px; align-items: flex-start;
+      font-size: 14.5px; line-height: 1.95;
+      color: #4a5850;
+      letter-spacing: 0.3px;
+      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      margin: 0 0 20px;
+      padding-bottom: 16px;
+      border-bottom: 0.5px solid rgba(14, 107, 80, 0.14);
+    }
+    .diary-epigraph .epi-mark {
+      flex: none; font-size: 9px; line-height: 3.2;
+      color: var(--accent); opacity: 0.65;
+    }
+    .diary-epigraph[hidden] { display: none; }
+
     /* ─── User input: handwriting + large + bold ─── */
     .diary-user-input {
       font-size: 20px; line-height: 1.9;
@@ -612,6 +629,11 @@
       <!-- Body: text left, image right -->
       <div class="output-body-layout">
         <div class="output-text-block">
+          <!-- 一天的第一句话（AI 并置三条，不编造） -->
+          <div class="diary-epigraph" id="outputEpigraph" hidden>
+            <span class="epi-mark">✦</span><span id="epigraphText"></span>
+          </div>
+
           <!-- User input (handwriting) -->
           <div class="diary-user-input" id="outputUserInput" contenteditable="true"></div>
           <span class="diary-edit-hint">可编辑</span>
@@ -997,7 +1019,7 @@ function generateDiary(){
 // AI 日记生成（DeepSeek / 云端无 Key）
 // ══════════════════════════════════════
 function diarySystemPrompt(){
-  return '你是一个温暖的感恩日记助手。用户会写下今天感恩的片段，请生成以下内容并以纯JSON格式返回（不要有任何JSON以外的文字，不要加```标记）：\n1. "wrapper": 一段温暖的引导文字（35-65字），放在用户原始输入下方，语气温柔，与用户输入的具体细节相关，不要重复用户原话，而是延伸出一种感受\n2. "emotions": 情绪评分对象，四个维度各0-100的整数：{"warm":80,"calm":60,"hopeful":40,"gentle":70}\n3. "insight": 情绪洞察（30-50字），从用户输入中提取具体的人/事/物名，编织成一句温暖的鼓励，不要模板化通用话\n4. "tome": 致此刻的你（12-22字），一句话，与用户输入内容相关，温暖有力量\n只返回JSON。';
+  return '你是一个温暖的感恩日记助手。用户会写下今天感恩的片段，请生成以下内容并以纯JSON格式返回（不要有任何JSON以外的文字，不要加```标记）：\n1. "wrapper": 一段温暖的引导文字（35-65字），放在用户原始输入下方，语气温柔，与用户输入的具体细节相关，不要重复用户原话，而是延伸出一种感受\n2. "emotions": 情绪评分对象，四个维度各0-100的整数：{"warm":80,"calm":60,"hopeful":40,"gentle":70}\n3. "insight": 情绪洞察（30-50字），从用户输入中提取具体的人/事/物名，编织成一句温暖的鼓励，不要模板化通用话\n4. "tome": 致此刻的你（12-22字），一句话，与用户输入内容相关，温暖有力量\n5. "narrative": 把这一天写下的几件事并置成一段第一人称的陈诉，≤42字，一句话不换行。铁律：只用用户自己写下的内容，不新增细节、不编造因果、不推测别人的动机、不替用户升华；不出现「感恩」「感谢」「让我明白」「于是我懂了」；不用序号和引号，用逗号或分号把几件事连起来，像一次呼吸。示例：输入「中午的番茄牛腩很好吃；老板把项目机会给了我；路上阿姨对我笑了一下」，narrative 为「中午的番茄牛腩很入味，老板把机会递给了我，路口那位阿姨对我笑了一下。」\n只返回JSON。';
 }
 
 // ── 稳健解析模型输出 ──
@@ -1028,8 +1050,8 @@ function parseAIJson(raw){
     var m=text.match(new RegExp('"'+name+'"\\s*:\\s*"([^"]*)"'));
     return m?m[1]:'';
   }
-  var out={ wrapper:field('wrapper'), insight:field('insight'), tome:field('tome') };
-  if(!out.wrapper && !out.insight && !out.tome) throw new Error('AI_PARSE_FAILED');
+  var out={ wrapper:field('wrapper'), insight:field('insight'), tome:field('tome'), narrative:field('narrative') };
+  if(!out.wrapper && !out.insight && !out.tome && !out.narrative) throw new Error('AI_PARSE_FAILED');
   var em=text.match(/"emotions"\s*:\s*(\{[^}]*\})/);
   if(em){ try { out.emotions=JSON.parse(em[1]); } catch(e){} }
   return out;
@@ -1070,6 +1092,33 @@ function callDeepSeek(inputText,apiKey){
 }
 
 // ══════════════════════════════════════
+// 一天的第一句话（短版陈述，≤42字）
+// 只做「并置」：不编造因果、不添细节。AI 失手时退回原文拼接，不假装智能。
+// ══════════════════════════════════════
+var NARRATIVE_MAX = 42;
+
+function fallbackNarrative(inp){
+  var parts = String(inp||'').split(/\n+/).map(function(t){
+    return t.replace(/^[\s\-—•·*·]+/, '').replace(/^[\d一二三四五六七八九]+[.、)）]\s*/, '').trim();
+  }).filter(function(t){ return t.length>0; });
+  if(!parts.length) return '';
+  var s = parts.join('，').replace(/[。；;]+$/,'').replace(/[，,]{2,}/g,'，');
+  if(s.length > NARRATIVE_MAX){ s = s.slice(0, NARRATIVE_MAX-1) + '…'; }
+  return s;
+}
+
+function cleanNarrative(raw, inp){
+  var s = String(raw||'').trim();
+  s = s.replace(/^[「“‘"'\s]+/, '').replace(/[」”’"'\s]+$/, '');
+  s = s.replace(/^(narrative|一句话|今天)[:：]\s*/, '');
+  s = s.replace(/\s*\n+\s*/g, '').replace(/^✦\s*/, '');
+  if(!s) return fallbackNarrative(inp);
+  if(s.length > NARRATIVE_MAX + 4){ s = s.slice(0, NARRATIVE_MAX-1) + '…'; }
+  return s;
+}
+
+
+// ══════════════════════════════════════
 // Render from AI result
 // ══════════════════════════════════════
 function renderFromAI(inputText,ai){
@@ -1077,6 +1126,7 @@ function renderFromAI(inputText,ai){
   var emotions=ai.emotions||{};
   var insight=ai.insight||'';
   var tome=ai.tome||'';
+  var narrative=cleanNarrative(ai.narrative, inputText);
 
   // Validate emotions
   var emotionKeys=['warm','calm','hopeful','gentle'];
@@ -1087,7 +1137,7 @@ function renderFromAI(inputText,ai){
 
   var parts={userText:inputText,aiText:wrapper};
 
-  renderOutput(parts,imageUrl,emotions,insight,tome);
+  renderOutput(parts,imageUrl,emotions,insight,tome,narrative);
 
   currentDiaryKey='diary_'+formatDate(new Date());
   document.getElementById('loadingSection').classList.remove('active');
@@ -1114,7 +1164,7 @@ function generateMock(inp){
     var analysis=genInsight(inp,emotions);
     var tome=genTome(inp,emotions);
 
-    renderOutput(diaryParts,imageUrl,emotions,analysis,tome);
+    renderOutput(diaryParts,imageUrl,emotions,analysis,tome,fallbackNarrative(inp));
     currentDiaryKey='diary_'+formatDate(new Date());
 
     document.getElementById('loadingSection').classList.remove('active');
@@ -1297,7 +1347,7 @@ function genTome(input,emotions){
 // ══════════════════════════════════════
 // Render Output
 // ══════════════════════════════════════
-function renderOutput(parts, imageUrl, emotions, analysis, tome){
+function renderOutput(parts, imageUrl, emotions, analysis, tome, narrative){
   var now=new Date();
   document.getElementById('outputDateNum').textContent=now.getDate();
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1311,14 +1361,29 @@ function renderOutput(parts, imageUrl, emotions, analysis, tome){
   // AI text — system font, smaller
   document.getElementById('outputAiText').textContent=parts.aiText;
 
+  // 一天的第一句话（AI 并置，无则退回原文拼接；都没有就整块隐藏）
+  var epi = document.getElementById('outputEpigraph');
+  var epiTxt = document.getElementById('epigraphText');
+  var narrText = narrative || cleanNarrative('', parts.userText);
+  if (epi && epiTxt) {
+    epiTxt.textContent = narrText || '';
+    epi.hidden = !narrText;
+  }
+
   renderOutputAttachments();
   renderEmotionDots(emotions);
   document.getElementById('analysisText').textContent=analysis;
   document.getElementById('tomeText').textContent=tome;
 }
 
-function renderOutputAttachments(){
-  var c=document.getElementById('outputAttachments');
+// 复制 / 下载用的纯文本：第一句话 + 用户原文 + AI 延伸
+function diaryPlainText(){
+  var epi=document.getElementById('outputEpigraph');
+  var head=(epi && !epi.hidden && document.getElementById('epigraphText').textContent)? document.getElementById('epigraphText').textContent+'\n\n' : '';
+  return head+document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
+}
+
+function renderOutputAttachments(){  var c=document.getElementById('outputAttachments');
   if(!attachedImages.length&&!attachedAudio){c.innerHTML='';return;}
   var h='';
   attachedImages.forEach(function(item){h+='<img class="output-attachment-img" src="'+item.dataUrl+'" alt="">';});
@@ -1485,7 +1550,7 @@ function saveDiary(){
 
 // Persist diary data to localStorage for history list
 function persistDiaryData(){
-  var t=document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
+  var t=diaryPlainText();
   var k='diary_'+formatDate(new Date());
   try{
     var saved=JSON.parse(localStorage.getItem('saved_diaries')||'{}');
@@ -1495,7 +1560,7 @@ function persistDiaryData(){
   }catch(e){}
 }
 function shareDiary(){
-  var t=document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText;
+  var t=diaryPlainText();
   var d={title:'光之日记 · '+formatDate(new Date()),text:t+'\n\n— 来自光之日记 Gratitude'};
   if(navigator.share)navigator.share(d).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(d.text).then(function(){showNotification('已复制 📋');});
   logEvent('diary_share_attempted');
@@ -1566,6 +1631,8 @@ function viewDiary(key){
   
   document.getElementById('outputUserInput').textContent = userPart;
   document.getElementById('outputAiText').textContent = aiPart;
+  // 旧日记没有存下「第一句话」，直接收起，不留空块
+  var _epi=document.getElementById('outputEpigraph'); if(_epi){_epi.hidden=true;}
   
   // Hide emotion/insight/tome for saved diaries (or regenerate)
   document.getElementById('outputSection').classList.add('active');
