@@ -292,18 +292,30 @@
     }
     .edit-btn:hover { background: var(--surface-hover); color: var(--text-primary); border-color: var(--text-tertiary); }
 
-    /* ─── v2: Past Light —— 宝利来相片（照片 + 手写体文字）─── */
+    /* ─── v2: Past Light —— 平时只是一行很淡的字，轻点才显影成宝利来相片 ─── */
+    .past-light-entry { margin-top: 20px; }
     .past-light {
-      margin-top: 34px;
+      margin-top: 4px;
       opacity: 0;
-      transform: translateY(10px) rotate(-1.4deg);
-      transition: opacity 0.9s ease, transform 0.9s ease;
+      transform: scale(0.94) rotate(-1.4deg);
+      transition: opacity 0.75s ease, transform 0.75s cubic-bezier(.22,.68,.32,1);
       cursor: pointer;
       display: flex;
       justify-content: center;
+      will-change: opacity, transform;
     }
-    .past-light.visible { opacity: 1; transform: translateY(0) rotate(-1.4deg); }
-    .past-light:hover { transform: translateY(-3px) rotate(-1.4deg); }
+    .past-light.visible { opacity: 1; transform: scale(1) rotate(-1.4deg); }
+    .past-light:hover { transform: scale(1) translateY(-3px) rotate(-1.4deg); }
+    .past-light-hint {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: .06em;
+      color: var(--text-tertiary);
+      opacity: 0;
+      transition: opacity .6s ease .35s;
+    }
+    .past-light-hint.visible { opacity: .7; }
     .polaroid {
       width: 172px;
       padding: 9px 9px 0;
@@ -845,13 +857,15 @@
 
     /* ─── v2: Watermark Light ─── */
     .watermark {
-      margin-top: 18px;
+      margin-top: 0;
       opacity: 0.25;
       transition: opacity 0.5s ease;
       cursor: pointer;
       line-height: 1.6;
+      display: inline-block;
     }
     .watermark:hover { opacity: 0.55; }
+    .watermark.faded { opacity: 0; pointer-events: none; }
     .watermark-content {
       font-size: 14px;
       color: var(--text-secondary);
@@ -1300,10 +1314,19 @@
         <div class="gentle-text" id="gentleText"></div>
         <div class="gentle-hint" id="gentleHint">不用回答也可以 · 轻点此处收起</div>
       </div>
-      <!-- v2: Watermark light — a faint past gratitude, like light in the air -->
-      <div class="watermark" id="watermark" style="display:none;">
-        <span class="watermark-content" id="watermarkContent"></span>
-        <span class="watermark-date" id="watermarkDate"></span>
+      <!-- v2: 曾经的微光 —— 默认只有一行很淡的字，轻点才显影成宝利来相片 -->
+      <div class="past-light-entry" id="pastLightEntry" style="display:none;">
+        <div class="watermark" id="watermark">
+          <span class="watermark-content" id="watermarkContent"></span>
+          <span class="watermark-date" id="watermarkDate"></span>
+        </div>
+        <div class="past-light" id="pastLight" style="display:none;">
+          <div class="polaroid">
+            <div class="polaroid-photo" id="pastLightPhoto"></div>
+            <div class="polaroid-caption" id="pastLightText"></div>
+          </div>
+        </div>
+        <div class="past-light-hint" id="pastLightHint" style="display:none;" data-i18n="past_light_hint">轻点相片，走进那一天</div>
       </div>
     </div>
 
@@ -1334,13 +1357,6 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         <span data-i18n="edit_btn">修改今天的记录</span>
       </button>
-      <!-- v2: 曾经的微光 —— 一张宝利来相片（照片 + 手写体文字），点击走进重逢 -->
-      <div class="past-light" id="pastLight" style="display:none;">
-        <div class="polaroid">
-          <div class="polaroid-photo" id="pastLightPhoto"></div>
-          <div class="polaroid-caption" id="pastLightText"></div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -1553,6 +1569,7 @@ const I18N = {
     card_photo_reset: '换回默认相片',
     past_light_text: '曾经的微光',
     past_light_none: '每一束光，都在等待被记住',
+    past_light_hint: '轻点相片，走进那一天',
     reunion_share: '分享',
     reunion_saving: '生成中…',
     reunion_saved: '✅ 图片已保存',
@@ -1692,6 +1709,7 @@ const I18N = {
     card_photo_reset: 'Default photo',
     past_light_text: 'A flicker of past light',
     past_light_none: 'Every light waits to be remembered',
+    past_light_hint: 'Tap the photo to step back into that day',
     reunion_share: 'Share',
     reunion_saving: 'Generating…',
     reunion_saved: '✅ Image saved',
@@ -2402,8 +2420,6 @@ async function startApp() {
   renderToday();
   renderHistory();
   scheduleReminder();
-  // v2: Show watermark light on homepage (only if today is not yet submitted)
-  if (!todayDone) showWatermark();
 }
 
 // ─── Nickname — load, display, edit ────────────────────────────────────────
@@ -2575,9 +2591,8 @@ function renderToday() {
     container.innerHTML = '';
     entries.forEach((text, i) => { container.appendChild(makeEntryCard(i, text, true)); });
     updateProgress();
-    // v2: Hide watermark when today is done, but show past-light entry instead
-    document.getElementById('watermark')?.style && (document.getElementById('watermark').style.display = 'none');
-    showPastLight();
+    // 曾经的微光在两种状态下都是同一行淡字，不再把相片直接摊在已完成面板里
+    showWatermark();
     return;
   }
 
@@ -2937,10 +2952,8 @@ document.getElementById('gentleArea').addEventListener('click', () => {
 
 document.getElementById('editBtn').addEventListener('click', () => {
   todayDone = false;
-  // Reset past-light visibility
-  const pastLight = document.getElementById('pastLight');
-  pastLight.style.display = 'none';
-  pastLight.classList.remove('visible');
+  // 回到一行淡字，重新记录时不被一张相片压着
+  collapsePastLight();
   // Hide the gentle question when re-editing
   const gentle = document.getElementById('gentleArea');
   if (gentle) { gentle.classList.remove('visible'); gentle.style.display = 'none'; }
@@ -3124,36 +3137,82 @@ function showEchoInModal() {
 let currentMemoryData = null; // Store for reuse in reunion
 
 function showWatermark() {
+  const entry = document.getElementById('pastLightEntry');
+  if (!entry) return;
+
   const memory = pickMemory();
-  if (!memory) {
-    document.getElementById('watermark').style.display = 'none';
-    currentMemoryData = null;
-    return;
-  }
+  currentMemoryData = null;
 
-  const nonEmpty = memory.entries.filter(c => c.trim());
-  if (!nonEmpty.length) {
-    document.getElementById('watermark').style.display = 'none';
-    currentMemoryData = null;
-    return;
-  }
+  const nonEmpty = memory ? memory.entries.filter(c => c.trim()) : [];
+  if (!nonEmpty.length) { entry.style.display = 'none'; return; }
 
-  // Pick one entry — 与宝利来相片同一条（按日期缓存）
+  // 与宝利来相片、重逢同一条（按日期缓存）
   const chosenText = chosenEntryFor(memory);
-  const watermark = document.getElementById('watermark');
-  const watermarkContent = document.getElementById('watermarkContent');
-  const watermarkDate = document.getElementById('watermarkDate');
+  if (!chosenText) { entry.style.display = 'none'; return; }
 
-  watermarkContent.textContent = t('watermark_prefix') + chosenText + t('watermark_suffix');
-  watermarkDate.textContent = formatMemoryDate(memory);
+  document.getElementById('watermarkContent').textContent = t('watermark_prefix') + chosenText + t('watermark_suffix');
+  document.getElementById('watermarkDate').textContent = formatMemoryDate(memory);
 
-  watermark.style.display = 'block';
+  entry.style.display = 'block';
   currentMemoryData = memory;
+  collapsePastLight();
 }
 
-// Click watermark → open reunion
-document.getElementById('watermark').addEventListener('click', () => {
-  if (currentMemoryData) openReunion(currentMemoryData);
+// 收回到一行淡字 —— 每次渲染都从收起状态开始，不把相片直接摊在页面上
+function collapsePastLight() {
+  const watermark = document.getElementById('watermark');
+  const pastLight = document.getElementById('pastLight');
+  const hint = document.getElementById('pastLightHint');
+  if (!watermark || !pastLight) return;
+  pastLight.classList.remove('visible');
+  pastLight.style.display = 'none';
+  hint.classList.remove('visible');
+  hint.style.display = 'none';
+  watermark.classList.remove('faded');
+  watermark.style.display = 'inline-block';
+}
+
+// 轻轻一点，那行淡字显影成一张宝利来相片
+function revealPastLight() {
+  const memory = currentMemoryData;
+  if (!memory) return;
+  const chosenText = chosenEntryFor(memory);
+  if (!chosenText) return;
+
+  const watermark = document.getElementById('watermark');
+  const pastLight = document.getElementById('pastLight');
+  const hint = document.getElementById('pastLightHint');
+  const photo = document.getElementById('pastLightPhoto');
+
+  photo.classList.remove('empty');
+  photo.style.backgroundImage = 'url("' + (customPhotoFor(memory.date) || warmPhotoFor(memory.date)) + '")';
+  document.getElementById('pastLightText').textContent =
+    chosenText.length > 26 ? chosenText.slice(0, 26) + '…' : chosenText;
+
+  watermark.classList.add('faded');
+  setTimeout(() => { watermark.style.display = 'none'; }, 380);
+
+  pastLight.style.display = 'flex';
+  requestAnimationFrame(() => pastLight.classList.add('visible'));
+  hint.style.display = 'block';
+  setTimeout(() => hint.classList.add('visible'), 320);
+
+  // 相片显影后如果有一部分在屏幕外，轻轻带上来一点，不抢镜
+  setTimeout(() => {
+    const r = pastLight.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (r.bottom > vh - 24) {
+      window.scrollBy({ top: Math.min(r.bottom - vh + 96, r.top - 96), behavior: 'smooth' });
+    }
+  }, 620);
+
+  logEvent('past_light_revealed');
+}
+
+// 点击那行淡字 → 显影；不跳转，先把相片交到手上
+document.getElementById('watermark').addEventListener('click', (e) => {
+  e.stopPropagation();
+  revealPastLight();
 });
 
 // ─── v2: 曾经的微光 —— 宝利来相片（照片 + 手写体文字）─────────────────────
@@ -3225,52 +3284,9 @@ function readPhotoFile(file, cb) {
   else setTimeout(run, 1200);
 })();
 
-function showPastLight() {
-  const pastLight = document.getElementById('pastLight');
-  const pastLightText = document.getElementById('pastLightText');
-  const pastLightPhoto = document.getElementById('pastLightPhoto');
-  const memory = pickMemory();
-
-  // 还没有过去的记录 —— 一张空白相片，配一句等待的话
-  const revealEmpty = () => {
-    pastLightPhoto.style.backgroundImage = '';
-    pastLightPhoto.classList.add('empty');
-    pastLightText.textContent = t('past_light_none');
-    pastLight.style.display = 'flex';
-    setTimeout(() => pastLight.classList.add('visible'), 600);
-    currentMemoryData = null;
-  };
-
-  if (!memory) return revealEmpty();
-
-  const nonEmpty = memory.entries.filter(c => c.trim());
-  if (!nonEmpty.length) return revealEmpty();
-
-  // 宝利来底部写的就是那天写下的话（手写体）—— 与重逢全屏同一条
-  const chosenText = chosenEntryFor(memory);
-  if (!chosenText) return revealEmpty();
-  const caption = chosenText.length > 26 ? chosenText.slice(0, 26) + '…' : chosenText;
-
-  pastLightPhoto.classList.remove('empty');
-  pastLightPhoto.style.backgroundImage = 'url("' + (customPhotoFor(memory.date) || warmPhotoFor(memory.date)) + '")';
-  pastLightText.textContent = caption;
-  pastLight.style.display = 'flex';
-  currentMemoryData = memory;
-  setTimeout(() => pastLight.classList.add('visible'), 600);
-}
-
-// Click past-light → open reunion (or navigate to history if no data)
+// Click past-light → open reunion (相片已经显影过一次，再点才走进那一天)
 document.getElementById('pastLight').addEventListener('click', () => {
-  if (currentMemoryData) {
-    openReunion(currentMemoryData);
-  } else {
-    // No past memories — gently guide user to history
-    document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('[data-view]').forEach(v => v.classList.remove('active'));
-    document.querySelector('.nav-tab[data-tab="history"]').classList.add('active');
-    document.querySelector('[data-view="history"]').classList.add('active');
-    renderHistory('');
-  }
+  if (currentMemoryData) openReunion(currentMemoryData);
 });
 
 // ─── v2: Reunion Full-screen ───────────────────────────────────────────────
