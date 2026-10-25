@@ -3154,6 +3154,19 @@ function warmPhotoFor(date) {
   return PAST_PHOTO_POOL[h % PAST_PHOTO_POOL.length];
 }
 
+// 空闲时把今天那张相片预热掉，点「生成卡片」时直接从缓存取，不必等网络
+(function warmPhotoCache() {
+  const run = () => {
+    try {
+      const d = new Date();
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      new Image().src = warmPhotoFor(key);
+    } catch (e) {}
+  };
+  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 3000 });
+  else setTimeout(run, 1200);
+})();
+
 function showPastLight() {
   const pastLight = document.getElementById('pastLight');
   const pastLightText = document.getElementById('pastLightText');
@@ -3615,10 +3628,12 @@ function generateCard(memory) {
     const textLeft = BORDER + bigW + colGap;
     const maxTextW = Math.max(150, textRight - textLeft);
 
-    const dateLineH = 26;                   // 日期行高（含间距）
-    const blockBottom = basBig;             // 整块（日期+正文）与大字共用基线
-    const textTopLimit = capTop + 34;       // 正文最高只能到这里
-    const availH = blockBottom - dateLineH - textTopLimit;
+    const blockBottom = basBig;             // 正文最底不能越过左下大字的基线
+    const whiteTop = capTop;                // 白边区上沿 = 照片下沿
+    const whiteBottom = H - 42;             // 白边区下沿
+    const dateGap = 30;                     // 照片下沿 → 日期
+    const bodyGap = 58;                     // 日期 → 正文首行（留足一行，两行不糊在一起）
+    const availH = blockBottom - (whiteTop + dateGap + bodyGap);   // 最满情况下的可用高度
 
     // 自适应字号：先按字数给初值，再按行数/高度收缩
     let fSize = 34;
@@ -3649,21 +3664,25 @@ function generateCard(memory) {
       }
     }
 
-    // 日期 + 正文作为一整块，底部对齐到大字基线 —— 长短文案都稳，上方自然留白
+    // 右栏自上而下：照片 → 日期 → 正文。
+    // 内容少时整块向下漂一点（30% 余量），白边区上下都留白，不塌在任一端。
     const lh = lhOf(fSize);
-    const blockH = (lines.length - 1) * lh + fSize * 1.35;
-    const blockTop = blockBottom - blockH;
-    const dateBaseline = blockTop - dateLineH + 14;
+    const blockH = bodyGap + (lines.length - 1) * lh + fSize * 0.9;
+    const drift = blockH < (whiteBottom - whiteTop) * 0.82
+      ? Math.round(((whiteBottom - whiteTop) - blockH) * 0.30)
+      : 0;
+    const dateBaseline = whiteTop + dateGap + drift;
+    const firstBase = dateBaseline + bodyGap;
 
-    ctx.font = '300 15px ' + peaceFont;
-    ctx.fillStyle = 'rgba(120,110,95,0.55)';
+    ctx.font = '300 13px ' + peaceFont;
+    ctx.fillStyle = 'rgba(120,110,95,0.46)';
     ctx.textAlign = 'right';
     ctx.fillText(dateStr, textRight, dateBaseline);
 
     ctx.font = `200 ${fSize}px ${peaceFont}`;
-    ctx.fillStyle = 'rgba(25,22,18,0.82)';
+    ctx.fillStyle = 'rgba(25,22,18,0.86)';
     lines.forEach((ln, i) => {
-      ctx.fillText(ln, textRight, blockTop + fSize * 1.02 + i * lh);
+      ctx.fillText(ln, textRight, firstBase + i * lh);
     });
 
     // 大字最后画（压在纸面上，不受正文影响）
@@ -3703,7 +3722,9 @@ function generateCard(memory) {
   };
 
   const bgImg = new Image();
-  bgImg.crossOrigin = 'anonymous';
+  // 不设 crossOrigin：相片全是同源本地文件，设了之后请求走 CORS 模式，
+  // 命中 Service Worker 缓存时会被判失败 → onerror → 整张卡退化成纯色纸面
+  // （2026-10-25 用户截图复现：照片区一片空白暖色，就是这里）
   let _drawn = false;
   const _drawOnce = (ok) => { if (_drawn) return; _drawn = true; drawPolaroid(ok); };
   bgImg.onload = () => { _drawOnce(true); };
