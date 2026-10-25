@@ -1021,6 +1021,19 @@
     .card-action-btn:hover { opacity: 0.85; }
     .card-action-btn.primary { background: #fafaf9; color: #1c1917; }
     .card-action-btn.secondary { background: transparent; color: #d6d3d1; border: 1px solid #57534e; }
+    /* 照片的「换一张」不出按钮，只留一行淡字：不抢主操作，也不构成选择负担 */
+    .card-photo-tools {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 2px; font-size: 12px;
+    }
+    .card-photo-link {
+      background: none; border: none; padding: 4px 2px;
+      color: #a8a29e; font-size: 12px; font-family: inherit;
+      letter-spacing: 0.02em; cursor: pointer; transition: color 0.2s;
+    }
+    .card-photo-link:hover { color: #fafaf9; }
+    .card-photo-sep { color: #57534e; font-size: 11px; }
+    .card-photo-tools [hidden] { display: none; }
 
     [data-view] { display: none; }
     [data-view].active { display: block; }
@@ -1395,6 +1408,12 @@
     <button class="card-action-btn primary" id="cardSaveBtn" data-i18n="reunion_save">保存图片</button>
     <button class="card-action-btn secondary" id="cardCloseBtn" data-i18n="reunion_close">×</button>
   </div>
+  <div class="card-photo-tools">
+    <button class="card-photo-link" id="cardPhotoUse" data-i18n="card_photo_use">用自己的照片</button>
+    <span class="card-photo-sep" id="cardPhotoSep">·</span>
+    <button class="card-photo-link" id="cardPhotoReset" data-i18n="card_photo_reset" hidden>换回默认相片</button>
+  </div>
+  <input type="file" id="cardPhotoFile" accept="image/*" hidden>
 </div>
 
 <!-- Notification Banner -->
@@ -1530,6 +1549,8 @@ const I18N = {
     reunion_hint: '你曾为这些瞬间心动',
     reunion_keep: '留住这束光',
     reunion_save: '保存图片',
+    card_photo_use: '用自己的照片',
+    card_photo_reset: '换回默认相片',
     past_light_text: '曾经的微光',
     past_light_none: '每一束光，都在等待被记住',
     reunion_share: '分享',
@@ -1667,6 +1688,8 @@ const I18N = {
     reunion_hint: 'You once felt moved by these moments',
     reunion_keep: 'Keep this light',
     reunion_save: 'Save Image',
+    card_photo_use: 'Use my own photo',
+    card_photo_reset: 'Default photo',
     past_light_text: 'A flicker of past light',
     past_light_none: 'Every light waits to be remembered',
     reunion_share: 'Share',
@@ -3134,24 +3157,59 @@ document.getElementById('watermark').addEventListener('click', () => {
 });
 
 // ─── v2: 曾经的微光 —— 宝利来相片（照片 + 手写体文字）─────────────────────
-// 相片池只收氛围/风景图，不用人像（人脸配一句无关的感恩文字会很违和）；
-// 全部是仓库内置图片，不依赖海外图床，国内可访问。
+// 两套图片语言，不共用一个池（2026-10-25 定）：
+//   宝利来 = 冷调、低饱和、过曝泛光、轻微拖影、颗粒 → 感性与留白
+//   光之日记 = 暖、亲和、明亮、快乐 → 可用性与舒展（见 diary.html 的 DIARY_POOL）
+// 这 8 张是离线烘好的成品（images/polaroid/），不是运行时滤镜 ——
+// ctx.filter 在部分 Safari 上不生效，且拖影/泛光在 canvas 里做不出胶片感。
 const PAST_PHOTO_POOL = [
-  'images/warm/warm-01.jpg', 'images/warm/warm-02.jpg',
-  'images/warm/warm-05.jpg',
-  'images/hopeful/hopeful-01.jpg', 'images/hopeful/hopeful-02.jpg',
-  'images/hopeful/hopeful-03.jpg', 'images/hopeful/hopeful-04.jpg',
-  'images/hopeful/hopeful-06.jpg',
-  'images/calm/calm-02.jpg', 'images/calm/calm-03.jpg',
-  'images/calm/calm-04.jpg', 'images/calm/calm-05.jpg', 'images/calm/calm-06.jpg',
-  'images/gentle/gentle-02.jpg', 'images/gentle/gentle-03.jpg',
-  'images/gentle/gentle-04.jpg', 'images/gentle/gentle-05.jpg'
+  'images/polaroid/pol-01.jpg', 'images/polaroid/pol-02.jpg',
+  'images/polaroid/pol-03.jpg', 'images/polaroid/pol-04.jpg',
+  'images/polaroid/pol-05.jpg', 'images/polaroid/pol-06.jpg',
+  'images/polaroid/pol-07.jpg', 'images/polaroid/pol-08.jpg'
 ];
 // 同一日期固定同一张相片（按日期做稳定散列），刷新不会跳图
 function warmPhotoFor(date) {
   let h = 0;
   for (let i = 0; i < date.length; i++) h = (h * 31 + date.charCodeAt(i)) % 9973;
   return PAST_PHOTO_POOL[h % PAST_PHOTO_POOL.length];
+}
+
+// ─── 用户自选相片（按天存，只存一天，不占空间）──
+// 用户拍的那张往往就是这件事本身，比任何库存相片都准。
+// 只存在这台设备（base64，约 120–200KB），不参与云端同步。
+function cardPhotoKey(date) { return 'gratitude_card_photo_' + (date || ''); }
+function customPhotoFor(date) {
+  try { return localStorage.getItem(cardPhotoKey(date)) || ''; } catch (e) { return ''; }
+}
+function setCustomPhoto(date, dataUrl) {
+  try {
+    if (dataUrl) localStorage.setItem(cardPhotoKey(date), dataUrl);
+    else localStorage.removeItem(cardPhotoKey(date));
+  } catch (e) { /* 配额满就静默放弃，不影响出卡 */ }
+}
+// 压到 900×900 居中裁切：卡片照片区约 676px，900 足够清晰且体积可控
+function readPhotoFile(file, cb) {
+  if (!file || !/^image\//.test(file.type)) return cb('');
+  const fr = new FileReader();
+  fr.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const S = 900;
+      const s = Math.min(im.width, im.height);
+      const c = document.createElement('canvas');
+      c.width = S; c.height = S;
+      const cx = c.getContext('2d');
+      cx.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, S, S);
+      let out = '';
+      try { out = c.toDataURL('image/jpeg', 0.84); } catch (e) { out = ''; }
+      cb(out);
+    };
+    im.onerror = () => cb('');
+    im.src = fr.result;
+  };
+  fr.onerror = () => cb('');
+  fr.readAsDataURL(file);
 }
 
 // 空闲时把今天那张相片预热掉，点「生成卡片」时直接从缓存取，不必等网络
@@ -3194,7 +3252,7 @@ function showPastLight() {
   const caption = chosenText.length > 26 ? chosenText.slice(0, 26) + '…' : chosenText;
 
   pastLightPhoto.classList.remove('empty');
-  pastLightPhoto.style.backgroundImage = 'url("' + warmPhotoFor(memory.date) + '")';
+  pastLightPhoto.style.backgroundImage = 'url("' + (customPhotoFor(memory.date) || warmPhotoFor(memory.date)) + '")';
   pastLightText.textContent = caption;
   pastLight.style.display = 'flex';
   currentMemoryData = memory;
@@ -3401,7 +3459,10 @@ function preRenderSigWords() {
   return _sigReadyPromise;
 }
 
+var _lastCardMemory = null;   // 换照片后要用它重出一张，不能重新抽日期
+
 function generateCard(memory) {
+  _lastCardMemory = memory;
   const canvas = document.createElement('canvas');
   // Polaroid proportions — photo ~68%, bottom caption ~32% (larger text)
   const W = 720, H = 1080;
@@ -3447,7 +3508,7 @@ function generateCard(memory) {
 
   // Load background image — 用仓库内置相片，和「曾经的微光」同一天同一张，
   // 不依赖海外图床（picsum 在国内会挂，挂了就只剩一张纯色纸）
-  const bgUrl = warmPhotoFor(memory.date || '');
+  const bgUrl = customPhotoFor(memory.date) || warmPhotoFor(memory.date || '');
 
   const drawPolaroid = (imgLoaded) => {
     if (imgLoaded) {
@@ -3803,6 +3864,50 @@ function showCardPreview(dataUrl) {
 
   document.getElementById('cardCloseBtn').onclick = () => {
     previewOverlay.classList.remove('show');
+  };
+
+  wireCardPhotoTools(previewOverlay);
+}
+
+// 照片只有一个动作：换成自己的（或换回来）。不做相册、不做多选。
+function wireCardPhotoTools(previewOverlay) {
+  const useBtn = document.getElementById('cardPhotoUse');
+  const resetBtn = document.getElementById('cardPhotoReset');
+  const sep = document.getElementById('cardPhotoSep');
+  const fileInput = document.getElementById('cardPhotoFile');
+  if (!useBtn || !fileInput) return;
+
+  const date = (_lastCardMemory && _lastCardMemory.date) || '';
+  const hasCustom = !!customPhotoFor(date);
+  resetBtn.hidden = !hasCustom;
+  if (sep) sep.hidden = !hasCustom;
+
+  const regen = () => {
+    previewOverlay.classList.remove('show');
+    setTimeout(() => { if (_lastCardMemory) generateCard(_lastCardMemory); }, 140);
+  };
+
+  useBtn.onclick = () => fileInput.click();
+
+  fileInput.onchange = () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    const label = useBtn.textContent;
+    useBtn.textContent = LANG === 'zh' ? '正在读取…' : 'Reading…';
+    readPhotoFile(f, (url) => {
+      useBtn.textContent = label;
+      fileInput.value = '';
+      if (!url) { showBanner(LANG === 'zh' ? '这张图读不出来，换一张试试' : 'Could not read that image'); return; }
+      setCustomPhoto(date, url);
+      logEvent('card_photo_custom');
+      regen();
+    });
+  };
+
+  resetBtn.onclick = () => {
+    setCustomPhoto(date, '');
+    logEvent('card_photo_reset');
+    regen();
   };
 }
 

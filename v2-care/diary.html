@@ -770,12 +770,19 @@ var recordingSeconds = 0;
 
 // 图片池：只收「高感性、正能量、无人像」的画面（光/海/天空/花/山野）
 // 明确剔除：calm-01、gentle-01、warm-03、warm-04、warm-06（有人物/人像）
-var IMAGE_DB = {
-  warm: ['images/warm/warm-01.jpg','images/warm/warm-02.jpg','images/warm/warm-05.jpg','images/hopeful/hopeful-01.jpg','images/gentle/gentle-04.jpg'],
-  calm: ['images/calm/calm-02.jpg','images/calm/calm-03.jpg','images/calm/calm-04.jpg','images/calm/calm-05.jpg','images/calm/calm-06.jpg'],
-  hopeful: ['images/hopeful/hopeful-01.jpg','images/hopeful/hopeful-02.jpg','images/hopeful/hopeful-04.jpg','images/hopeful/hopeful-06.jpg','images/warm/warm-02.jpg'],
-  gentle: ['images/gentle/gentle-02.jpg','images/gentle/gentle-03.jpg','images/gentle/gentle-04.jpg','images/gentle/gentle-05.jpg','images/warm/warm-05.jpg']
-};
+// 光之日记的图片语言：暖、亲和、明亮、快乐、积极（8 张）
+// ⚠️ 与宝利来池（index.html 的 images/polaroid/，冷调低饱和）刻意不共用：
+//    日记是白天的、可读的、舒展的；卡片是黄昏的、留白的、感性的。
+var DIARY_POOL = [
+  'images/warm/warm-02.jpg',      // 光穿过树冠
+  'images/warm/warm-04.jpg',      // 傍晚并肩骑行
+  'images/hopeful/hopeful-01.jpg',// 日出草原
+  'images/hopeful/hopeful-03.jpg',// 绿色山丘
+  'images/hopeful/hopeful-04.jpg',// 粉调海滩落日
+  'images/gentle/gentle-02.jpg',  // 野花
+  'images/gentle/gentle-04.jpg',  // 向日葵
+  'images/gentle/gentle-05.jpg'   // 紫色花田落日
+];
 
 var EMOTION_KEYWORDS = {
   warm: ['爱','温暖','家人','朋友','陪伴','拥抱','谢谢','感激','关心','照顾','在一起','想念','幸福','甜蜜','牵手','微笑','开心','快乐','喜欢','妈妈','爸爸'],
@@ -1264,10 +1271,9 @@ function genDiaryParts(input,emotions){
   return { userText: userText, aiText: aiLines.join('\n') };
 }
 function pickImage(emo){
-  var p = IMAGE_DB[emo] || IMAGE_DB.warm;
   var cur = (document.getElementById('outputImage')||{}).getAttribute ? document.getElementById('outputImage').getAttribute('src') : '';
-  var pool = p.filter(function(x){ return x !== cur; });
-  if(!pool.length) pool = p;
+  var pool = DIARY_POOL.filter(function(x){ return x !== cur; });
+  if(!pool.length) pool = DIARY_POOL;
   return pool[Math.floor(Math.random()*pool.length)];
 }
 function regenerateImage(){if(!currentEmotion)return;var el=document.getElementById('outputImage');el.style.opacity='0.3';
