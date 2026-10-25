@@ -3316,7 +3316,8 @@ function preRenderSigWords() {
   // Satisfy: expressive script font (local woff2, sharpie style)
   var FONT_SIZE = 240;       // larger render = crisper when scaled down, captures script flourishes
   var FONT = FONT_SIZE + 'px "Satisfy", "Playlist Script", "Caveat", cursive';
-  var COLOR = 'rgba(18,14,10,0.86)';  // slightly darker for more contrast
+  // 荧光黄绿：手写体现在压在照片上，靠高饱和色与照片形成反差（参考实拍海报复古做法）
+  var COLOR = 'rgba(229,249,84,1)';
   var PAD = Math.max(2, Math.round(FONT_SIZE * 0.04));  // 极小留白：只给笔锋出格的空间
 
   var bake = function() {
@@ -3350,9 +3351,14 @@ function preRenderSigWords() {
       c.height = inkH + PAD * 2;
       var cx = c.getContext('2d');
       cx.font = FONT;
-      cx.fillStyle = COLOR;
       cx.textAlign = 'left';
       cx.textBaseline = 'alphabetic';
+      // 先描一圈极细的暗边：荧光字压在任何照片上（草地、亮天空）都能立住
+      cx.lineJoin = 'round';
+      cx.lineWidth = Math.round(FONT_SIZE * 0.013);
+      cx.strokeStyle = 'rgba(26,18,6,0.38)';
+      cx.strokeText(word, PAD + left, PAD + asc);
+      cx.fillStyle = COLOR;
       cx.fillText(word, PAD + left, PAD + asc);
 
       // Store as Image for fast drawImage stamping
@@ -3402,8 +3408,9 @@ function generateCard(memory) {
   }
 
   // ─── Polaroid dimensions ───
-  const BORDER = 20;
-  const BOTTOM_BORDER = 320;   // extra space for large text
+  // 版式参考：上半为照片（手写体压在照片内），下半为「左大字 / 右正文」双栏
+  const BORDER = 22;
+  const BOTTOM_BORDER = entryText.length > 90 ? 362 : entryText.length > 42 ? 328 : 272;
   const photoX = BORDER;
   const photoY = BORDER;
   const photoW = W - BORDER * 2;
@@ -3425,9 +3432,9 @@ function generateCard(memory) {
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
 
-  // Load background image
-  const seed = pickCardBgSeed();
-  const bgUrl = `https://picsum.photos/seed/${seed}/${photoW * 2}/${photoH * 2}`;
+  // Load background image — 用仓库内置相片，和「曾经的微光」同一天同一张，
+  // 不依赖海外图床（picsum 在国内会挂，挂了就只剩一张纯色纸）
+  const bgUrl = warmPhotoFor(memory.date || '');
 
   const drawPolaroid = (imgLoaded) => {
     if (imgLoaded) {
@@ -3507,9 +3514,8 @@ function generateCard(memory) {
     }
 
     // ══════════════════════════════════════════════════
-    // ─── SIGNATURE GEOMETRY — 手写体骑在照片底边上 ───
-    // 规则：墨迹 ≥ 60% 落在照片内，其余落在下面白边；
-    //       正文整体下移，绝不与签名重叠。
+    // ─── SIGNATURE GEOMETRY — 手写体整块压在照片里 ───
+    // 位置：照片右下角，四周留出安全边距，绝不越出照片边界
     // ══════════════════════════════════════════════════
     var _sigWordsEmotion = {
       warm:    ['love','warmth','bloom','kiss','shine','golden','radiance','kindness','alive'],
@@ -3552,92 +3558,142 @@ function generateCard(memory) {
       var _pad = sigImg._pad || 0;
       var _inkSrcW = sigImg._w - _pad * 2;
       var _inkSrcH = sigImg._h - _pad * 2;
-      var _scale = Math.min((W * 0.58) / _inkSrcW, 132 / _inkSrcH, 1.5);
+      // 占照片宽 ~52%，高度上限 112：单词（love/free）不会被放大到失衡
+      var _scale = Math.min((photoW * 0.52) / _inkSrcW, 112 / _inkSrcH, 1.5);
       var _drawW = sigImg._w * _scale;
       var _drawH = sigImg._h * _scale;
       var _inkW = _inkSrcW * _scale;
       var _inkH = _inkSrcH * _scale;
-      // 轻微倾斜（真实手写幅度，避免旋转把字甩到正文上）
-      var _tilt = (Math.random() * 12 - 7) * Math.PI / 180;   // -7° ~ +5°
-      // 旋转后的墨迹半高
+      // 轻微倾斜（真实手写幅度）
+      var _tilt = (Math.random() * 10 - 6) * Math.PI / 180;   // -6° ~ +4°
+      // 旋转后的墨迹半宽/半高（用于精确贴边）
+      var _rotHalfW = Math.abs(_inkW / 2 * Math.cos(_tilt)) + Math.abs(_inkH / 2 * Math.sin(_tilt));
       var _rotHalfH = Math.abs(_inkW / 2 * Math.sin(_tilt)) + Math.abs(_inkH / 2 * Math.cos(_tilt));
-      // 墨迹约 62% 在照片上：中心只比照片底边低 0.24 个半高
-      var _centerY = photoY + photoH - _rotHalfH * 0.24;
-      var _centerX = BORDER + 10 + _drawW / 2;
+      var _safeR = 34, _safeB = 58;   // 距照片右边 / 底边的安全距离
+      var _centerX = photoX + photoW - _safeR - _rotHalfW;
+      var _centerY = photoY + photoH - _safeB - _rotHalfH;
       sigGeom = {
         img: sigImg, drawW: _drawW, drawH: _drawH, tilt: _tilt,
-        cx: _centerX, cy: _centerY,
-        inkBottom: _centerY + _rotHalfH,
-        inkTop: _centerY - _rotHalfH
+        cx: _centerX, cy: _centerY
       };
     }
 
     // ══════════════════════════════════════════════════
-    // ─── CAPTION AREA: Clean, peaceful, readable ───
+    // ─── CAPTION: 双栏 — 左「Gratitude」大字母 / 右感恩记录 ───
     // ══════════════════════════════════════════════════
-    // 正文起点必须让开签名墨迹的下沿（+20px 呼吸）
-    const capTop = Math.max(photoY + photoH + 18, sigGeom ? sigGeom.inkBottom + 20 : 0);
-    const capCenterX = W / 2;
+    const capTop = photoY + photoH;
 
     // Thin, light system font — ultra-clean, Apple-quality
     const peaceFont = LANG === 'zh'
       ? '"PingFang SC", "SF Pro Display", "-apple-system", "Helvetica Neue Light", sans-serif'
       : '"SF Pro Display Light", "Helvetica Neue Light", "-apple-system", sans-serif';
 
-    // Date — darker gray (+2 levels), larger (+20%), left-aligned, quiet
     const d = new Date(memory.date + 'T00:00:00');
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     const dateStr = `${year}.${month}.${day}`;
 
-    ctx.font = '300 16px ' + peaceFont;
-    ctx.fillStyle = 'rgba(110,100,85,0.60)';
-    ctx.textAlign = 'left';
-    ctx.fillText(dateStr, BORDER + 16, capTop + 26);
+    // ── 左下角大字：深紫 Gratitude ──
+    const BIG_WORD = 'Gratitude';
+    const DEEP_PURPLE = '#4B2A80';
+    const displayFont = '"SF Pro Display", "Helvetica Neue", "PingFang SC", Arial, sans-serif';
+    const basBig = H - 38;                 // 大字基线
+    const colGap = 42;                      // 两栏间距
+    const leftColMax = Math.round(W * 0.44);
 
-    // Main entry text — adaptive size based on content length
-    // Layout: left 20% padding, right-aligned (peaceful, like margin notes)
-    const textStartY = capTop + 56;
-    const textLeft = Math.round(W * 0.20);   // 20% from left
-    const maxTextW = W - textLeft - 32;       // remaining width minus right margin
-    const capBottom = H - BORDER;             // bottom edge of caption area
-    const availH = capBottom - textStartY;     // available height for text
+    let bigSize = 74;
+    ctx.font = `700 ${bigSize}px ${displayFont}`;
+    while (bigSize > 34 && ctx.measureText(BIG_WORD).width > leftColMax) {
+      bigSize -= 2;
+      ctx.font = `700 ${bigSize}px ${displayFont}`;
+    }
+    const bigW = ctx.measureText(BIG_WORD).width;
 
-    // Start with a reasonable base, shrink based on content length AND line count
-    let fSize = 36;
-    if (entryText.length > 6) fSize = 30;
-    if (entryText.length > 10) fSize = 26;
-    if (entryText.length > 16) fSize = 22;
-    if (entryText.length > 24) fSize = 19;
+    // ── 右栏：感恩记录（右对齐到照片右边界）+ 日期 ──
+    const textRight = photoX + photoW;
+    const textLeft = BORDER + bigW + colGap;
+    const maxTextW = Math.max(150, textRight - textLeft);
+
+    const dateLineH = 26;                   // 日期行高（含间距）
+    const blockBottom = basBig;             // 整块（日期+正文）与大字共用基线
+    const textTopLimit = capTop + 34;       // 正文最高只能到这里
+    const availH = blockBottom - dateLineH - textTopLimit;
+
+    // 自适应字号：先按字数给初值，再按行数/高度收缩
+    let fSize = 34;
+    if (entryText.length > 6) fSize = 29;
+    if (entryText.length > 10) fSize = 25;
+    if (entryText.length > 16) fSize = 21;
+    if (entryText.length > 24) fSize = 18;
     if (entryText.length > 36) fSize = 16;
     if (entryText.length > 55) fSize = 14;
 
-    // Adaptive: if lines would overflow, keep shrinking until they fit
+    const lhOf = s => Math.round(s * 1.72);
     ctx.font = `200 ${fSize}px ${peaceFont}`;
-    let lines = wrapText(ctx, entryText, maxTextW);
-    let neededH = lines.length * Math.round(fSize * 1.75);
+    let lines = wrapText(ctx, entryText, maxTextW - fSize);   // 留一个字余量，防标点顶出版心
+    let neededH = (lines.length - 1) * lhOf(fSize) + fSize * 1.3;
     while (neededH > availH && fSize > 12) {
       fSize -= 1;
       ctx.font = `200 ${fSize}px ${peaceFont}`;
-      lines = wrapText(ctx, entryText, maxTextW);
-      neededH = lines.length * Math.round(fSize * 1.75);
+      lines = wrapText(ctx, entryText, maxTextW - fSize);
+      neededH = (lines.length - 1) * lhOf(fSize) + fSize * 1.3;
     }
-    ctx.fillStyle = 'rgba(25,22,18,0.82)';
-    ctx.textAlign = 'right';
 
-    // Clean lines, no decoration, no wobble — peaceful
-    // Right-aligned within 80% width (20% left padding)
+    // 短句（≤26 字）优先排成单行：宁可小一号，也不要出现「弃。」这种孤字落行
+    if (entryText.length <= 26) {
+      while (lines.length > 1 && fSize > 13) {
+        fSize -= 1;
+        ctx.font = `200 ${fSize}px ${peaceFont}`;
+        lines = wrapText(ctx, entryText, maxTextW - fSize);
+      }
+    }
+
+    // 日期 + 正文作为一整块，底部对齐到大字基线 —— 长短文案都稳，上方自然留白
+    const lh = lhOf(fSize);
+    const blockH = (lines.length - 1) * lh + fSize * 1.35;
+    const blockTop = blockBottom - blockH;
+    const dateBaseline = blockTop - dateLineH + 14;
+
+    ctx.font = '300 15px ' + peaceFont;
+    ctx.fillStyle = 'rgba(120,110,95,0.55)';
+    ctx.textAlign = 'right';
+    ctx.fillText(dateStr, textRight, dateBaseline);
+
+    ctx.font = `200 ${fSize}px ${peaceFont}`;
+    ctx.fillStyle = 'rgba(25,22,18,0.82)';
     lines.forEach((ln, i) => {
-      ctx.fillText(ln, W - 32, textStartY + i * Math.round(fSize * 1.75));
+      ctx.fillText(ln, textRight, blockTop + fSize * 1.02 + i * lh);
     });
 
+    // 大字最后画（压在纸面上，不受正文影响）
+    ctx.font = `700 ${bigSize}px ${displayFont}`;
+    ctx.fillStyle = DEEP_PURPLE;
+    ctx.textAlign = 'left';
+    ctx.fillText(BIG_WORD, BORDER + 2, basBig);
+
     // ─── STAMP SIGNATURE ───
-    // 墨迹大半压在照片上、小半落在白边（位置在 capTop 之前算好，正文已让开）
+    // 整块压在照片右下角：荧光色 + 局部柔光暗角，保证在亮/绿照片上也读得出来
     if (sigGeom) {
+      // 极淡的局部暗角（裁剪在照片内），不是整块蒙版，看不出痕迹
+      ctx.save();
+      roundRect(ctx, photoX, photoY, photoW, photoH, 3);
+      ctx.clip();
+      var _scR = Math.max(sigGeom.drawW * 0.62, sigGeom.drawH * 1.6);
+      var _sc = ctx.createRadialGradient(sigGeom.cx, sigGeom.cy, _scR * 0.1, sigGeom.cx, sigGeom.cy, _scR);
+      _sc.addColorStop(0, 'rgba(16,10,4,0.20)');
+      _sc.addColorStop(0.55, 'rgba(16,10,4,0.08)');
+      _sc.addColorStop(1, 'rgba(16,10,4,0)');
+      ctx.fillStyle = _sc;
+      ctx.fillRect(photoX, photoY, photoW, photoH);
+      ctx.restore();
+
       ctx.save();
       ctx.translate(sigGeom.cx, sigGeom.cy);
       ctx.rotate(sigGeom.tilt);
+      ctx.shadowColor = 'rgba(22,14,4,0.32)';
+      ctx.shadowBlur = 7;
+      ctx.shadowOffsetY = 1;
       ctx.drawImage(sigGeom.img, -sigGeom.drawW / 2, -sigGeom.drawH / 2, sigGeom.drawW, sigGeom.drawH);
       ctx.restore();
     }
@@ -3648,8 +3704,12 @@ function generateCard(memory) {
 
   const bgImg = new Image();
   bgImg.crossOrigin = 'anonymous';
-  bgImg.onload = () => { drawPolaroid(true); };
-  bgImg.onerror = () => { drawPolaroid(false); };
+  let _drawn = false;
+  const _drawOnce = (ok) => { if (_drawn) return; _drawn = true; drawPolaroid(ok); };
+  bgImg.onload = () => { _drawOnce(true); };
+  bgImg.onerror = () => { _drawOnce(false); };
+  // 兜底：图片 4 秒还没回来（离线 / 图床被墙），直接用暖色调纸面出卡，不能让用户干等
+  setTimeout(() => _drawOnce(!!(bgImg.complete && bgImg.naturalWidth > 0)), 4000);
   bgImg.src = bgUrl;
 }
 
@@ -3671,21 +3731,34 @@ function roundRect(ctx, x, y, w, h, r) {
 
 // Word-wrap helper for Canvas
 function wrapText(ctx, text, maxWidth) {
-  const words = text.split('');
+  const chars = text.split('');
   const lines = [];
-  let currentLine = '';
+  let cur = '';
+  // 中文排版的「避头尾」：这些字符不许出现在行首 / 行尾，
+  // 否则会出现一整行只有一个句号的难看情况（曾真实出现在卡片上）
+  const NO_START = '，。、；：！？）】》」』”’…％‰℃·,.!?;:)]}';
+  const NO_END   = '（【《「『“‘([{';
 
-  for (let i = 0; i < words.length; i++) {
-    const testLine = currentLine + words[i];
-    const metrics = ctx.measureText(testLine);
-    if (metrics.width > maxWidth && currentLine.length > 0) {
-      lines.push(currentLine);
-      currentLine = words[i];
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const test = cur + ch;
+    if (ctx.measureText(test).width > maxWidth && cur.length > 0) {
+      if (NO_START.indexOf(ch) >= 0) {        // 标点跟随上一行，不另起一行
+        cur = test;
+        continue;
+      }
+      let carry = '';
+      if (NO_END.indexOf(cur.charAt(cur.length - 1)) >= 0 && cur.length > 1) {
+        carry = cur.charAt(cur.length - 1);   // 开括号不落行尾，带到下一行
+        cur = cur.slice(0, -1);
+      }
+      lines.push(cur);
+      cur = carry + ch;
     } else {
-      currentLine = testLine;
+      cur = test;
     }
   }
-  if (currentLine) lines.push(currentLine);
+  if (cur) lines.push(cur);
   return lines;
 }
 
