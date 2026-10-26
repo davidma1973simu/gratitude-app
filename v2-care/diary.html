@@ -182,6 +182,8 @@
       background: #fbf7ef;
       box-shadow: 0 12px 44px rgba(120,100,70,0.16), 0 1px 3px rgba(120,100,70,0.08);
       margin-bottom: 24px;
+      /* 顶部导航是 sticky 的：滚到这一页时给它让出高度，否则日期大字被压在标题栏下面 */
+      scroll-margin-top: 64px;
     }
     .output-section.active { display: block; }
     /* 点阵纸底：data-uri SVG 平铺 —— html2canvas 导出时不会丢 */
@@ -1180,6 +1182,7 @@ function renderFromAI(inputText,ai){
   document.getElementById('loadingSection').classList.remove('active');
   var os=document.getElementById('outputSection');os.classList.add('active');os.classList.add('fade-in-up');
   setTimeout(function(){os.scrollIntoView({behavior:'smooth',block:'start'});},100);
+  requestAnimationFrame(applyTomeFit);
 
   var btn=document.getElementById('generateBtn');
   btn.innerHTML='✦ 再写一篇';
@@ -1207,6 +1210,7 @@ function generateMock(inp){
     document.getElementById('loadingSection').classList.remove('active');
     var os=document.getElementById('outputSection');os.classList.add('active');os.classList.add('fade-in-up');
     setTimeout(function(){os.scrollIntoView({behavior:'smooth',block:'start'});},100);
+    requestAnimationFrame(applyTomeFit);
 
     var btn=document.getElementById('generateBtn');
     btn.innerHTML='✦ 再写一篇';
@@ -1441,6 +1445,9 @@ function renderOutput(parts, imageUrl, emotions, analysis, tome, narrative){
   var epi = document.getElementById('outputEpigraph');
   var epiTxt = document.getElementById('epigraphText');
   var narrText = narrative || cleanNarrative('', parts.userText);
+  // 本地兜底时 narrative 往往就是原文本身 —— 那样这一页会把同一句话写两遍。宁可空着。
+  var _normTxt = function(x){ return String(x || '').replace(/[\s，。、；：！？,.;:!?"'「」“”‘’…—-]/g, ''); };
+  if(narrText && _normTxt(narrText) === _normTxt(parts.userText)) narrText = '';
   if (epi && epiTxt) {
     epiTxt.textContent = narrText || '';
     epi.hidden = !narrText;
@@ -1457,21 +1464,41 @@ function renderOutput(parts, imageUrl, emotions, analysis, tome, narrative){
   var tomeEl = document.getElementById('outputTome');
   var tomeLine = document.getElementById('tomeText');
   var tomeTxt = cleanTome(tome);
+  // 模型有时会返回一串看不见的字符（零宽空格 / 全角空格），textContent 非空但一个字都不显示。
+  // 所以判空不能只看长度，要看有没有真的字形；没有就退回本地那句。
+  // ⚠️ 本地那句不要再过 cleanTome —— 它会连开头的「一起吃掉，变成「同事」这一笔…」缺一半引号
+  if(!hasVisibleGlyph(tomeTxt)) tomeTxt = genTome(parts.userText || '', emotions || {});
   tomeLine.textContent = tomeTxt;
-  if (tomeEl) tomeEl.hidden = !tomeTxt;
-  if (tomeTxt) fitTomeLine(tomeLine);
+  if (tomeEl) tomeEl.hidden = !hasVisibleGlyph(tomeTxt);
+  // 此时 #outputSection 还是 display:none，量不出宽度 —— 真正的字号适配要等它显示出来再做
+  window._pendingTomeFit = tomeTxt;
 }
 
 // ── 落款那一句：严格一行 ──
 // 25 个字在手机上必然折行，所以先把字数收紧到 20，再把字号从 16px 逐级压到刚好放得下。
 // 宁可字小一点，也不能变成两行 —— 那就不再是「一句话」了。
 var TOME_MAX = 20;
+function hasVisibleGlyph(s){
+  return /[^\s\u200b-\u200f\u2028-\u202f\ufeff]/.test(String(s || ''));
+}
+function applyTomeFit(){
+  if(!window._pendingTomeFit) return;
+  var line = document.getElementById('tomeText');
+  if(line && line.clientWidth > 0) fitTomeLine(line);
+}
 function cleanTome(raw){
-  var s = String(raw || '').trim();
-  s = s.replace(/^[「“‘"'\s]+/, '').replace(/[」”’"'\s]+$/, '');
+  var s = String(raw || '');
+  // 先清掉零宽字符与全角空格：模型偶尔吐「看不见的字」，长度不为 0 却一个字形都没有
+  s = s.replace(/[\u200b-\u200f\u2028-\u202f\ufeff]/g, '').trim();
   s = s.replace(/^(tome|致此刻的你)[:：]\s*/, '');
   s = s.replace(/\s*\n+\s*/g, '');
-  if(s.length > TOME_MAX) s = s.slice(0, TOME_MAX - 1) + '…';
+  // 只有「整句被一对引号包住」才拆壳。本地模板形如「同事」在的这一天…… 开头也是「，
+  // 无条件剥壳会把前半句的引号吃掉，变成「同事」这一笔…」缺一半引号。
+  if(/^[「“‘"']/.test(s) && /[」”’"']$/.test(s)) s = s.slice(1, -1).trim();
+  if(s.length > TOME_MAX){
+    // 截断后不要留下一个悬空的逗号（「…的下午，…」读起来像机器出错）
+    s = s.slice(0, TOME_MAX - 1).replace(/[，、；：,;:\s]+$/, '') + '…';
+  }
   return s;
 }
 function fitTomeLine(el){
