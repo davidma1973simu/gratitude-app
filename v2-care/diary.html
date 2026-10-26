@@ -1758,7 +1758,15 @@ function viewDiary(key){
   var months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('outputDateStr').textContent = (months[parseInt(dateParts[1])||''])+' · '+dateParts[0];
   
-  if(entry.image) document.getElementById('outputImage').src = entry.image;
+  // 旧日记里可能存着已经删掉的人像图（calm-01 / warm-03 / warm-06），
+  // 或图池外的老路径 —— 一律换成池内的风景，否则翻回历史还会看到那张脸
+  var imgSrc = entry.image || '';
+  var inPool = DIARY_POOL.some(function(p){ return _imgKey(p) === _imgKey(imgSrc); });
+  if(!inPool){
+    imgSrc = DIARY_POOL[Math.floor(Math.random() * DIARY_POOL.length)];
+    try{ entry.image = imgSrc; saved[key] = entry; localStorage.setItem('saved_diaries', JSON.stringify(saved)); }catch(e){}
+  }
+  document.getElementById('outputImage').src = imgSrc;
   
   // Split text: first non-empty lines = user input, rest = AI
   var nonEmpty = lines.filter(function(l){ return l.trim().length>0; });
