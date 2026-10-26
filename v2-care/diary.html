@@ -693,7 +693,9 @@
       </div>
 
       <!-- 落款：先「致此刻的你」，紧跟一句不超过一行的收束语 -->
-      <div class="output-tome" id="outputTome">
+      <!-- hidden 必须写死在 HTML 上：没有内容时连标签都不该出现，
+           否则翻历史日记（不会走 renderOutput）会留下一个空的「致此刻的你」 -->
+      <div class="output-tome" id="outputTome" hidden>
         <span class="tome-label">致此刻的你</span>
         <div class="tome-line" id="tomeText"></div>
       </div>
@@ -1429,6 +1431,7 @@ function genTome(input,emotions){
 // ══════════════════════════════════════
 function renderOutput(parts, imageUrl, emotions, analysis, tome, narrative){
   var now=new Date();
+  window._lastEmotions = emotions || null;   // 存档时要用（历史回看靠它还原温度带）
   document.getElementById('outputDateNum').textContent=now.getDate();
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('outputDateStr').textContent=months[now.getMonth()]+' · '+now.getFullYear();
@@ -1461,17 +1464,24 @@ function renderOutput(parts, imageUrl, emotions, analysis, tome, narrative){
   if (analysisEl) analysisEl.hidden = !analysisTxt;
 
   // 落款：一句、一行。空的时候整块不出现（避免留一条空横线）
-  var tomeEl = document.getElementById('outputTome');
-  var tomeLine = document.getElementById('tomeText');
-  var tomeTxt = cleanTome(tome);
-  // 模型有时会返回一串看不见的字符（零宽空格 / 全角空格），textContent 非空但一个字都不显示。
-  // 所以判空不能只看长度，要看有没有真的字形；没有就退回本地那句。
-  // ⚠️ 本地那句不要再过 cleanTome —— 它会连开头的「一起吃掉，变成「同事」这一笔…」缺一半引号
-  if(!hasVisibleGlyph(tomeTxt)) tomeTxt = genTome(parts.userText || '', emotions || {});
-  tomeLine.textContent = tomeTxt;
-  if (tomeEl) tomeEl.hidden = !hasVisibleGlyph(tomeTxt);
-  // 此时 #outputSection 还是 display:none，量不出宽度 —— 真正的字号适配要等它显示出来再做
-  window._pendingTomeFit = tomeTxt;
+  showTome(tome, parts.userText, emotions);
+}
+
+// ── 落款统一入口 ──
+// 生成、翻历史两条路都走这里：清壳 → 判空 → 兜底 → 写入 → 决定显不显示。
+// 判空必须看「有没有真的字形」：模型偶尔返回零宽字符，length 不为 0 却一个字都不显示。
+function showTome(raw, fallbackInput, emotions){
+  var t = cleanTome(raw);
+  if (!hasVisibleGlyph(t) && fallbackInput !== undefined) {
+    t = genTome(fallbackInput || '', emotions || {});
+  }
+  var el = document.getElementById('outputTome');
+  var line = document.getElementById('tomeText');
+  if (line) line.textContent = t;
+  var show = hasVisibleGlyph(t);
+  if (el) el.hidden = !show;
+  window._pendingTomeFit = show ? t : '';
+  return t;
 }
 
 // ── 落款那一句：严格一行 ──
@@ -1712,12 +1722,27 @@ function saveDiary(target){
 }
 
 // Persist diary data to localStorage for history list
+// 除了正文，还要把「落款 / 温度带 / 旁注 / 第一句话」一起存下来 —— 否则翻回历史时
+// 这几块要么空着（空的「致此刻的你」），要么残留着上一篇的内容。
 function persistDiaryData(){
   var t=diaryPlainText();
   var k='diary_'+formatDate(new Date());
   try{
     var saved=JSON.parse(localStorage.getItem('saved_diaries')||'{}');
-    saved[k]={text:t,image:document.getElementById('outputImage').src,emotion:currentEmotion,savedAt:new Date().toISOString()};
+    var tomeLine=document.getElementById('tomeText');
+    var tomeEl=document.getElementById('outputTome');
+    var epi=document.getElementById('outputEpigraph');
+    var note=document.getElementById('outputAnalysis');
+    saved[k]={
+      text:t,
+      image:document.getElementById('outputImage').src,
+      emotion:currentEmotion,
+      tome:(tomeEl && !tomeEl.hidden && tomeLine) ? tomeLine.textContent.trim() : '',
+      emotions:window._lastEmotions||null,
+      insight:(note && !note.hidden) ? (document.getElementById('analysisText').textContent||'').trim() : '',
+      narrative:(epi && !epi.hidden) ? (document.getElementById('epigraphText').textContent||'').trim() : '',
+      savedAt:new Date().toISOString()
+    };
     localStorage.setItem('saved_diaries',JSON.stringify(saved));
     renderHistory();
   }catch(e){}
@@ -1802,13 +1827,49 @@ function viewDiary(key){
   
   document.getElementById('outputUserInput').textContent = userPart;
   document.getElementById('outputAiText').textContent = aiPart;
-  // 旧日记没有存下「第一句话」，直接收起，不留空块
-  var _epi=document.getElementById('outputEpigraph'); if(_epi){_epi.hidden=true;}
+
+  // ── 落款：翻回历史的日记必须也有这一句 ──
+  // 老记录里没单独存 tome，但 diaryPlainText() 当时是把那一句接在正文末尾的，
+  // 所以先看最后一句话像不像落款：短、以句末标点收尾、且正文还有别的内容。
+  var tomeSaved = (entry.tome || '').trim();
+  var aiLines = aiPart.split('\n').filter(function(l){ return l.trim().length > 0; });
+  var cand = aiLines.length ? aiLines[aiLines.length - 1].trim() : '';
+  var looksTome = cand && cand.length <= 26 && /[。！？…]$/.test(cand);
+  if (!tomeSaved && looksTome && aiLines.length >= 2) {
+    tomeSaved = cand;
+    aiLines.pop();
+    aiPart = aiLines.join('\n');
+    document.getElementById('outputAiText').textContent = aiPart;
+  }
+  if (!tomeSaved) tomeSaved = genTome(userPart, {});
+  showTome(tomeSaved);
+
+  // ── 温度带 / 旁注 / 第一句话：有存档就还原，没有就收起（不留上一篇的残留） ──
+  var moodEl = document.getElementById('emotionBars');
+  if (entry.emotions) { renderMoodBar(entry.emotions); }
+  else if (moodEl) { moodEl.innerHTML = ''; }
+
+  var _note = document.getElementById('outputAnalysis');
+  var _insight = (entry.insight || '').trim();
+  if (_insight) {
+    document.getElementById('analysisText').textContent = _insight;
+    _note.hidden = false;
+  } else if (_note) {
+    _note.hidden = true;
+  }
+
+  var _epi = document.getElementById('outputEpigraph');
+  var _narr = (entry.narrative || '').trim();
+  if (_epi) {
+    if (_narr) { document.getElementById('epigraphText').textContent = _narr; _epi.hidden = false; }
+    else { _epi.hidden = true; }
+  }
   
-  // Hide emotion/insight/tome for saved diaries (or regenerate)
+  // 显示输出区（温度带 / 旁注 / 落款已在上面按存档还原过）
   document.getElementById('outputSection').classList.add('active');
   document.getElementById('outputSection').classList.add('fade-in-up');
   document.getElementById('outputSection').scrollIntoView({behavior:'smooth',block:'start'});
+  requestAnimationFrame(applyTomeFit);
   
   currentDiaryKey = key;
   logEvent('diary_viewed',{key:key});
