@@ -718,9 +718,10 @@ var recordingStream = null;
 var recordingTimer = null;
 var recordingSeconds = 0;
 
+// 只收没有人的画面：warm-03 / warm-06 / calm-01 是人像，已从仓库物理删除（2026-10-26）
 var IMAGE_DB = {
-  warm: ['images/warm/warm-01.jpg','images/warm/warm-02.jpg','images/warm/warm-03.jpg','images/warm/warm-04.jpg','images/warm/warm-05.jpg','images/warm/warm-06.jpg'],
-  calm: ['images/calm/calm-01.jpg','images/calm/calm-02.jpg','images/calm/calm-03.jpg','images/calm/calm-04.jpg','images/calm/calm-05.jpg','images/calm/calm-06.jpg'],
+  warm: ['images/warm/warm-01.jpg','images/warm/warm-02.jpg','images/warm/warm-04.jpg','images/warm/warm-05.jpg'],
+  calm: ['images/calm/calm-02.jpg','images/calm/calm-03.jpg','images/calm/calm-04.jpg','images/calm/calm-05.jpg','images/calm/calm-06.jpg'],
   hopeful: ['images/hopeful/hopeful-01.jpg','images/hopeful/hopeful-02.jpg','images/hopeful/hopeful-03.jpg','images/hopeful/hopeful-04.jpg','images/hopeful/hopeful-05.jpg','images/hopeful/hopeful-06.jpg'],
   gentle: ['images/gentle/gentle-01.jpg','images/gentle/gentle-02.jpg','images/gentle/gentle-03.jpg','images/gentle/gentle-04.jpg','images/gentle/gentle-05.jpg','images/gentle/gentle-06.jpg']
 };
@@ -1048,8 +1049,19 @@ function genDiaryParts(input,emotions){
   return { userText: userText, aiText: aiLines.join('\n') };
 }
 function pickImage(emo){var p=IMAGE_DB[emo]||IMAGE_DB.warm;return p[Math.floor(Math.random()*p.length)];}
-function regenerateImage(){if(!currentEmotion)return;var el=document.getElementById('outputImage');el.style.opacity='0.3';
-  setTimeout(function(){el.src=pickImage(currentEmotion);el.onload=function(){el.style.opacity='1';};el.style.transition='opacity 0.4s ease';},200);
+// 与 v2-care 同一处修复：情绪为空也能换图；不依赖 el.onload（缓存命中不触发会把透明度卡在 0.3）
+function regenerateImage(){
+  var el=document.getElementById('outputImage'); if(!el) return;
+  var next=pickImage(currentEmotion||'warm'), swapped=false;
+  el.style.transition='opacity 0.24s ease'; el.style.opacity='0.22';
+  function swap(){
+    if(swapped) return; swapped=true;
+    el.src=next; el.style.transition='opacity 0.45s ease';
+    requestAnimationFrame(function(){el.style.opacity='1';});
+    setTimeout(function(){el.style.opacity='1';},520);
+  }
+  var pre=new Image(); pre.onload=swap; pre.onerror=swap; pre.src=next;
+  setTimeout(swap,1200);
 }
 
 // ══════════════════════════════════════

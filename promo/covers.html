@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Gratitude — 封面三方向</title>
+<style>
+  @font-face {
+    font-family: 'Satisfy';
+    src: url('../v2-care/fonts/satisfy.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: block;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --paper: #f7f3ed;
+    --ink: #23201c;
+    --ink-soft: #6c645b;
+    --ink-faint: #9a9086;
+    --green: #0e6b50;
+    --neon: #e5f954;
+    --purple: #4b2a80;
+  }
+
+  body {
+    background: #2a2a2a;
+    font-family: 'PingFang SC', 'Helvetica Neue', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+  .stack { display: flex; flex-direction: column; gap: 40px; padding: 40px; width: 2000px; }
+  .frame { position: relative; overflow: hidden; flex: none; }
+  #A-land, #B-land, #C-land { width: 1920px; height: 1080px; }
+  #A-port, #B-port, #C-port { width: 1080px; height: 1920px; }
+
+  .grain {
+    position: absolute; inset: 0; opacity: .26; mix-blend-mode: multiply; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='0.15'/></svg>");
+  }
+
+  /* ════════════════════════════════════════════════════
+     A · 光落  — 大留白，一片光，一句话
+     ════════════════════════════════════════════════════ */
+  .A-land, .A-port { background: #f6f2eb; }
+
+  .A-glow {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(40% 36% at 78% 10%, rgba(255, 196, 134, .64) 0%, rgba(255, 219, 182, .26) 44%, rgba(246, 242, 235, 0) 78%),
+      radial-gradient(60% 46% at 8% 96%, rgba(206, 201, 191, .28) 0%, rgba(246, 242, 235, 0) 72%);
+  }
+
+  .A-bleed {
+    position: absolute; overflow: hidden;
+  }
+  .A-bleed img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: saturate(.80) contrast(1.02) brightness(.98);
+  }
+  .A-veil { position: absolute; inset: 0; }
+
+  .A-copy { position: absolute; }
+  .A-kicker {
+    font-size: 11px; letter-spacing: .44em; color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  .A-copy h1 {
+    font-weight: 200; color: var(--ink);
+  }
+  .A-rule { height: 1px; background: rgba(35, 32, 28, .22); }
+  .A-en {
+    font-size: 11.5px; letter-spacing: .12em; line-height: 2.1;
+    color: var(--ink-faint); font-style: italic; font-weight: 300;
+  }
+  .A-foot {
+    position: absolute; font-size: 11.5px; letter-spacing: .16em; color: var(--ink-faint);
+  }
+
+  /* A 横版 */
+  .A-land .A-bleed {
+    right: -230px; top: 0; width: 790px; height: 1080px;
+    -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.30) 10%, rgba(0,0,0,.82) 26%, #000 46%);
+    mask-image: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.30) 10%, rgba(0,0,0,.82) 26%, #000 46%);
+  }
+  .A-land .A-veil {
+    background: linear-gradient(90deg,
+      rgba(246,242,235,.88) 0%, rgba(246,242,235,.46) 26%, rgba(246,242,235,.06) 58%, rgba(246,242,235,.22) 100%);
+  }
+  .A-land .A-copy { left: 152px; top: 50%; transform: translateY(-50%); width: 880px; }
+  .A-land .A-copy h1 { font-size: 90px; line-height: 1.52; letter-spacing: .05em; margin-top: 54px; }
+  .A-land .A-rule { width: 56px; margin: 62px 0 32px 4px; }
+  .A-land .A-foot { left: 152px; bottom: 86px; }
+
+  /* A 竖版 */
+  .A-port .A-bleed {
+    left: 0; top: 858px; width: 1080px; height: 900px;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 12%, #000 34%, #000 84%, rgba(0,0,0,.06) 100%);
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 12%, #000 34%, #000 84%, rgba(0,0,0,.06) 100%);
+  }
+  .A-port .A-veil {
+    background: linear-gradient(180deg,
+      rgba(246,242,235,.60) 0%, rgba(246,242,235,.30) 12%, rgba(246,242,235,.04) 42%,
+      rgba(246,242,235,.06) 76%, rgba(246,242,235,.80) 100%);
+  }
+  .A-port .A-glow {
+    background:
+      radial-gradient(72% 38% at 74% 4%, rgba(255, 205, 148, .54) 0%, rgba(255, 224, 190, .20) 44%, rgba(246, 242, 235, 0) 76%),
+      radial-gradient(70% 30% at 14% 100%, rgba(206, 201, 191, .22) 0%, rgba(246, 242, 235, 0) 72%);
+  }
+  .A-port .A-copy { left: 84px; top: 300px; width: 900px; }
+  .A-port .A-copy h1 { font-size: 74px; line-height: 1.62; letter-spacing: .05em; margin-top: 40px; }
+  .A-port .A-rule { width: 48px; margin: 120px 0 26px 3px; }
+  .A-port .A-foot { left: 84px; bottom: 104px; }
+
+  /* ════════════════════════════════════════════════════
+     B · 证据  — 一张卡片，就是一天的实体
+     ════════════════════════════════════════════════════ */
+  .B-land, .B-port { background: #f4efe7; }
+  .B-glow { position: absolute; inset: 0; }
+  .B-land .B-glow {
+    background:
+      radial-gradient(44% 46% at 72% 8%, rgba(255, 208, 152, .46) 0%, rgba(255, 226, 194, .18) 44%, rgba(244,239,231,0) 74%),
+      radial-gradient(56% 40% at 6% 92%, rgba(204, 199, 188, .28) 0%, rgba(244,239,231,0) 72%);
+  }
+  .B-port .B-glow {
+    background:
+      radial-gradient(68% 34% at 50% 2%, rgba(255, 208, 152, .50) 0%, rgba(255, 226, 194, .18) 46%, rgba(244,239,231,0) 76%),
+      radial-gradient(80% 26% at 50% 100%, rgba(204, 199, 188, .24) 0%, rgba(244,239,231,0) 74%);
+  }
+
+  .B-card {
+    position: absolute; background: #fffdf9;
+    box-shadow:
+      0 1px 2px rgba(40, 32, 24, .08),
+      0 18px 40px rgba(40, 32, 24, .16),
+      0 54px 96px rgba(40, 32, 24, .13);
+  }
+  .B-photo { position: relative; overflow: hidden; background: #e9e2d7; }
+  .B-photo img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: saturate(.74) contrast(.93) brightness(1.08);
+  }
+  .B-photo::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,236,214,.18) 0%, rgba(250,240,228,.10) 56%, rgba(244,236,226,.22) 100%);
+  }
+  .B-photo::before {
+    content: ''; position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(0deg,
+      rgba(28,20,10,.46) 0%, rgba(28,20,10,.18) 18%, rgba(28,20,10,0) 46%);
+  }
+  .B-sig {
+    position: absolute; font-family: 'Satisfy', cursive;
+    color: #e5f954; line-height: 1; white-space: nowrap; z-index: 3;
+    text-shadow: 0 0 1px rgba(20,14,4,.55), 0 2px 12px rgba(20,14,4,.62);
+  }
+  .B-cap { position: absolute; text-align: right; }
+  .B-cap .date { letter-spacing: .20em; color: #a49a8e; }
+  .B-cap .line { color: #3a342d; font-weight: 300; letter-spacing: .02em; }
+
+  .B-copy { position: absolute; }
+  .B-brand { letter-spacing: .38em; color: var(--purple); font-weight: 300; }
+  .B-copy h2 { font-weight: 200; color: var(--ink); letter-spacing: .05em; }
+  .B-sub { letter-spacing: .10em; color: #8d8377; font-style: italic; font-weight: 300; }
+  .B-foot { position: absolute; font-size: 11.5px; letter-spacing: .16em; color: var(--ink-faint); }
+
+  /* B 横版 */
+  .B-land .B-card { right: 214px; top: 202px; width: 566px; padding: 18px 18px 128px 18px; transform: rotate(-2.2deg); }
+  .B-land .B-photo { width: 530px; height: 530px; }
+  .B-land .B-sig { left: 22px; bottom: 106px; font-size: 68px; transform: rotate(-4.5deg); }
+  .B-land .B-cap { right: 0; top: 566px; width: 100%; padding: 0 4px; }
+  .B-land .B-cap .date { font-size: 13px; margin-bottom: 12px; }
+  .B-land .B-cap .line { font-size: 20px; line-height: 1.75; }
+  .B-land .B-copy { left: 152px; top: 335px; width: 640px; }
+  .B-land .B-brand { font-size: 30px; }
+  .B-land .B-copy h2 { font-size: 70px; line-height: 1.62; margin-top: 62px; }
+  .B-land .B-sub { font-size: 12px; line-height: 2; margin-top: 56px; }
+  .B-land .B-foot { left: 152px; bottom: 86px; }
+
+  /* B 竖版 */
+  .B-port .B-card { left: 50%; top: 720px; width: 680px; padding: 20px 20px 140px 20px; transform: translateX(-50%) rotate(-1.8deg); }
+  .B-port .B-photo { width: 640px; height: 640px; }
+  .B-port .B-sig { left: 26px; bottom: 110px; font-size: 78px; transform: rotate(-4deg); }
+  .B-port .B-cap { right: 0; top: 682px; width: 100%; padding: 0 4px; }
+  .B-port .B-cap .date { font-size: 14px; margin-bottom: 14px; }
+  .B-port .B-cap .line { font-size: 22px; line-height: 1.78; }
+  .B-port .B-copy { left: 0; top: 236px; width: 100%; text-align: center; }
+  .B-port .B-brand { font-size: 30px; }
+  .B-port .B-copy h2 { font-size: 66px; line-height: 1.66; margin-top: 60px; }
+  .B-port .B-sub { font-size: 12px; line-height: 2; margin-top: 54px; }
+  .B-port .B-foot { left: 0; width: 100%; text-align: center; bottom: 108px; }
+
+  /* ════════════════════════════════════════════════════
+     C · 积累  — 一格一天
+     ════════════════════════════════════════════════════ */
+  .C-land, .C-port { background: #f7f3ed; }
+  .C-glow { position: absolute; inset: 0; }
+  .C-land .C-glow {
+    background:
+      radial-gradient(40% 46% at 74% 62%, rgba(229, 249, 84, .20) 0%, rgba(247, 243, 237, 0) 68%),
+      radial-gradient(46% 40% at 12% 6%, rgba(255, 209, 158, .34) 0%, rgba(247, 243, 237, 0) 74%);
+  }
+  .C-port .C-glow {
+    background:
+      radial-gradient(70% 36% at 52% 68%, rgba(229, 249, 84, .18) 0%, rgba(247, 243, 237, 0) 70%),
+      radial-gradient(76% 30% at 50% 2%, rgba(255, 209, 158, .34) 0%, rgba(247, 243, 237, 0) 74%);
+  }
+
+  .C-grid { position: absolute; display: grid; }
+  .C-cell { border-radius: 1px; }
+
+  .C-copy { position: absolute; }
+  .C-kicker { font-size: 11px; letter-spacing: .44em; color: var(--ink-faint); text-transform: uppercase; }
+  .C-copy h2 { font-weight: 200; color: var(--ink); letter-spacing: .06em; }
+  .C-en { font-size: 11.5px; letter-spacing: .14em; color: var(--ink-faint); font-style: italic; font-weight: 300; }
+  .C-rule { height: 1px; background: rgba(35,32,28,.20); }
+  .C-foot { position: absolute; font-size: 11.5px; letter-spacing: .16em; color: var(--ink-faint); }
+
+  /* C 横版 */
+  .C-land .C-grid { right: 186px; top: 50%; transform: translateY(-50%); grid-template-columns: repeat(5, 58px); gap: 34px; }
+  .C-land .C-cell { width: 58px; height: 58px; }
+  .C-land .C-copy { left: 152px; top: 50%; transform: translateY(-50%); width: 720px; }
+  .C-land .C-copy h2 { font-size: 82px; line-height: 1.56; margin-top: 46px; }
+  .C-land .C-rule { width: 56px; margin: 58px 0 30px 4px; }
+  .C-land .C-foot { left: 152px; bottom: 86px; }
+
+  /* C 竖版 */
+  .C-port .C-grid { left: 50%; transform: translateX(-50%); top: 958px; grid-template-columns: repeat(7, 66px); gap: 26px; }
+  .C-port .C-cell { width: 66px; height: 66px; }
+  .C-port .C-copy { left: 84px; top: 300px; width: 912px; }
+  .C-port .C-copy h2 { font-size: 74px; line-height: 1.62; margin-top: 44px; }
+  .C-port .C-rule { width: 48px; margin: 64px 0 26px 3px; }
+  .C-port .C-en { margin-top: 22px; }
+  .C-port .C-foot { left: 84px; bottom: 104px; }
+</style>
+</head>
+<body>
+<div class="stack">
+
+  <!-- ══════════ A 横版 ══════════ -->
+  <div class="frame A-land" id="A-land">
+    <div class="A-glow"></div>
+    <div class="A-bleed"><img src="../v2-care/images/warm/warm-02.jpg" alt=""></div>
+    <div class="A-bleed A-veil"></div>
+    <div class="grain"></div>
+    <div class="A-copy">
+      <div class="A-kicker">Gratitude Journal · 感恩日记</div>
+      <h1>感谢今天的，<br>照到我身上的光。</h1>
+      <div class="A-rule"></div>
+      <div class="A-en">No streaks. No guilt.<br>Just notice what came.</div>
+    </div>
+    <div class="A-foot">gratitude-v2.app.workbuddy.host</div>
+  </div>
+
+  <!-- ══════════ B 横版 ══════════ -->
+  <div class="frame B-land" id="B-land">
+    <div class="B-glow"></div>
+    <div class="grain"></div>
+    <div class="B-card">
+      <div class="B-photo"><img src="../v2-care/images/gentle/gentle-02.jpg" alt=""></div>
+      <div class="B-sig">peaceful</div>
+      <div class="B-cap">
+        <div class="date">2026.10.24</div>
+        <div class="line">楼下的桂花开了一小片，<br>风把它送到我窗口。</div>
+      </div>
+    </div>
+    <div class="B-copy">
+      <div class="B-brand">GRATITUDE</div>
+      <h2>你写下的，<br>会留下来。</h2>
+      <div class="B-sub">A quiet place for what came.</div>
+    </div>
+    <div class="B-foot">gratitude-v2.app.workbuddy.host</div>
+  </div>
+
+  <!-- ══════════ C 横版 ══════════ -->
+  <div class="frame C-land" id="C-land">
+    <div class="C-glow"></div>
+    <div class="grain"></div>
+    <div class="C-grid" data-grid="25"></div>
+    <div class="C-copy">
+      <div class="C-kicker">Gratitude Journal · 感恩日记</div>
+      <h2>一天一天，<br>光就积起来了。</h2>
+      <div class="C-rule"></div>
+      <div class="C-en">Light, accumulated.</div>
+    </div>
+    <div class="C-foot">gratitude-v2.app.workbuddy.host</div>
+  </div>
+
+  <!-- ══════════ A 竖版 ══════════ -->
+  <div class="frame A-port" id="A-port">
+    <div class="A-glow"></div>
+    <div class="A-bleed"><img src="../v2-care/images/hopeful/hopeful-01.jpg" alt=""></div>
+    <div class="A-bleed A-veil"></div>
+    <div class="grain"></div>
+    <div class="A-copy">
+      <div class="A-kicker">Gratitude Journal · 感恩日记</div>
+      <h1>感谢今天的，<br>照到我身上的光。</h1>
+      <div class="A-rule"></div>
+      <div class="A-en">No streaks. No guilt. Just notice what came.</div>
+    </div>
+    <div class="A-foot">gratitude-v2.app.workbuddy.host</div>
+  </div>
+
+  <!-- ══════════ B 竖版 ══════════ -->
+  <div class="frame B-port" id="B-port">
+    <div class="B-glow"></div>
+    <div class="grain"></div>
+    <div class="B-card">
+      <div class="B-photo"><img src="../v2-care/images/warm/warm-01.jpg" alt=""></div>
+      <div class="B-sig">gentle</div>
+      <div class="B-cap">
+        <div class="date">2026.10.24</div>
+        <div class="line">楼下的桂花开了一小片，<br>风把它送到我窗口。</div>
+      </div>
+    </div>
+    <div class="B-copy">
+      <div class="B-brand">GRATITUDE</div>
+      <h2>你写下的，<br>会留下来。</h2>
+      <div class="B-sub">A quiet place for what came.</div>
+    </div>
+    <div class="B-foot">gratitude-v2.app.workbuddy.host</div>
+  </div>
+
+  <!-- ══════════ C 竖版 ══════════ -->
+  <div class="frame C-port" id="C-port">
+    <div class="C-glow"></div>
+    <div class="grain"></div>
+    <div class="C-grid" data-grid="42"></div>
+    <div class="C-copy">
+      <div class="C-kicker">Gratitude Journal · 感恩日记</div>
+      <h2>一天一天，<br>光就积起来了。</h2>
+      <div class="C-rule"></div>
+      <div class="C-en">Light, accumulated.</div>
+    </div>
+    <div class="C-foot">gratitude-v2.app.workbuddy.host</div>
+  </div>
+
+</div>
+
+<script>
+  // C 方向：一格代表一天，从几近空白渐次点亮
+  document.querySelectorAll('.C-grid').forEach(function (grid) {
+    var n = parseInt(grid.dataset.grid, 10);
+    for (var i = 0; i < n; i++) {
+      var t = i / (n - 1);              // 0 → 1
+      var cell = document.createElement('div');
+      cell.className = 'C-cell';
+      var lit = Math.pow(t, 1.85);      // 后段点亮更快，像日子越攒越亮
+      var a = 0.048 + 0.52 * lit;
+      cell.style.background = 'rgba(14,107,80,' + a.toFixed(3) + ')';
+      if (i === n - 1) {
+        cell.style.background = 'rgba(14,107,80,0.78)';
+      }
+      grid.appendChild(cell);
+    }
+  });
+</script>
+</body>
+</html>
