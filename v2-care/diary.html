@@ -38,6 +38,9 @@
       --emotion-calm: #7fb3a8;
       --emotion-hopeful: #d4b87a;
       --emotion-gentle: #c99bb5;
+      /* 正文用衬线：宋体在 macOS 是 Songti SC，Android 退到 Noto Serif，都还是"书"的质感；
+         不使用楷体/手写体 —— 那是用户明确不要的 */
+      --serif: 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif SC', 'Songti TC', serif;
     }
 
     html, body {
@@ -225,20 +228,26 @@
       transform: rotate(-3deg);
     }
 
-    /* ─── 温度带：一条线 + 一枚指针，取代 4×7 点阵 ─── */
+    /* ─── 温度带：一条彩色线 + 一枚指针，取代 4×7 点阵 ─── */
     .mood { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
-    .mood-word { font-size: 11px; letter-spacing: 0.14em; color: #8a7b6a; white-space: nowrap; }
+    .mood-word {
+      font-size: 11.5px; letter-spacing: 0.14em; font-weight: 600;
+      color: #8a7b6a; white-space: nowrap;
+    }
     .mood-track {
-      position: relative; flex: 1; height: 3px; border-radius: 3px;
-      background: linear-gradient(90deg, #8fbcb2 0%, #cfc39a 42%, #e8b07a 72%, #d98f6a 100%);
+      position: relative; flex: 1; height: 4px; border-radius: 4px;
+      background: linear-gradient(90deg,#7FB3A8 0%,#9FC0A4 26%,#D8C489 52%,#ECA474 76%,#D97C58 100%);
     }
     .mood-pin {
-      position: absolute; top: 50%; width: 9px; height: 9px;
-      margin: -4.5px 0 0 -4.5px; border-radius: 50%;
-      background: #fff; border: 1.5px solid #d98f6a;
+      position: absolute; top: 50%; width: 10px; height: 10px;
+      margin: -5px 0 0 -5px; border-radius: 50%;
+      background: #fff; border: 2px solid #d98f6a;
       box-shadow: 0 0 0 3px rgba(217,143,106,0.16);
     }
-    .mood-score { font-size: 11px; color: #a1968a; font-variant-numeric: tabular-nums; }
+    .mood-score {
+      font-size: 11.5px; font-weight: 600;
+      color: #a1968a; font-variant-numeric: tabular-nums;
+    }
 
     /* ─── 相片：贴在纸上的宝利来，位置与宽度不再挤压正文 ─── */
     .output-image-block {
@@ -273,7 +282,7 @@
       font-size: 14px; line-height: 1.95;
       color: #6f6659;
       letter-spacing: 0.02em;
-      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      font-family: var(--serif);
       margin: 24px 0 0;
     }
     .diary-epigraph .epi-mark {
@@ -282,14 +291,14 @@
     }
     .diary-epigraph[hidden] { display: none; }
 
-    /* ─── 正文：日记主体（不用手写体，靠字号、行距和留白撑住） ─── */
+    /* ─── 正文：日记主体（衬线，字大、行距松，像写在纸上） ─── */
     .diary-user-input {
       margin-top: 18px;
-      font-size: 18px; line-height: 2.0;
+      font-size: 20px; line-height: 2.02;
       color: #332c25;
-      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      font-family: var(--serif);
       font-weight: 500;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.015em;
       white-space: pre-wrap; word-break: break-word;
     }
     .diary-user-input[contenteditable="true"] {
@@ -302,15 +311,17 @@
     /* ─── AI wrapper text：比正文低一档，像接着写下去的一小段 ─── */
     .diary-ai-text {
       margin-top: 10px;
-      font-size: 14px; line-height: 1.95;
-      color: #5f574d;
+      font-size: 14.5px; line-height: 1.95;
+      color: #6b6257;
       white-space: pre-wrap; word-break: break-word;
-      font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      font-family: var(--serif);
     }
 
     .diary-edit-hint {
-      display: inline-block; font-size: 10px; color: var(--text-tertiary);
-      opacity: 0.35; margin-left: 5px;
+      display: block; text-align: right;
+      font-size: 9.5px; color: var(--text-tertiary);
+      opacity: 0.32; margin: -2px 2px 0 0;
+      letter-spacing: 0.12em;
     }
 
     /* ─── 情绪洞察：正文下面的铅笔旁注，不再是一块灰卡片 ─── */
@@ -319,6 +330,7 @@
       font-size: 13px; line-height: 1.9;
       color: #9a8f83;
       letter-spacing: 0.01em;
+      font-family: var(--serif);
     }
     .diary-note::before { content: '↳ '; color: #bfb4a6; }
     .diary-note[hidden] { display: none; }
@@ -836,6 +848,7 @@ document.addEventListener('DOMContentLoaded', function() {
   restoreDraft();
   updateImportButton();
   renderHistory();
+  guardOutputImage();
   setTimeout(function() {
     document.querySelectorAll('.delay-1,.delay-2').forEach(function(el,i){ el.style.animationDelay=(i*0.08)+'s'; });
   }, 50);
@@ -1319,6 +1332,27 @@ function pickImage(emo){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 
+// 图片兜底：历史日记里可能存着已经被删掉的文件（calm-01 / warm-03 / warm-06），
+// 或者任何 404 的老路径 —— 那样整页会出现一个破图框，比没有图更难看。
+// 加载失败就换池内另一张，并就地修好存档。
+function guardOutputImage(){
+  var el = document.getElementById('outputImage');
+  if(!el || el._guarded) return;
+  el._guarded = true;
+  el.addEventListener('error', function(){
+    var cur = _imgKey(el.getAttribute('src'));
+    var pool = DIARY_POOL.filter(function(x){ return _imgKey(x) !== cur; });
+    if(!pool.length) pool = DIARY_POOL;
+    var next = pool[Math.floor(Math.random()*pool.length)];
+    el.src = next;
+    try{
+      var saved = JSON.parse(localStorage.getItem('saved_diaries')||'{}');
+      var k = currentDiaryKey;
+      if(k && saved[k]){ saved[k].image = next; localStorage.setItem('saved_diaries', JSON.stringify(saved)); }
+    }catch(e){}
+  });
+}
+
 // 换一张相片。
 // 两个坑：① 读历史日记时 currentEmotion 是空的，旧代码 `if(!currentEmotion)return` 直接什么都不做；
 //        ② 同一张图命中缓存时 el.onload 不触发，透明度会永远停在 0.3（看起来就是「点了没反应」）。
@@ -1564,10 +1598,10 @@ function renderMoodBar(scores){
   if(top<0) top=0;
   var pct=Math.max(5,Math.min(95,top));
   container.innerHTML=
-    '<span class="mood-word">'+labels[dom]+'</span>'+
+    '<span class="mood-word" style="color:'+colors[dom]+'">'+labels[dom]+'</span>'+
     '<span class="mood-track"><i class="mood-pin" style="left:'+pct+'%;border-color:'+colors[dom]+
       ';box-shadow:0 0 0 3px '+_rgbaOf(colors[dom],0.16)+'"></i></span>'+
-    '<span class="mood-score">'+Math.round(top)+'</span>';
+    '<span class="mood-score" style="color:'+colors[dom]+'">'+Math.round(top)+'</span>';
   var pin=container.querySelector('.mood-pin');
   if(pin){
     pin.style.transform='scale(0)';
@@ -1628,6 +1662,25 @@ document.getElementById('gentleArea').addEventListener('click', function(){
   setTimeout(function(){ area.style.display = 'none'; }, 1000);
 });
 
+// 把同源图片转成 dataURL：html2canvas 在离屏 clone 上取相对路径的图会偶发失败，
+// 表现就是「保存下来的照片是一个空相框」。转成 dataURL 之后百分百能画上去。
+function imageToDataUrl(src){
+  return new Promise(function(resolve){
+    if(!src) return resolve('');
+    var im = new Image();
+    im.onload = function(){
+      try{
+        var c = document.createElement('canvas');
+        c.width = im.naturalWidth; c.height = im.naturalHeight;
+        c.getContext('2d').drawImage(im, 0, 0);
+        resolve(c.toDataURL('image/jpeg', 0.92));
+      }catch(e){ resolve(src); }
+    };
+    im.onerror = function(){ resolve(src); };
+    im.src = src;
+  });
+}
+
 function saveDiary(target){
   var tgt = target || '';
   var btn = document.querySelector('.output-action-btn[onclick="saveDiary()"]');
@@ -1658,32 +1711,35 @@ function saveDiary(target){
   var userInput = clone.querySelector('.diary-user-input');
   if(userInput) userInput.removeAttribute('contenteditable');
 
-  // 图片：html2canvas 不支持 object-fit / aspect-ratio，会把图拉变形。
-  // 导出前改成「固定像素尺寸 + background-size:cover」，视觉上与屏幕一致。
-  clone.querySelectorAll('.output-image-wrap').forEach(function(wrap){
-    var img = wrap.querySelector('.output-image');
-    var src = img ? img.getAttribute('src') : '';
-    var w = wrap.offsetWidth || 160;
-    var h = wrap.offsetHeight || Math.round(w * 4 / 3);
-    wrap.style.width = w + 'px';
-    wrap.style.height = h + 'px';
-    wrap.style.paddingBottom = '0';
-    wrap.style.overflow = 'hidden';
-    if(src){
-      wrap.style.backgroundImage = 'url("' + src + '")';
-      wrap.style.backgroundSize = 'cover';
-      wrap.style.backgroundPosition = 'center center';
-      wrap.style.backgroundRepeat = 'no-repeat';
-    }
-    if(img) img.remove();
-  });
-
-  html2canvas(clone, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: '#ffffff',
-    logging: false,
-    allowTaint: false
+  // 图片：① html2canvas 不支持 object-fit / aspect-ratio，会把图拉变形 → 固定像素 + cover；
+  //       ② 离屏 clone 里用相对路径取图会偶发失败，存下来就是一个空相框 → 先转成 dataURL 再交给它。
+  var _imgEl = clone.querySelector('.output-image');
+  var _imgSrc = _imgEl ? _imgEl.getAttribute('src') : '';
+  imageToDataUrl(_imgSrc).then(function(dataUrl){
+    clone.querySelectorAll('.output-image-wrap').forEach(function(wrap){
+      var img = wrap.querySelector('.output-image');
+      var w = wrap.offsetWidth || 160;
+      var h = wrap.offsetHeight || Math.round(w * 0.75);
+      wrap.style.width = w + 'px';
+      wrap.style.height = h + 'px';
+      wrap.style.paddingBottom = '0';
+      wrap.style.overflow = 'hidden';
+      var src = dataUrl || _imgSrc;
+      if(src){
+        wrap.style.backgroundImage = 'url("' + src + '")';
+        wrap.style.backgroundSize = 'cover';
+        wrap.style.backgroundPosition = 'center center';
+        wrap.style.backgroundRepeat = 'no-repeat';
+      }
+      if(img) img.remove();
+    });
+    return html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      allowTaint: false
+    });
   }).then(function(canvas){
     // Download as PNG
     var link = document.createElement('a');
@@ -1830,24 +1886,39 @@ function viewDiary(key){
 
   // ── 落款：翻回历史的日记必须也有这一句 ──
   // 老记录里没单独存 tome，但 diaryPlainText() 当时是把那一句接在正文末尾的，
-  // 所以先看最后一句话像不像落款：短、以句末标点收尾、且正文还有别的内容。
+  // 所以先看最后一句话像不像落款：短、以句末标点收尾、且整篇还有别的内容。
   var tomeSaved = (entry.tome || '').trim();
-  var aiLines = aiPart.split('\n').filter(function(l){ return l.trim().length > 0; });
-  var cand = aiLines.length ? aiLines[aiLines.length - 1].trim() : '';
+  var allLines = text.split('\n').filter(function(l){ return l.trim().length > 0; });
+  var cand = allLines.length ? allLines[allLines.length - 1].trim() : '';
   var looksTome = cand && cand.length <= 26 && /[。！？…]$/.test(cand);
-  if (!tomeSaved && looksTome && aiLines.length >= 2) {
+  if (!tomeSaved && looksTome && allLines.length >= 2) {
     tomeSaved = cand;
-    aiLines.pop();
-    aiPart = aiLines.join('\n');
-    document.getElementById('outputAiText').textContent = aiPart;
+    // 它可能落在正文段里，也可能落在 AI 段里 —— 两边都清一遍，别让它出现两次
+    var aiLines2 = aiPart.split('\n').filter(function(l){ return l.trim().length > 0; });
+    if (aiLines2.length && aiLines2[aiLines2.length - 1].trim() === cand) {
+      aiLines2.pop();
+      aiPart = aiLines2.join('\n');
+      document.getElementById('outputAiText').textContent = aiPart;
+    } else if (userPart.split('\n').slice(-1)[0].trim() === cand) {
+      var uLines = userPart.split('\n');
+      uLines.pop();
+      userPart = uLines.join('\n');
+      document.getElementById('outputUserInput').textContent = userPart;
+    }
   }
   if (!tomeSaved) tomeSaved = genTome(userPart, {});
   showTome(tomeSaved);
 
-  // ── 温度带 / 旁注 / 第一句话：有存档就还原，没有就收起（不留上一篇的残留） ──
+  // ── 温度带：必须一直在 ──
+  // 老记录没存 emotions 时不能把这条彩色带抹掉 —— 用户会以为「彩色条消失了」，
+  // 这一页就只剩字。没有存档就用正文重新推一遍，至少让它有颜色。
   var moodEl = document.getElementById('emotionBars');
-  if (entry.emotions) { renderMoodBar(entry.emotions); }
-  else if (moodEl) { moodEl.innerHTML = ''; }
+  var mood = entry.emotions;
+  if (!mood) {
+    mood = analyzeEmotions(entry.text || '');
+    if (entry.emotion && typeof mood[entry.emotion] !== 'number') mood[entry.emotion] = 60;
+  }
+  if (moodEl) renderMoodBar(mood);
 
   var _note = document.getElementById('outputAnalysis');
   var _insight = (entry.insight || '').trim();
