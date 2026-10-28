@@ -417,6 +417,31 @@
     }
     .output-action-btn.share-link:hover { color: var(--accent); }
 
+    /* ─── 合成视频：这一步是实时的，必须让人看见「还剩多久」 ─── */
+    .video-making {
+      position: fixed; inset: 0; z-index: 210;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(20,16,12,0.46);
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    .video-making.on { display: flex; }
+    .video-making-box {
+      width: min(78vw, 300px); background: #fffefb;
+      border-radius: 16px; padding: 24px 22px 22px;
+      text-align: center;
+      box-shadow: 0 18px 50px rgba(30,22,14,0.26);
+    }
+    .video-making-title { font-size: 14px; color: #3a332b; letter-spacing: 0.02em; }
+    .video-making-sub { font-size: 11.5px; color: #a2958a; margin-top: 7px; letter-spacing: 0.02em; }
+    .video-making-track {
+      height: 3px; border-radius: 3px; margin-top: 16px; overflow: hidden;
+      background: rgba(150,132,108,0.18);
+    }
+    .video-making-fill {
+      height: 100%; width: 0; background: var(--accent);
+      transition: width 0.25s linear;
+    }
+
     /* ══════════════════════════════════════
        分享面板
        ══════════════════════════════════════ */
@@ -746,7 +771,8 @@
 
       <!-- Actions -->
       <div class="output-actions">
-        <button class="output-action-btn primary" onclick="saveDiary()">保存图片</button>
+        <button class="output-action-btn primary" id="btnSaveMedia" onclick="saveMediaPrimary()">保存图片</button>
+        <button class="output-action-btn share-link" id="btnSaveImageOnly" onclick="saveDiary()" hidden>只要图片</button>
         <button class="output-action-btn share-link" onclick="openShareSheet()">分享</button>
         <button class="output-action-btn share-link" onclick="regenerateImage()">换一张相片</button>
       </div>
@@ -881,6 +907,7 @@ document.addEventListener('DOMContentLoaded', function() {
   restoreDraft();
   updateImportButton();
   renderHistory();
+  syncMediaButtons();
   guardOutputImage();
   setTimeout(function() {
     document.querySelectorAll('.delay-1,.delay-2').forEach(function(el,i){ el.style.animationDelay=(i*0.08)+'s'; });
@@ -1605,8 +1632,10 @@ function renderOutput(parts, imageUrl, emotions, analysis, tome, narrative){
   var epiTxt = document.getElementById('epigraphText');
   var narrText = narrative || cleanNarrative('', parts.userText);
   // 本地兜底时 narrative 往往就是原文本身 —— 那样这一页会把同一句话写两遍。宁可空着。
+  // 注意它会被截到 NARRATIVE_MAX 再补「…」，所以不能只比相等，得比「是不是正文的开头」。
   var _normTxt = function(x){ return String(x || '').replace(/[\s，。、；：！？,.;:!?"'「」“”‘’…—-]/g, ''); };
-  if(narrText && _normTxt(narrText) === _normTxt(parts.userText)) narrText = '';
+  var _nKey = _normTxt(narrText), _bKey = _normTxt(parts.userText);
+  if(_nKey && (_nKey === _bKey || (_nKey.length >= 8 && _bKey.indexOf(_nKey) === 0))) narrText = '';
   if (epi && epiTxt) {
     epiTxt.textContent = narrText || '';
     epi.hidden = !narrText;
@@ -1726,6 +1755,7 @@ function renderOutputAttachments(){
   }
   c.innerHTML = h;
   c.hidden = !h;
+  syncMediaButtons();     // 有声音 → 主按钮变「保存视频」；删掉声音 → 变回「保存图片」
 }
 function toggleVoicePlay(){
   if(!attachedAudio || !attachedAudio.url){ showNotification('这段声音已不在了'); return; }
@@ -1858,73 +1888,115 @@ function imageToDataUrl(src){
   });
 }
 
+// ══════════════════════════════════════
+// 导出的底图：图片和视频共用同一张卡片
+// ══════════════════════════════════════
+function buildCardCanvas(scale){
+  return new Promise(function(resolve, reject){
+    var cardEl = document.getElementById('outputSection');
+    if(!cardEl) return reject(new Error('NO_CARD'));
+
+    var clone = cardEl.cloneNode(true);
+    clone.style.position = 'absolute';
+    clone.style.left = '-9999px';
+    clone.style.top = '0';
+    clone.style.width = cardEl.offsetWidth + 'px';
+    // ⚠️ clone 会把 fade-in-up 一起复制过去，动画在离屏节点上重新播一遍 ——
+    //    截图正好落在动画中途，导出的图整页发灰（字像被水洗过）。必须掐掉动画。
+    clone.classList.remove('fade-in-up');
+    clone.style.animation = 'none';
+    clone.style.opacity = '1';
+    clone.style.transform = 'none';
+    document.body.appendChild(clone);
+
+    // Remove unwanted elements from clone
+    ['.output-actions', '.diary-edit-hint', '.gentle-area'].forEach(function(sel){
+      clone.querySelectorAll(sel).forEach(function(el){ el.remove(); });
+    });
+
+    // Remove contenteditable from user input in clone (fixes cursor rendering)
+    var userInput = clone.querySelector('.diary-user-input');
+    if(userInput) userInput.removeAttribute('contenteditable');
+
+    // 图片是静态的，声音条也必须是静态的：导出时把播放态收回去（不打断正在播的那段）
+    clone.querySelectorAll('.voice-chip.playing').forEach(function(b){
+      b.classList.remove('playing');
+      var ico = b.querySelector('.v-ico');
+      if(ico) ico.textContent = '▶';
+    });
+
+    // 图片：① html2canvas 不支持 object-fit / aspect-ratio，会把图拉变形 → 固定像素 + cover；
+    //       ② 离屏 clone 里用相对路径取图会偶发失败，存下来就是一个空相框 → 先转成 dataURL 再交给它。
+    var _imgEl = clone.querySelector('.output-image');
+    var _imgSrc = _imgEl ? _imgEl.getAttribute('src') : '';
+
+    imageToDataUrl(_imgSrc).then(function(dataUrl){
+      clone.querySelectorAll('.output-image-wrap').forEach(function(wrap){
+        var img = wrap.querySelector('.output-image');
+        var w = wrap.offsetWidth || 160;
+        var h = wrap.offsetHeight || Math.round(w * 0.75);
+        wrap.style.width = w + 'px';
+        wrap.style.height = h + 'px';
+        wrap.style.paddingBottom = '0';
+        wrap.style.overflow = 'hidden';
+        var src = dataUrl || _imgSrc;
+        if(src){
+          wrap.style.backgroundImage = 'url("' + src + '")';
+          wrap.style.backgroundSize = 'cover';
+          wrap.style.backgroundPosition = 'center center';
+          wrap.style.backgroundRepeat = 'no-repeat';
+        }
+        if(img) img.remove();
+      });
+      return html2canvas(clone, {
+        scale: scale || 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        allowTaint: false
+      });
+    }).then(function(canvas){
+      if(clone.parentNode) clone.parentNode.removeChild(clone);
+      resolve(canvas);
+    }).catch(function(err){
+      if(clone.parentNode) clone.parentNode.removeChild(clone);
+      reject(err);
+    });
+  });
+}
+
+// ─── 主按钮会变脸：有声音就是「保存视频」，没声音才是「保存图片」 ───
+var _mediaBusy = false;
+function syncMediaButtons(){
+  var has = !!(attachedAudio && attachedAudio.blob);
+  var primary = document.getElementById('btnSaveMedia');
+  if(primary && !_mediaBusy) primary.textContent = has ? '保存视频' : '保存图片';
+  var alt = document.getElementById('btnSaveImageOnly');
+  if(alt) alt.hidden = !has;
+  var sheetBtn = document.getElementById('sheetSaveMedia');
+  if(sheetBtn) sheetBtn.textContent = has ? '保存视频（带声音）' : '保存图片到相册';
+  var sheetAlt = document.getElementById('sheetSaveAlt');
+  if(sheetAlt) sheetAlt.hidden = !has;
+  var note = document.getElementById('sheetNote');
+  if(note){
+    note.textContent = has
+      ? '朋友圈没有开放接口 · 视频存进相册后直接发，播起来就有声音'
+      : '朋友圈没有开放接口 · 会先把图存进相册并复制这段文字';
+  }
+}
+function saveMediaPrimary(){
+  if(attachedAudio && attachedAudio.blob) saveVideoCard();
+  else saveDiary();
+}
+
 function saveDiary(target){
+  if(_mediaBusy) return;
   var tgt = target || '';
-  var btn = document.querySelector('.output-action-btn[onclick="saveDiary()"]');
+  _mediaBusy = true;
+  var btn = document.getElementById('btnSaveMedia');
   if(btn){ btn.disabled = true; btn.textContent = '正在生成…'; }
 
-  // Clone card content, strip UI elements that shouldn't appear in image
-  var cardEl = document.getElementById('outputSection');
-  var clone = cardEl.cloneNode(true);
-  clone.style.position = 'absolute';
-  clone.style.left = '-9999px';
-  clone.style.top = '0';
-  clone.style.width = cardEl.offsetWidth + 'px';
-  // ⚠️ clone 会把 fade-in-up 一起复制过去，动画在离屏节点上重新播一遍 ——
-  //    截图正好落在动画中途，导出的图整页发灰（字像被水洗过）。必须掐掉动画。
-  clone.classList.remove('fade-in-up');
-  clone.style.animation = 'none';
-  clone.style.opacity = '1';
-  clone.style.transform = 'none';
-  document.body.appendChild(clone);
-
-  // Remove unwanted elements from clone
-  var removeSelectors = ['.output-actions', '.diary-edit-hint', '.gentle-area'];
-  removeSelectors.forEach(function(sel){
-    clone.querySelectorAll(sel).forEach(function(el){ el.remove(); });
-  });
-
-  // Remove contenteditable from user input in clone (fixes cursor rendering)
-  var userInput = clone.querySelector('.diary-user-input');
-  if(userInput) userInput.removeAttribute('contenteditable');
-
-  // 图片是静态的，声音条也必须是静态的：导出时把播放态收回去（不打断正在播的那段）
-  clone.querySelectorAll('.voice-chip.playing').forEach(function(b){
-    b.classList.remove('playing');
-    var ico = b.querySelector('.v-ico');
-    if(ico) ico.textContent = '▶';
-  });
-
-  // 图片：① html2canvas 不支持 object-fit / aspect-ratio，会把图拉变形 → 固定像素 + cover；
-  //       ② 离屏 clone 里用相对路径取图会偶发失败，存下来就是一个空相框 → 先转成 dataURL 再交给它。
-  var _imgEl = clone.querySelector('.output-image');
-  var _imgSrc = _imgEl ? _imgEl.getAttribute('src') : '';
-  imageToDataUrl(_imgSrc).then(function(dataUrl){
-    clone.querySelectorAll('.output-image-wrap').forEach(function(wrap){
-      var img = wrap.querySelector('.output-image');
-      var w = wrap.offsetWidth || 160;
-      var h = wrap.offsetHeight || Math.round(w * 0.75);
-      wrap.style.width = w + 'px';
-      wrap.style.height = h + 'px';
-      wrap.style.paddingBottom = '0';
-      wrap.style.overflow = 'hidden';
-      var src = dataUrl || _imgSrc;
-      if(src){
-        wrap.style.backgroundImage = 'url("' + src + '")';
-        wrap.style.backgroundSize = 'cover';
-        wrap.style.backgroundPosition = 'center center';
-        wrap.style.backgroundRepeat = 'no-repeat';
-      }
-      if(img) img.remove();
-    });
-    return html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      allowTaint: false
-    });
-  }).then(function(canvas){
+  buildCardCanvas(2).then(function(canvas){
     // Download as PNG
     var link = document.createElement('a');
     var dateStr = formatDate(new Date());
@@ -1932,9 +2004,9 @@ function saveDiary(target){
     link.href = canvas.toDataURL('image/png');
     link.click();
 
-    // Cleanup
-    document.body.removeChild(clone);
-    if(btn){ btn.disabled = false; btn.textContent = '保存图片'; }
+    _mediaBusy = false;
+    if(btn) btn.disabled = false;
+    syncMediaButtons();
     // 分享面板里进来的：图存好了，再接一句「去哪儿发」
     var guide = {
       moments: '已存进相册 · 打开微信发到朋友圈',
@@ -1942,7 +2014,7 @@ function saveDiary(target){
       weibo: '已存进相册 · 去微博发这一条'
     };
     // 图片存下了，但声音进不了 PNG —— 说清楚，比让人以为「语音丢了」好
-    showNotification(guide[tgt] || (attachedAudio ? '图已保存 · 声音留在这一页里' : '这一页已保存 ✦'));
+    showNotification(guide[tgt] || (attachedAudio ? '图已保存 · 想要声音就存视频' : '这一页已保存 ✦'));
     if(tgt) copyDiaryText(true);
     showShareHint();
 
@@ -1952,13 +2024,249 @@ function saveDiary(target){
     logEvent('diary_card_saved',{emotion:currentEmotion});
   }).catch(function(err){
     console.warn('html2canvas error:', err);
-    document.body.removeChild(clone);
-    if(btn){ btn.disabled = false; btn.textContent = '保存图片'; }
+    _mediaBusy = false;
+    if(btn) btn.disabled = false;
+    syncMediaButtons();
     // Fallback: just persist text data
     persistDiaryData();
     showGentleQuestion();
     showNotification('图片生成失败，已保存文字');
     logEvent('diary_save_fallback');
+  });
+}
+
+// ══════════════════════════════════════
+// 视频卡片 · MP4（H.264 + AAC）
+// 图片格式里没有一个能装音轨（PNG/GIF/WebP 都没有这个字段，实况照片只在 iPhone 相册里动）。
+// 所以「会出声的卡片」只有一种做法：把卡片当画面、语音当音轨，装进视频容器。
+// ══════════════════════════════════════
+var VIDEO_MAX_SIDE = 1920;   // 朋友圈竖版的最佳尺寸，再高也是被压回来
+var _videoTarget = '';       // 从分享面板哪个入口进来的，决定最后那句提示
+
+function pickVideoMime(){
+  if(!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+  // MP4 排最前：它是唯一一个朋友圈、小红书、微博、安卓、iOS 全都认的容器。
+  // WebM 只是兜底 —— Chrome 在某些平台只肯出 WebM，那就存下来并明确告诉用户。
+  var list = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm'
+  ];
+  for(var i=0;i<list.length;i++){
+    if(MediaRecorder.isTypeSupported(list[i])) return list[i];
+  }
+  return '';
+}
+
+function _videoMaking(on, sub, pct){
+  var el = document.getElementById('videoMaking');
+  if(!el) return;
+  el.classList.toggle('on', !!on);
+  if(sub != null){
+    var s = document.getElementById('videoMakingSub');
+    if(s) s.textContent = sub;
+  }
+  if(pct != null){
+    var f = document.getElementById('videoMakingFill');
+    if(f) f.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  }
+}
+
+function _downloadBlob(blob, name){
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){
+    URL.revokeObjectURL(url);
+    if(a.parentNode) a.parentNode.removeChild(a);
+  }, 4000);
+}
+
+function _deliverVideo(blob, mime){
+  var isMp4 = /mp4/.test(mime);
+  var name = '光之日记_' + formatDate(new Date()) + (isMp4 ? '.mp4' : '.webm');
+  var type = isMp4 ? 'video/mp4' : 'video/webm';
+  var file = null;
+  try{ file = new File([blob], name, {type: type}); }catch(e){}
+
+  var tgt = _videoTarget || '';
+  var guide = {
+    moments: '视频已存好 · 打开微信发朋友圈，播起来就出声',
+    xhs: '视频已存好 · 去小红书发这一篇',
+    weibo: '视频已存好 · 去微博发这一条'
+  };
+
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  // 手机上「下载」到不了相册，走系统分享面板才能选「存储视频」
+  if(coarse && file && navigator.canShare && navigator.canShare({files:[file]})){
+    navigator.share({files:[file]}).then(function(){
+      showNotification('选「存储视频」就进相册了');
+    }).catch(function(err){
+      if(err && err.name === 'AbortError') return;
+      _downloadBlob(blob, name);
+    });
+  }else{
+    _downloadBlob(blob, name);
+    showNotification(guide[tgt] || (isMp4
+      ? '已存下 · 发朋友圈就是这个会出声的版本'
+      : '存下了 · 但这台设备只能出 WebM，朋友圈不收；用 iPhone 的 Safari 再存一次'));
+  }
+
+  if(tgt) copyDiaryText(true);
+  showShareHint();
+  logEvent('diary_video_saved',{mime: mime, target: tgt || 'button'});
+}
+
+function saveVideoCard(target){
+  if(_mediaBusy) return;
+  _videoTarget = target || '';
+  if(!attachedAudio || !attachedAudio.blob){ showNotification('这一页还没有声音'); return; }
+  stopVoicePlay();   // 合成本身会把声音放一遍，别和页面上的播放叠在一起
+
+  var AC = window.AudioContext || window.webkitAudioContext;
+  var probe = document.createElement('canvas');
+  var mime = pickVideoMime();
+  if(!window.MediaRecorder || !AC || !probe.captureStream || !mime){
+    showNotification('这个浏览器做不了视频，先存图片吧');
+    setTimeout(function(){ saveDiary(); }, 60);
+    return;
+  }
+
+  _mediaBusy = true;
+  var btn = document.getElementById('btnSaveMedia');
+  if(btn){ btn.disabled = true; btn.textContent = '正在合成…'; }
+  _videoMaking(true, '正在准备画面…', 4);
+
+  var actx = null, rec = null, rafId = 0, stopTimer = 0, done = false;
+
+  function cleanup(){
+    _mediaBusy = false;
+    if(btn) btn.disabled = false;
+    syncMediaButtons();
+    _videoMaking(false);
+  }
+  function fail(msg){
+    if(done) return;
+    done = true;
+    cancelAnimationFrame(rafId);
+    clearTimeout(stopTimer);
+    try{ if(rec && rec.state !== 'inactive') rec.stop(); }catch(e){}
+    try{ if(actx) actx.close(); }catch(e){}
+    cleanup();
+    showNotification(msg || '合成失败，先存图片吧');
+  }
+
+  buildCardCanvas(3).then(function(cardCanvas){
+    // 长边压到 1920 以内；宽高必须是偶数，否则 H.264 直接拒绝
+    var cw = cardCanvas.width, ch = cardCanvas.height;
+    var k = Math.min(1080 / cw, VIDEO_MAX_SIDE / ch);
+    var vw = Math.floor(cw * k / 2) * 2;
+    var vh = Math.floor(ch * k / 2) * 2;
+    if(vw < 8 || vh < 8) throw new Error('BAD_SIZE');
+
+    var out = document.createElement('canvas');
+    out.width = vw; out.height = vh;
+    var octx = out.getContext('2d');
+    octx.fillStyle = '#fbf7ef';
+    octx.fillRect(0, 0, vw, vh);
+
+    var abPromise = attachedAudio.blob.arrayBuffer
+      ? attachedAudio.blob.arrayBuffer()
+      : new Promise(function(res, rej){
+          var fr = new FileReader();
+          fr.onload = function(){ res(fr.result); };
+          fr.onerror = rej;
+          fr.readAsArrayBuffer(attachedAudio.blob);
+        });
+
+    return abPromise.then(function(ab){
+      actx = new AC();
+      if(actx.state === 'suspended') actx.resume();
+      return new Promise(function(res, rej){
+        actx.decodeAudioData(ab, res, function(e){ rej(e || new Error('DECODE_FAIL')); });
+      });
+    }).then(function(buffer){ return {buffer: buffer, out: out, ctx: octx, vw: vw, vh: vh, card: cardCanvas}; });
+  }).then(function(job){
+    var buffer = job.buffer;
+    if(!buffer || !buffer.duration) throw new Error('NO_AUDIO');
+
+    var dest = actx.createMediaStreamDestination();
+    var src = actx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(dest);
+    src.connect(actx.destination);   // 顺手放出来：录的时候自己也听得见，知道它真的在走
+
+    var stream = job.out.captureStream(30);
+    dest.stream.getAudioTracks().forEach(function(t){ stream.addTrack(t); });
+
+    try{
+      rec = new MediaRecorder(stream, {mimeType: mime, videoBitsPerSecond: 4000000, audioBitsPerSecond: 128000});
+    }catch(e){
+      try{ rec = new MediaRecorder(stream, {mimeType: mime}); }
+      catch(e2){ throw new Error('NO_RECORDER'); }
+    }
+
+    var chunks = [];
+    var lead = 0.15;                              // 先起录，再让声音进来，避免开头被切
+    var total = lead + buffer.duration + 0.45;    // 尾巴留一点，进度条走完不突兀
+
+    rec.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onerror = function(){ fail('合成中途出错了'); };
+    rec.onstop = function(){
+      if(done) return;
+      done = true;
+      cancelAnimationFrame(rafId);
+      clearTimeout(stopTimer);
+      try{ if(actx) actx.close(); }catch(e){}
+      cleanup();
+      var blob = new Blob(chunks, {type: mime.split(';')[0]});
+      if(!blob.size){ showNotification('合成失败，先存图片吧'); return; }
+      _deliverVideo(blob, mime);
+      persistDiaryData();
+      showGentleQuestion();
+    };
+
+    rec.start(500);
+    src.start(actx.currentTime + lead);
+
+    var t0 = performance.now();
+    var barH = Math.max(4, Math.round(job.vh * 0.0035));
+
+    function draw(){
+      var el = (performance.now() - t0) / 1000;
+      var p = Math.min(1, el / total);
+      job.ctx.drawImage(job.card, 0, 0, job.vw, job.vh);
+      // 唯一会动的东西：底边一条进度线。它比任何文字都更直接地说「这段在播」
+      job.ctx.fillStyle = 'rgba(14,107,80,0.14)';
+      job.ctx.fillRect(0, job.vh - barH, job.vw, barH);
+      job.ctx.fillStyle = 'rgba(14,107,80,0.62)';
+      job.ctx.fillRect(0, job.vh - barH, Math.round(job.vw * p), barH);
+      if(p < 1) rafId = requestAnimationFrame(draw);
+    }
+    draw();
+
+    var tick = setInterval(function(){
+      var el = (performance.now() - t0) / 1000;
+      var p = Math.min(99, Math.round(el / total * 100));
+      var left = Math.max(0, Math.ceil(total - el));
+      _videoMaking(true, left > 0 ? '还剩 ' + left + ' 秒' : '正在收尾…', p);
+    }, 250);
+
+    stopTimer = setTimeout(function(){
+      clearInterval(tick);
+      _videoMaking(true, '正在收尾…', 99);
+      try{ if(rec.state !== 'inactive') rec.stop(); }catch(e){ fail(); }
+    }, total * 1000);
+  }).catch(function(err){
+    console.warn('video card error:', err);
+    var msg = err && err.message === 'NO_AUDIO' ? '这段声音读不出来，先存图片吧'
+            : err && err.message === 'NO_RECORDER' ? '这个浏览器无法录制视频'
+            : '合成失败，先存图片吧';
+    fail(msg);
   });
 }
 
@@ -2286,7 +2594,13 @@ function copyDiaryText(silent){
 // 微信好友 / 更多 → 走系统分享面板（移动端里面有微信）；其余 → 存图 + 引导
 function shareTo(target){
   closeShareSheet();
-  if(target === 'wechat' || target === 'more'){ shareDiary(); return; }
+  // 有声音的时候，最适合发出去的是那段视频，不是一张静图
+  var hasVoice = !!(attachedAudio && attachedAudio.blob);
+  if(target === 'wechat' || target === 'more'){
+    if(hasVoice){ saveVideoCard(target); return; }
+    shareDiary(); return;
+  }
+  if(hasVoice){ saveVideoCard(target); return; }
   saveDiary(target);
 }
 
@@ -2338,9 +2652,19 @@ function shareTo(target){
         <em>更多</em>
       </button>
     </div>
-    <div class="sheet-note">朋友圈没有开放接口 · 会先把图存进相册并复制这段文字</div>
-    <button class="sheet-save" onclick="closeShareSheet();saveDiary();">保存图片到相册</button>
+    <div class="sheet-note" id="sheetNote">朋友圈没有开放接口 · 会先把图存进相册并复制这段文字</div>
+    <button class="sheet-save" id="sheetSaveMedia" onclick="closeShareSheet();saveMediaPrimary();">保存图片到相册</button>
+    <button class="sheet-copy" id="sheetSaveAlt" onclick="closeShareSheet();saveDiary();" hidden>只要图片</button>
     <button class="sheet-copy" onclick="closeShareSheet();copyDiaryText();">复制文字</button>
+  </div>
+</div>
+
+<!-- 合成视频时的进度：这段是实时的，不能让人以为卡死了 -->
+<div class="video-making" id="videoMaking">
+  <div class="video-making-box">
+    <div class="video-making-title" id="videoMakingTitle">正在把这页做成会出声的卡片</div>
+    <div class="video-making-sub" id="videoMakingSub">大约需要 10 秒</div>
+    <div class="video-making-track"><div class="video-making-fill" id="videoMakingFill"></div></div>
   </div>
 </div>
 </body>
