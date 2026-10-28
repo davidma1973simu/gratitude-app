@@ -335,19 +335,48 @@
     .diary-note::before { content: '↳ '; color: #bfb4a6; }
     .diary-note[hidden] { display: none; }
 
-    /* User attachments row */
+    /* ─── 用户附上的照片 / 声音：夹在纸页里的实物，不是 UI 缩略图 ─── */
     .output-attachments {
-      display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;
+      display: flex; gap: 12px; margin: 20px 0 4px; flex-wrap: wrap;
+      align-items: center;
     }
-    .output-attachment-img {
-      width: 48px; height: 48px; border-radius: 10px;
-      object-fit: cover; border: 1px solid var(--border-light);
+    .output-attachments[hidden] { display: none; }
+    /* 小相纸：白边 + 轻微旋转 + 软阴影。用 wrapper + background，
+       因为 html2canvas 不支持 object-fit，导出会拉变形。 */
+    .output-attachment-photo {
+      width: 84px; padding: 4px 4px 12px; background: #fff;
+      box-shadow: 0 1px 2px rgba(120,100,70,0.18), 0 7px 16px rgba(120,100,70,0.13);
+      transform: rotate(-1.4deg); cursor: zoom-in;
     }
-    .output-attachment-audio {
-      display: flex; align-items: center; gap: 5px;
-      padding: 6px 11px; background: var(--accent-soft);
-      border-radius: 8px; font-size: 11.5px; color: var(--text-secondary);
+    .output-attachment-photo:nth-of-type(even) { transform: rotate(1.6deg); }
+    .output-attachment-photo i {
+      display: block; width: 100%; height: 76px;
+      background-size: cover; background-position: center;
+      background-color: #efe7d8; background-repeat: no-repeat;
     }
+
+    /* 声音条：一条可点的时间轴，不是一块灰底标签 */
+    .voice-chip {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 9px 14px 9px 11px; border-radius: 999px;
+      border: 1px solid rgba(14,107,80,0.22); background: rgba(14,107,80,0.055);
+      font-family: inherit; font-size: 11.5px; color: var(--accent);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      -webkit-appearance: none; appearance: none;   /* 否则导出时会被画成系统按钮 */
+    }
+    .voice-chip:active { background: rgba(14,107,80,0.12); }
+    .voice-chip .v-ico {
+      width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 8px; line-height: 1; flex-shrink: 0; padding-left: 1px;
+    }
+    .voice-chip .v-wave { display: flex; align-items: center; gap: 2px; height: 14px; }
+    .voice-chip .v-wave i {
+      display: block; width: 2px; border-radius: 2px; background: currentColor; opacity: 0.42;
+    }
+    .voice-chip.playing .v-wave i { animation: waveBeat 0.9s ease-in-out infinite; opacity: 0.85; }
+    @keyframes waveBeat { 0%,100% { transform: scaleY(0.45); } 50% { transform: scaleY(1); } }
+    .voice-chip .v-dur { font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 
     /* ─── Tome：落款 —— 小标签在上，一句话在下，永远只占一行 ─── */
     .output-tome {
@@ -642,7 +671,10 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
         照片
       </label>
-      <input type="file" id="imageInput" accept="image/*" multiple hidden onchange="handleImages(event)">
+      <!-- 不用 hidden 属性：iOS 微信里 display:none 的 file input 偶尔点了不弹选择器。
+           视觉上藏起来，但仍然参与布局，兼容性更稳 -->
+      <input type="file" id="imageInput" accept="image/*" multiple onchange="handleImages(event)"
+             style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;">
       <button class="attach-btn" id="voiceBtn" onclick="toggleRecording()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         <span id="voiceBtnText">语音</span>
@@ -690,8 +722,8 @@
       <!-- AI 延伸 -->
       <div class="diary-ai-text" id="outputAiText"></div>
 
-      <!-- 附件 -->
-      <div class="output-attachments" id="outputAttachments"></div>
+      <!-- 附件：用户自己附的照片 / 声音 -->
+      <div class="output-attachments" id="outputAttachments" hidden></div>
 
       <!-- 旁注：情绪洞察 -->
       <div class="diary-note" id="outputAnalysis" hidden><span id="analysisText"></span></div>
@@ -806,6 +838,7 @@ document.getElementById('settingsPanel').addEventListener('click', function(e){
 // ══════════════════════════════════════
 var attachedImages = [];
 var attachedAudio = null;
+var _imgOrder = 0;          // 照片的选择顺序（压缩是并发的，不编号会乱序）
 var mediaRecorder = null;
 var recordingStream = null;
 var recordingTimer = null;
@@ -820,7 +853,7 @@ var recordingSeconds = 0;
 var DIARY_POOL = [
   'images/warm/warm-01.jpg',      // 海面落日与栈桥
   'images/warm/warm-02.jpg',      // 光穿过树冠
-  'images/warm/warm-04.jpg',      // 傍晚并肩骑行（远景剪影，无面部）
+  'images/warm/warm-05.jpg',      // 落日倒影（无人物 —— 有人影的图会把注意力从文字上拽走）
   'images/hopeful/hopeful-01.jpg',// 日出草原
   'images/hopeful/hopeful-03.jpg',// 绿色山丘
   'images/hopeful/hopeful-04.jpg',// 粉调海滩落日
@@ -984,16 +1017,87 @@ function importToday() {
 // ══════════════════════════════════════
 // Image Upload / Voice Recording / Preview / Draft
 // ══════════════════════════════════════
+// 照片统一走 canvas 转一遍 JPEG。
+// 不直接用 FileReader 的原始 dataURL，原因是真机上会翻车：
+//  ① iPhone 原图 4032×3024，base64 之后 5-8MB，iOS 的 WKWebView 渲染这种超大 dataURL
+//    会极慢甚至静默失败 —— 表现就是「传上去了，但哪里都不显示」；
+//  ② 相册里可能是 HEIC，或 PNG 带透明通道（贴在米色纸底上会发黑）。
+// 转成 ≤1600px、白底、JPEG 之后，显示和导出都稳。
+function readImageAsJpeg(file, maxSide){
+  return new Promise(function(resolve, reject){
+    if(!file) return reject(new Error('EMPTY'));
+    if(file.type && file.type.indexOf('image/') !== 0) return reject(new Error('NOT_IMAGE'));
+    var url = null;
+    try { url = URL.createObjectURL(file); } catch(e) { return reject(new Error('NO_URL')); }
+    var im = new Image();
+    var settled = false;
+    function finish(fn, arg){
+      if(settled) return; settled = true;
+      if(url) { try{ URL.revokeObjectURL(url); }catch(e){} }
+      fn(arg);
+    }
+    im.onload = function(){
+      try{
+        var w = im.naturalWidth, h = im.naturalHeight;
+        if(!w || !h) throw new Error('BAD_IMAGE');
+        var draw = function(limit, quality){
+          var m = Math.max(w, h);
+          var scale = m > limit ? limit / m : 1;
+          var cw = Math.max(1, Math.round(w * scale));
+          var ch = Math.max(1, Math.round(h * scale));
+          var cv = document.createElement('canvas');
+          cv.width = cw; cv.height = ch;
+          var ctx = cv.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch);   // 透明 PNG 垫白，不留黑块
+          ctx.drawImage(im, 0, 0, cw, ch);
+          return cv.toDataURL('image/jpeg', quality);
+        };
+        // 页面上这张只有 84px 宽，640px 已经远超 2x 导出所需；
+        // 真正的原图留着没用，只会把 iOS 的内存撑爆。
+        finish(resolve, {
+          dataUrl: draw(Math.min(maxSide, 640), 0.82),  // 放进日记页、导出 PNG 用
+          thumb:   draw(300, 0.75)                      // 存档用（localStorage 放不下大图）
+        });
+      }catch(err){ finish(reject, err); }
+    };
+    im.onerror = function(){ finish(reject, new Error('DECODE_FAIL')); };
+    im.src = url;
+    // 兜底：某些机型对超大图解码不报错也不触发 onload
+    setTimeout(function(){ if(!settled) finish(reject, new Error('TIMEOUT')); }, 12000);
+  });
+}
+
 function handleImages(event) {
   var files = event.target.files;
   if (!files || !files.length) return;
-  for (var i=0;i<files.length;i++) (function(file){
-    if(!file.type.startsWith('image/'))return;
-    var r=new FileReader();r.onload=function(e){
-      attachedImages.push({file:file,dataUrl:e.target.result});renderPreviews();saveDraft();
-    };r.readAsDataURL(file);
-  })(files[i]);
-  event.target.value='';
+  var list = Array.prototype.slice.call(files);
+  event.target.value = '';            // 先清，允许同一张再选一次
+  var pending = list.length, failed = 0;
+  if(list.length) showNotification(list.length > 1 ? '正在处理 ' + list.length + ' 张照片…' : '正在处理照片…');
+
+  // 压缩是并发的，谁先完成谁先回来 —— 不能按回来的先后排列，
+  // 否则用户选了「甲、乙」，页面上可能是「乙、甲」。按选择顺序编号再排序。
+  _imgOrder += list.length;
+  var orderBase = _imgOrder - list.length;
+
+  list.forEach(function(file, i){
+    readImageAsJpeg(file, 1600).then(function(r){
+      attachedImages.push({dataUrl: r.dataUrl, thumb: r.thumb, name: file.name || '', order: orderBase + i});
+      attachedImages.sort(function(a, b){ return (a.order || 0) - (b.order || 0); });
+      renderPreviews();
+      saveDraft();
+    }).catch(function(err){
+      failed++;
+      console.warn('image failed:', err && err.message);
+      if(err && err.message === 'NOT_IMAGE') showNotification('只能添加图片文件');
+      else if(err && err.message === 'DECODE_FAIL') showNotification('这张照片读不出来，换一张或先截图再试');
+      else showNotification('照片处理失败，换一张试试');
+      logEvent('diary_image_failed', { reason: (err && err.message) || 'unknown' });
+    }).then(function(){
+      if(--pending === 0 && failed === 0 && list.length) showNotification('照片已添加 ✦');
+    });
+  });
+  logEvent('diary_image_picked', { count: list.length });
 }
 function toggleRecording(){ if(mediaRecorder&&mediaRecorder.state==='recording')stopRecording(); else startRecording(); }
 function startRecording(){
@@ -1003,11 +1107,17 @@ function startRecording(){
     mediaRecorder=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);
     var chunks=[];mediaRecorder.ondataavailable=function(e){if(e.data&&e.data.size>0)chunks.push(e.data);};
     mediaRecorder.onstop=function(){
-      var b=new Blob(chunks,{type:(chunks[0]&&chunks[0].type)||'audio/webm'});
-      if(attachedAudio&&attachedAudio.url)URL.revokeObjectURL(attachedAudio.url);
-      attachedAudio={blob:b,url:URL.createObjectURL(b),duration:recordingSeconds};
-      renderPreviews();saveDraft();
       if(recordingStream){recordingStream.getTracks().forEach(function(t){t.stop();});recordingStream=null;}
+      var b=new Blob(chunks,{type:(chunks[0]&&chunks[0].type)||'audio/webm'});
+      if(!b.size){ showNotification('这次没有录到声音，再试一次'); renderPreviews(); return; }
+      voicePlaying=false;
+      if(voiceAudio){ try{ voiceAudio.pause(); }catch(e){} voiceAudio=null; }
+      if(attachedAudio&&attachedAudio.url){ try{ URL.revokeObjectURL(attachedAudio.url); }catch(e){} }
+      // 录音刚停时 recordingSeconds 可能还是 0，显示 0:00 会像坏了
+      attachedAudio={blob:b,url:URL.createObjectURL(b),duration:Math.max(1,recordingSeconds)};
+      renderPreviews();saveDraft();
+      showNotification('声音已添加 ✦');
+      logEvent('diary_audio_recorded',{seconds:Math.max(1,recordingSeconds)});
     };
     mediaRecorder.start();recordingSeconds=0;
     var btn=document.getElementById('voiceBtn');btn.classList.add('recording');
@@ -1021,14 +1131,23 @@ function startRecording(){
 function stopRecording(){ if(mediaRecorder&&mediaRecorder.state==='recording')mediaRecorder.stop();clearInterval(recordingTimer);document.getElementById('voiceBtn').classList.remove('recording');document.getElementById('voiceBtnText').textContent='语音'; }
 function renderPreviews(){
   var a=document.getElementById('previewArea');
-  if(!attachedImages.length&&!attachedAudio){a.classList.remove('has-content');a.innerHTML='';return;}
+  if(!attachedImages.length&&!attachedAudio){
+    a.classList.remove('has-content');a.innerHTML='';
+    renderOutputAttachments();        // 删光之后输出区也要收起，不能留着上一篇的照片
+    return;
+  }
   a.classList.add('has-content');var h='';
-  attachedImages.forEach(function(item,idx){h+='<div class="preview-item"><img src="'+item.dataUrl+'" alt=""><button class="preview-remove" onclick="removeImage('+idx+')">✕</button></div>';});
+  attachedImages.forEach(function(item,idx){h+='<div class="preview-item"><img src="'+(item.thumb||item.dataUrl)+'" alt=""><button class="preview-remove" onclick="removeImage('+idx+')">✕</button></div>';});
   if(attachedAudio){var dur=attachedAudio.duration||0;h+='<div class="preview-item audio-preview" style="position:relative;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg> '+Math.floor(dur/60)+':'+String(dur%60).padStart(2,'0')+'<button class="preview-remove" style="position:static;background:none;color:inherit;margin-left:4px;" onclick="removeAudio()">✕</button></div>';}
   a.innerHTML=h;
+  renderOutputAttachments();           // 生成之后再补传/删，输出区也要跟着变
 }
 function removeImage(idx){attachedImages.splice(idx,1);renderPreviews();saveDraft();}
-function removeAudio(){if(attachedAudio&&attachedAudio.url)URL.revokeObjectURL(attachedAudio.url);attachedAudio=null;renderPreviews();saveDraft();}
+function removeAudio(){
+  stopVoicePlay();
+  if(attachedAudio&&attachedAudio.url&&!attachedAudio.persisted){try{URL.revokeObjectURL(attachedAudio.url);}catch(e){}}
+  attachedAudio=null;renderPreviews();saveDraft();
+}
 function saveDraft(){try{localStorage.setItem('diary_draft',JSON.stringify({text:document.getElementById('diaryInput').value,savedAt:new Date().toISOString()}));}catch(e){}}
 function restoreDraft(){try{var d=JSON.parse(localStorage.getItem('diary_draft')||'null');if(d&&d.text)document.getElementById('diaryInput').value=d.text;}catch(e){}}
 function clearDraft(){localStorage.removeItem('diary_draft');}
@@ -1254,8 +1373,11 @@ function handleGenerateBtn(){
 function resetForNew(){
   // Clear input + attachments
   document.getElementById('diaryInput').value = '';
+  stopVoicePlay();
+  voiceAudio = null;
   attachedImages = [];
-  if(attachedAudio&&attachedAudio.url)URL.revokeObjectURL(attachedAudio.url);
+  // 已经存进 IndexedDB 的那段，url 可以放心回收；正在录的也一并释放
+  if(attachedAudio && attachedAudio.url){ try{ URL.revokeObjectURL(attachedAudio.url); }catch(e){} }
   attachedAudio = null;
   renderPreviews();
   clearDraft();
@@ -1311,10 +1433,10 @@ function genDiaryParts(input,emotions){
   var closer=closers[Math.floor(Math.random()*closers.length)];
 
   // AI wrapper (goes below user input)
+  // 不在正文里播报「附上了 2 张照片」——照片和声音本来就贴在页面上，
+  // 再写一句就是在替读者念说明书。日记里只留感受。
   var aiLines = [];
   aiLines.push(opener);
-  if(attachedImages.length>0) aiLines.push('（附上了 '+attachedImages.length+' 张照片，想把这一刻的样子留下来）');
-  if(attachedAudio) aiLines.push('（还录了一段声音，那个瞬间的声音也很重要）');
   aiLines.push(closer);
 
   return { userText: userText, aiText: aiLines.join('\n') };
@@ -1566,12 +1688,67 @@ function diaryPlainText(){
   return head+document.getElementById('outputUserInput').innerText+'\n'+document.getElementById('outputAiText').innerText+tail;
 }
 
-function renderOutputAttachments(){  var c=document.getElementById('outputAttachments');
-  if(!attachedImages.length&&!attachedAudio){c.innerHTML='';return;}
-  var h='';
-  attachedImages.forEach(function(item){h+='<img class="output-attachment-img" src="'+item.dataUrl+'" alt="">';});
-  if(attachedAudio)h+='<div class="output-attachment-audio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg> 语音</div>';
-  c.innerHTML=h;
+// ══════════════════════════════════════
+// 输出区的附件：照片 + 能真的播出来的声音
+// ══════════════════════════════════════
+// 之前的语音只是一个写着「语音」的静态标签 —— 点了没有任何反应，因为页面上
+// 根本没有 audio 元素。现在它是一条可播的时间轴：图标 / 声波 / 时长。
+var voiceAudio = null;      // 当前挂着的 Audio 对象
+var voicePlaying = false;
+
+function _fmtDur(sec){
+  sec = Math.max(0, Math.round(sec || 0));
+  return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
+}
+function _waveBars(seed){
+  // 固定的高低起伏，看起来像那段声音的形状；不是随机，避免每次重绘都跳
+  var hs = [6,11,8,14,9,13,7,10,12,8,5,11,9,6,12,8];
+  var h = '';
+  for(var i=0;i<hs.length;i++){
+    h += '<i style="height:' + hs[(i+(seed||0)) % hs.length] + 'px"></i>';
+  }
+  return h;
+}
+function renderOutputAttachments(){
+  var c = document.getElementById('outputAttachments');
+  if(!c) return;
+  var h = '';
+  attachedImages.forEach(function(item){
+    // 单引号包 URL：属性本身是双引号，用 JSON.stringify 会把 style 属性截断
+    h += '<div class="output-attachment-photo"><i style="background-image:url(\'' + item.dataUrl + '\')"></i></div>';
+  });
+  if(attachedAudio){
+    h += '<button class="voice-chip' + (voicePlaying ? ' playing' : '') + '" onclick="toggleVoicePlay()" aria-label="播放语音">'
+       +   '<span class="v-ico">' + (voicePlaying ? '❚❚' : '▶') + '</span>'
+       +   '<span class="v-wave">' + _waveBars(voicePlaying ? 2 : 0) + '</span>'
+       +   '<span class="v-dur">' + _fmtDur(attachedAudio.duration) + '</span>'
+       + '</button>';
+  }
+  c.innerHTML = h;
+  c.hidden = !h;
+}
+function toggleVoicePlay(){
+  if(!attachedAudio || !attachedAudio.url){ showNotification('这段声音已不在了'); return; }
+  if(voicePlaying){ stopVoicePlay(); return; }
+  try{
+    if(!voiceAudio || voiceAudio.src !== attachedAudio.url){
+      if(voiceAudio){ try{ voiceAudio.pause(); }catch(e){} }
+      voiceAudio = new Audio(attachedAudio.url);
+      voiceAudio.onended = function(){ stopVoicePlay(); };
+    }
+    var p = voiceAudio.play();
+    if(p && p.catch) p.catch(function(){ showNotification('播放失败，请再点一次'); });
+    voicePlaying = true;
+    renderOutputAttachments();
+    logEvent('diary_audio_played');
+  }catch(e){
+    showNotification('这个浏览器放不了这段声音');
+  }
+}
+function stopVoicePlay(){
+  if(voiceAudio){ try{ voiceAudio.pause(); }catch(e){} }
+  voicePlaying = false;
+  renderOutputAttachments();
 }
 
 // ══════════════════════════════════════
@@ -1711,6 +1888,13 @@ function saveDiary(target){
   var userInput = clone.querySelector('.diary-user-input');
   if(userInput) userInput.removeAttribute('contenteditable');
 
+  // 图片是静态的，声音条也必须是静态的：导出时把播放态收回去（不打断正在播的那段）
+  clone.querySelectorAll('.voice-chip.playing').forEach(function(b){
+    b.classList.remove('playing');
+    var ico = b.querySelector('.v-ico');
+    if(ico) ico.textContent = '▶';
+  });
+
   // 图片：① html2canvas 不支持 object-fit / aspect-ratio，会把图拉变形 → 固定像素 + cover；
   //       ② 离屏 clone 里用相对路径取图会偶发失败，存下来就是一个空相框 → 先转成 dataURL 再交给它。
   var _imgEl = clone.querySelector('.output-image');
@@ -1757,7 +1941,8 @@ function saveDiary(target){
       xhs: '已存进相册 · 去小红书发这一篇',
       weibo: '已存进相册 · 去微博发这一条'
     };
-    showNotification(guide[tgt] || '这一页已保存 ✦');
+    // 图片存下了，但声音进不了 PNG —— 说清楚，比让人以为「语音丢了」好
+    showNotification(guide[tgt] || (attachedAudio ? '图已保存 · 声音留在这一页里' : '这一页已保存 ✦'));
     if(tgt) copyDiaryText(true);
     showShareHint();
 
@@ -1777,6 +1962,45 @@ function saveDiary(target){
   });
 }
 
+// ─── 声音的持久化：localStorage 放不下音频二进制，改用 IndexedDB ───
+// 不存的话，日记一保存、页面一刷新，那段声音就永远消失了 —— 用户会觉得「白录了」。
+var _idbPromise = null;
+function _idbOpen(){
+  if(_idbPromise) return _idbPromise;
+  _idbPromise = new Promise(function(resolve, reject){
+    if(!window.indexedDB) return reject(new Error('NO_IDB'));
+    var req;
+    try{ req = indexedDB.open('grat_diary_media', 1); }catch(e){ return reject(e); }
+    req.onupgradeneeded = function(){
+      var db = req.result;
+      if(!db.objectStoreNames.contains('audio')) db.createObjectStore('audio');
+    };
+    req.onsuccess = function(){ resolve(req.result); };
+    req.onerror = function(){ reject(req.error); };
+  });
+  return _idbPromise;
+}
+function idbPutAudio(key, blob){
+  return _idbOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction('audio', 'readwrite');
+      tx.objectStore('audio').put(blob, key);
+      tx.oncomplete = function(){ resolve(true); };
+      tx.onerror = function(){ reject(tx.error); };
+    });
+  });
+}
+function idbGetAudio(key){
+  return _idbOpen().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction('audio', 'readonly');
+      var r = tx.objectStore('audio').get(key);
+      r.onsuccess = function(){ resolve(r.result || null); };
+      r.onerror = function(){ reject(r.error); };
+    });
+  });
+}
+
 // Persist diary data to localStorage for history list
 // 除了正文，还要把「落款 / 温度带 / 旁注 / 第一句话」一起存下来 —— 否则翻回历史时
 // 这几块要么空着（空的「致此刻的你」），要么残留着上一篇的内容。
@@ -1791,21 +2015,52 @@ function persistDiaryData(){
     var note=document.getElementById('outputAnalysis');
     saved[k]={
       text:t,
+      // 分开存：翻回历史时不能靠「前 3 行是用户写的」去猜 —— 一旦正文行数变了，
+      // 落款会被当成正文、AI 段会串位。有了这两个字段就不必猜。
+      userText:document.getElementById('outputUserInput').innerText,
+      aiText:document.getElementById('outputAiText').innerText,
       image:document.getElementById('outputImage').src,
       emotion:currentEmotion,
       tome:(tomeEl && !tomeEl.hidden && tomeLine) ? tomeLine.textContent.trim() : '',
       emotions:window._lastEmotions||null,
       insight:(note && !note.hidden) ? (document.getElementById('analysisText').textContent||'').trim() : '',
       narrative:(epi && !epi.hidden) ? (document.getElementById('epigraphText').textContent||'').trim() : '',
+      // 用户自己附的照片只存缩小版：这是「那天我贴了一张照片」的记认，不是相册
+      photos:attachedImages.slice(0,4).map(function(item){ return item.thumb || item.dataUrl; }),
+      audioDur:attachedAudio ? (attachedAudio.duration||0) : 0,
+      hasAudio:!!attachedAudio,
       savedAt:new Date().toISOString()
     };
     localStorage.setItem('saved_diaries',JSON.stringify(saved));
     renderHistory();
   }catch(e){}
+  // 声音放 IndexedDB（异步，失败不影响存图）
+  if(attachedAudio && attachedAudio.blob){
+    var dur = attachedAudio.duration || 0;
+    idbPutAudio(k, attachedAudio.blob).then(function(){
+      attachedAudio.persisted = true;
+      logEvent('diary_audio_saved',{seconds:dur});
+    }).catch(function(){});
+  }
 }
 function shareDiary(){
   var t=diaryPlainText();
-  var d={title:'光之日记 · '+formatDate(new Date()),text:t+'\n\n— 来自光之日记 Gratitude'};
+  var title='光之日记 · '+formatDate(new Date());
+  // 有声音就一起发出去：图片（PNG）里塞不进音轨，但系统分享面板可以带附件，
+  // 对方收到的是一个能播的声音文件 + 这段文字。
+  if(attachedAudio && attachedAudio.blob && navigator.share && navigator.canShare){
+    try{
+      var type = attachedAudio.blob.type || 'audio/webm';
+      var ext = type.indexOf('mp4') >= 0 ? 'm4a' : (type.indexOf('wav') >= 0 ? 'wav' : 'webm');
+      var f = new File([attachedAudio.blob], '光之日记·声音.'+ext, {type:type});
+      if(navigator.canShare({files:[f]})){
+        navigator.share({title:title, text:t+'\n\n— 来自光之日记 Gratitude', files:[f]}).catch(function(){});
+        logEvent('diary_share_attempted',{withAudio:true});
+        return;
+      }
+    }catch(e){}
+  }
+  var d={title:title,text:t+'\n\n— 来自光之日记 Gratitude'};
   if(navigator.share)navigator.share(d).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(d.text).then(function(){showNotification('已复制 📋');});
   logEvent('diary_share_attempted');
 }
@@ -1855,6 +2110,8 @@ function viewDiary(key){
   try { saved = JSON.parse(localStorage.getItem('saved_diaries')||'{}'); } catch(e){ return; }
   var entry = saved[key];
   if(!entry) return;
+  currentDiaryKey = key;      // 先落定当前页，后面的异步取声音才知道取的是哪一篇
+  if(mediaRecorder && mediaRecorder.state==='recording') stopRecording();
   
   // Parse text back into parts (user text + AI text)
   var text = entry.text || '';
@@ -1876,13 +2133,35 @@ function viewDiary(key){
   }
   document.getElementById('outputImage').src = imgSrc;
   
-  // Split text: first non-empty lines = user input, rest = AI
+  // 正文与 AI 段：新记录分开存了，直接用；老记录才退回「前 3 行」的猜法
   var nonEmpty = lines.filter(function(l){ return l.trim().length>0; });
-  var userPart = nonEmpty.slice(0,3).join('\n');
-  var aiPart = nonEmpty.slice(3).join('\n');
+  var userPart, aiPart;
+  if(typeof entry.userText === 'string' || typeof entry.aiText === 'string'){
+    userPart = entry.userText || '';
+    aiPart = entry.aiText || '';
+  }else{
+    userPart = nonEmpty.slice(0,3).join('\n');
+    aiPart = nonEmpty.slice(3).join('\n');
+  }
   
   document.getElementById('outputUserInput').textContent = userPart;
   document.getElementById('outputAiText').textContent = aiPart;
+
+  // ── 那一页的附件：先清掉上一篇的，再按存档还原（照片用缩小版，声音从 IndexedDB 取回） ──
+  voicePlaying = false;
+  if(voiceAudio){ try{ voiceAudio.pause(); }catch(e){} }
+  voiceAudio = null;
+  attachedImages = (entry.photos || []).map(function(t){ return {dataUrl:t, thumb:t, name:''}; });
+  attachedAudio = null;
+  renderPreviews();          // 输入区的预览也要跟着换成这一篇的，别留着上一张
+  if(entry.hasAudio){
+    var _dur = entry.audioDur || 0;
+    idbGetAudio(key).then(function(blob){
+      if(!blob || currentDiaryKey !== key) return;   // 用户已经翻到别的日记了
+      attachedAudio = {blob:blob, url:URL.createObjectURL(blob), duration:_dur, persisted:true};
+      renderOutputAttachments();
+    }).catch(function(){});
+  }
 
   // ── 落款：翻回历史的日记必须也有这一句 ──
   // 老记录里没单独存 tome，但 diaryPlainText() 当时是把那一句接在正文末尾的，
@@ -1891,7 +2170,9 @@ function viewDiary(key){
   var allLines = text.split('\n').filter(function(l){ return l.trim().length > 0; });
   var cand = allLines.length ? allLines[allLines.length - 1].trim() : '';
   var looksTome = cand && cand.length <= 26 && /[。！？…]$/.test(cand);
-  if (!tomeSaved && looksTome && allLines.length >= 2) {
+  // 只对老记录做这件事：新记录正文已经分开了，再去「猜最后一行是落款」会把正文吃掉
+  var legacyEntry = !(typeof entry.userText === 'string' || typeof entry.aiText === 'string');
+  if (!tomeSaved && legacyEntry && looksTome && allLines.length >= 2) {
     tomeSaved = cand;
     // 它可能落在正文段里，也可能落在 AI 段里 —— 两边都清一遍，别让它出现两次
     var aiLines2 = aiPart.split('\n').filter(function(l){ return l.trim().length > 0; });
